@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import IlyasPreview from "./previews/IlyasPreview";
 import AminePreview from "./previews/AminePreview";
 import type { Agent, TaskField, CheckboxGroupOption, SourceListOption } from "./types";
@@ -24,6 +25,8 @@ import ImanePreview from "./previews/ImanePreview";
 import SofiaPreview from "./previews/SofiaPreview";
 import MehdiPreview from "./previews/MehdiPreview";
 import ZinebPreview from "./previews/ZinebPreview";
+import { useAgentRun } from "./useAgentRun";
+import { getRunConfig, APPROVAL_ACTION } from "./runConfig";
 
 type FieldValue = string | boolean | string[];
 type Values = Record<string, FieldValue>;
@@ -40,17 +43,36 @@ const PREVIEWS: Record<string, React.ComponentType<{ values: Values }>> = {
   salma: SalmaPreview,
   youssef: YoussefPreview,
   hamza: HamzaPreview,
-   hind: HindPreview,
-   rachid: RachidPreview,
-   karim: KarimPreview,
-   imane: ImanePreview,
-   sofia: SofiaPreview,
-   mehdi: MehdiPreview,
-   zineb: ZinebPreview,
-
+  hind: HindPreview,
+  rachid: RachidPreview,
+  karim: KarimPreview,
+  imane: ImanePreview,
+  sofia: SofiaPreview,
+  mehdi: MehdiPreview,
+  zineb: ZinebPreview,
 };
 
+const monoLabel: React.CSSProperties = {
+  fontFamily: "var(--font-mono, monospace)",
+  fontSize: "10px",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "var(--muted-foreground)",
+};
+
+function formatCost(value: Agent["cost_estimate"]) {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  if (Number.isNaN(n)) return null;
+  return `≈ ${n.toFixed(2).replace(".", ",")} MAD`;
+}
+
 export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; taskFields: TaskField[] }) {
+  const router = useRouter();
+  const config = getRunConfig(agent.slug);
+  const { status, step, run } = useAgentRun(config.steps.length);
+  const cost = formatCost(agent.cost_estimate);
+
   const [values, setValues] = useState<Values>(() => {
     const initial: Values = {};
     for (const f of taskFields) {
@@ -68,12 +90,20 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
 
   const Preview = PREVIEWS[agent.slug];
 
+  const buttonLabel =
+    status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
+  const previewState =
+    status === "done" ? config.doneLabel : status === "running" ? "génération…" : "aperçu live des entrées";
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: "32px" }}>
       <div>
-        <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)", marginBottom: "16px" }}>
+        <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)", marginBottom: "8px" }}>
           ENTRÉES DE LA TÂCHE
         </div>
+        <p style={{ fontSize: "12px", lineHeight: 1.5, color: "var(--muted-foreground)", margin: "0 0 16px" }}>
+          {config.inputsNote}
+        </p>
         {taskFields.map((field) => (
           <FieldRenderer
             key={field.field_key}
@@ -82,17 +112,105 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
             onChange={(v) => setValues((prev) => ({ ...prev, [field.field_key]: v }))}
           />
         ))}
+
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "8px" }}>
+          {cost && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Coût estimé de l&apos;exécution</span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{cost}</span>
+            </div>
+          )}
+          <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
+            {buttonLabel}
+          </Button>
+          <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "10px" }}>
+            L&apos;agent ne répond pas : il produit un livrable puis déclenche une action métier.
+          </div>
+          {status !== "idle" && (
+            <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "8px" }}>
+              Simulation : le moteur IA n&apos;est pas encore branché, aucun agent n&apos;a réellement travaillé.
+            </div>
+          )}
+        </div>
       </div>
 
       <div>
-        <div style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)", marginBottom: "16px" }}>
-          APERÇU DU LIVRABLE
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
+            APERÇU DU LIVRABLE
+          </span>
+          <span
+            style={{
+              ...monoLabel,
+              textTransform: "none",
+              border: "1px solid var(--border)",
+              borderRadius: "3px",
+              padding: "2px 6px",
+              background: "var(--surface, #fff)",
+            }}
+          >
+            {previewState}
+          </span>
         </div>
+
         {Preview ? (
           <Preview values={values} />
         ) : (
           <div style={{ padding: "40px", border: "1px dashed var(--border)", borderRadius: "12px", textAlign: "center", color: "var(--muted-foreground)" }}>
             Aperçu à venir pour cet agent.
+          </div>
+        )}
+
+        {status === "done" && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "16px" }}>
+            {config.actions.map((label) =>
+              label === APPROVAL_ACTION ? (
+                <Button key={label} type="button" variant="outline" size="sm" onClick={() => router.push("/approvals")}>
+                  {label}
+                </Button>
+              ) : (
+                <Button key={label} type="button" variant="outline" size="sm" disabled title="Bientôt disponible">
+                  {label}
+                </Button>
+              )
+            )}
+          </div>
+        )}
+
+        {status !== "idle" && (
+          <div
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              background: "var(--surface, #fff)",
+              padding: "14px 18px",
+              marginTop: "16px",
+            }}
+          >
+            <div style={{ ...monoLabel, marginBottom: "10px" }}>Exécution — statut opérationnel · simulation</div>
+            {config.steps.slice(0, step).map((label, i) => (
+              <div
+                key={label}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "20px minmax(0, 1fr) auto",
+                  gap: "8px",
+                  alignItems: "center",
+                  padding: "6px 0",
+                  fontSize: "13px",
+                  borderTop: i === 0 ? "none" : "1px solid var(--border)",
+                }}
+              >
+                <span style={{ color: "#166534", fontWeight: 700 }}>✓</span>
+                <span>{label}</span>
+                <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "11px", color: "var(--muted-foreground)" }}>
+                  {((i + 1) * 0.62).toFixed(1).replace(".", ",")} s
+                </span>
+              </div>
+            ))}
+            {status === "running" && (
+              <div style={{ fontSize: "13px", color: "var(--muted-foreground)", padding: "6px 0 0" }}>…</div>
+            )}
           </div>
         )}
       </div>
