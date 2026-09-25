@@ -76,6 +76,7 @@ export default async function DashboardPage() {
   const kpiRows = await sql`
   SELECT
     (SELECT COUNT(*) FROM agents WHERE status = 'actif') AS active_agents,
+    (SELECT COUNT(*) FROM agents) AS total_agents,
     (SELECT COUNT(*) FROM workflow_executions WHERE status = 'en_cours') AS active_workflows,
     (SELECT COUNT(*) FROM activity_log WHERE created_at::date = CURRENT_DATE) AS today_activity,
     (SELECT COUNT(*) FROM approvals WHERE status = 'en_attente') AS pending_approvals,
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
 `;
   const k = kpiRows[0];
   const KPIS = [
-    { label: "Agents actifs", value: String(k.active_agents), suffix: "/ 17" },
+    { label: "Agents actifs", value: String(k.active_agents), suffix: `/ ${k.total_agents}` },
     { label: "Workflows en cours", value: String(k.active_workflows) },
     { label: "Exécutions aujourd'hui", value: String(k.today_activity) },
     { label: "En attente d'approbation", value: String(k.pending_approvals), tone: "amber" as const },
