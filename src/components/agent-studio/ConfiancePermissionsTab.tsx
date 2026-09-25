@@ -57,6 +57,11 @@ export default function ConfiancePermissionsTab({ permissions, executionHistory 
 
       <Card>
         <SectionTitle>HISTORIQUE D&apos;EXÉCUTIONS</SectionTitle>
+         {executionHistory.length === 0 && (
+          <div style={{ padding: "24px 0", fontSize: "13px", color: "var(--muted-foreground)" }}>
+            Aucune exécution pour le moment.
+          </div>
+        )}
         {executionHistory.map((h, idx) => (
           <div
             key={h.id}
