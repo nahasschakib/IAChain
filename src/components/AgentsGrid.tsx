@@ -60,7 +60,7 @@ const ICONS: Record<string, LucideIcon> = {
   "shopping-cart": ShoppingCart,
 };
 
-const CATEGORIES = ["TOUS", "SALES", "MARKETING", "FINANCE", "SUPPORT", "OPS", "RH", "E-COMMERCE"];
+const CATEGORIES = ["TOUS", "SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH"];
 
 function useColumns() {
   const [columns, setColumns] = useState(4);
