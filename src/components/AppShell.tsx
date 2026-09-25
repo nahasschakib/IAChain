@@ -120,6 +120,15 @@ const SYSTEM_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+   {
+    href: "/onboarding",
+    label: "Onboarding",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M6 20V4M6 5H17L14.5 9L17 13H6" stroke="#f5f6f8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
