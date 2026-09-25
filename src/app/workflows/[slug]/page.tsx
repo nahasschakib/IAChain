@@ -6,6 +6,8 @@ import WorkflowStudio, {
   type StudioNode,
   type PaletteAgent,
   type VersionItem,
+  type RunBanner,
+  type SwitchItem,
 } from "@/components/workflow-studio/WorkflowStudio";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +25,7 @@ export default async function WorkflowStudioPage({ params }: { params: Promise<{
   const { slug } = await params;
 
   const wfRows = await sql`
-    SELECT slug, name, version, cost_estimate, run_label, studio_ready
+    SELECT slug, name, version, cost_estimate, cost_unit, run_label, run_banner, studio_ready
     FROM workflows
     WHERE slug = ${slug}
     LIMIT 1
@@ -32,8 +34,8 @@ export default async function WorkflowStudioPage({ params }: { params: Promise<{
   if (!wf || !wf.studio_ready) notFound();
 
   const nodes = (await sql`
-    SELECT n.node_key, n.kind, n.label, n.agent_slug, n.version, n.tag,
-           n.row_index, n.col_index, n.parents, n.mapping, n.outputs,
+    SELECT n.node_key, n.kind, n.label, n.agent_slug, n.version, n.tag, n.design_note, n.blurb,
+           n.row_index, n.col_index, n.parents, n.mapping, n.outputs, n.details,
            n.run_state, n.run_note,
            a.name AS agent_name, a.code AS agent_code, a.role AS agent_role
     FROM workflow_nodes n
@@ -42,8 +44,8 @@ export default async function WorkflowStudioPage({ params }: { params: Promise<{
     ORDER BY n.row_index, n.col_index
   `) as unknown as StudioNode[];
 
-  // Palette : les agents des mêmes catégories que ceux du workflow.
-    const palette = (await sql`
+  // Palette : les agents de la catégorie de l'agent de départ + ceux du workflow.
+  const palette = (await sql`
     SELECT slug, name, role
     FROM agents
     WHERE category = (
@@ -57,6 +59,10 @@ export default async function WorkflowStudioPage({ params }: { params: Promise<{
     OR slug IN (SELECT agent_slug FROM workflow_nodes WHERE workflow_slug = ${slug} AND agent_slug IS NOT NULL)
     ORDER BY code ASC
   `) as unknown as PaletteAgent[];
+
+  const switcher = (await sql`
+    SELECT slug, code FROM workflows WHERE studio_ready = true ORDER BY sort_order
+  `) as unknown as SwitchItem[];
 
   const rawVersion = String(wf.version ?? "");
   const version = /^v/i.test(rawVersion) ? rawVersion : `v${rawVersion}`;
@@ -89,7 +95,11 @@ export default async function WorkflowStudioPage({ params }: { params: Promise<{
         palette={palette}
         versions={VERSIONS[slug] ?? []}
         costEstimate={Number(wf.cost_estimate ?? 0)}
+        costUnit={(wf.cost_unit as string) ?? "run"}
         runLabel={(wf.run_label as string | null) ?? null}
+        runBanner={(wf.run_banner as RunBanner | null) ?? null}
+        switcher={switcher}
+        currentSlug={slug}
       />
     </AppShell>
   );

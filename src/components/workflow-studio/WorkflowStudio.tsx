@@ -3,18 +3,32 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
+export type DetailRow = { k?: string; v: string };
+export type DetailBlock = { label: string; type?: "kv" | "pairs" | "rules"; rows: DetailRow[] };
+export type NodeDetails = {
+  intro?: string;
+  blocks?: DetailBlock[];
+  note?: string;
+  link?: { label: string; href: string };
+};
+export type RunBanner = { title: string; tone: "alert" | "info"; text: string; actions: string[] };
+export type SwitchItem = { slug: string; code: string };
+
 export type StudioNode = {
   node_key: string;
-  kind: "agent" | "merge" | "approval" | "action";
+  kind: "agent" | "merge" | "approval" | "action" | "condition";
   label: string;
   agent_slug: string | null;
   version: string | null;
   tag: string | null;
+  design_note: string | null;
+  blurb: string | null;
   row_index: number;
   col_index: number;
   parents: string[];
   mapping: { from: string; to: string }[];
   outputs: string[];
+  details: NodeDetails;
   run_state: "done" | "running" | "failed" | "waiting" | "pending";
   run_note: string | null;
   agent_name: string | null;
@@ -27,8 +41,8 @@ export type VersionItem = { label: string; detail: string; current: boolean };
 type Mode = "design" | "run";
 
 const W = 760; // largeur logique du graphe
-const NODE_H = 58;
-const ROW_PITCH = 96;
+const NODE_H = 64;
+const ROW_PITCH = 100;
 const PAD = 12;
 
 const panel: React.CSSProperties = {
@@ -45,6 +59,11 @@ const mono: React.CSSProperties = {
   textTransform: "uppercase",
   color: "var(--steel)",
 };
+const sectionLabel: React.CSSProperties = {
+  ...mono,
+  color: "var(--graphite)",
+  marginBottom: 6,
+};
 const ghostBtn: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
@@ -53,30 +72,129 @@ const ghostBtn: React.CSSProperties = {
   border: "1px solid var(--line)",
   background: "var(--surface)",
   color: "var(--ink)",
+  WebkitTextFillColor: "var(--ink)",
   cursor: "pointer",
+};
+const smallBtn: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  padding: "7px 12px",
+  borderRadius: 8,
+  border: "1px solid var(--line)",
+  background: "var(--surface)",
+  color: "var(--ink)",
+  WebkitTextFillColor: "var(--ink)",
+  cursor: "pointer",
+  textDecoration: "none",
 };
 
 const CONTROL_CHIPS = ["Condition", "Merge", "Approbation", "Fallback"];
 
-const KIND_TEXT: Record<string, string> = {
-  merge: "Attend la fin de toutes les branches amont avant de continuer.",
-  approval: "Un humain valide avant l'action métier. Le SLA s'applique à cette étape.",
-  action: "Écrit le résultat dans le système métier (CRM).",
+const KIND_HEADER: Record<string, string> = {
+  merge: "MERGE · JOIN",
+  approval: "APPROVAL",
+  action: "ACTION",
+  condition: "CONDITION",
 };
 
 function stateView(n: StudioNode) {
+  const t = n.run_note;
   switch (n.run_state) {
     case "done":
-      return { text: "✓ terminé", color: "var(--signal)" };
+      return { text: `✓ ${t ?? "terminé"}`, color: "var(--signal)" };
     case "failed":
-      return { text: `⚠ ${n.run_note ?? "échec"}`, color: "var(--red)" };
+      return { text: `⚠ ${t ?? "échec"}`, color: "var(--red)" };
     case "waiting":
-      return { text: n.run_note ?? "en attente", color: "var(--amber)" };
+      return { text: t ?? "en attente", color: "var(--amber)" };
     case "running":
-      return { text: "● en cours", color: "var(--amber)" };
+      return { text: `● ${t ?? "en cours"}`, color: "var(--amber)" };
     default:
-      return { text: "à venir", color: "var(--muted-foreground)" };
+      return { text: t ?? "à venir", color: "var(--muted-foreground)" };
   }
+}
+
+function DetailBlocks({ details }: { details: NodeDetails }) {
+  return (
+    <>
+      {details.intro && (
+        <p style={{ fontSize: 12, color: "var(--graphite)", lineHeight: 1.55, margin: "0 0 14px" }}>{details.intro}</p>
+      )}
+
+      {(details.blocks ?? []).map((b) => (
+        <div key={b.label} style={{ marginBottom: 14 }}>
+          <div style={sectionLabel}>{b.label}</div>
+
+          {(b.type === "kv" || !b.type) && (
+            <div style={{ display: "grid", gap: 8 }}>
+              {b.rows.map((r, i) => (
+                <div key={i}>
+                  {r.k && <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{r.k}</div>}
+                  <div style={{ fontSize: 12, color: r.k ? "var(--graphite)" : "var(--ink)", lineHeight: 1.5 }}>{r.v}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {b.type === "pairs" && (
+            <div style={{ display: "grid", gap: 6 }}>
+              {b.rows.map((r, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    background: "var(--paper)",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    fontSize: 12,
+                  }}
+                >
+                  <span style={{ color: "var(--ink)" }}>{r.k}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--steel)" }}>{r.v}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {b.type === "rules" && (
+            <div style={{ display: "grid", gap: 8 }}>
+              {b.rows.map((r, i) => (
+                <div key={i} style={{ background: "var(--paper)", borderRadius: 8, padding: "8px 10px", fontSize: 12 }}>
+                  <div>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--graphite)", marginRight: 6 }}>SI</span>
+                    {r.k}
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--graphite)", marginRight: 6 }}>
+                      ALORS →
+                    </span>
+                    <strong style={{ color: "var(--steel)" }}>{r.v}</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {details.note && (
+        <div
+          style={{
+            background: "var(--steel-tint)",
+            borderRadius: 8,
+            padding: "10px 12px",
+            fontSize: 12,
+            color: "var(--steel)",
+            lineHeight: 1.5,
+            marginBottom: 14,
+          }}
+        >
+          {details.note}
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function WorkflowStudio({
@@ -84,17 +202,30 @@ export default function WorkflowStudio({
   palette,
   versions,
   costEstimate,
+  costUnit,
   runLabel,
+  runBanner,
+  switcher,
+  currentSlug,
 }: {
   nodes: StudioNode[];
   palette: PaletteAgent[];
   versions: VersionItem[];
   costEstimate: number;
+  costUnit: string;
   runLabel: string | null;
+  runBanner: RunBanner | null;
+  switcher: SwitchItem[];
+  currentSlug: string;
 }) {
   const [mode, setMode] = useState<Mode>("design");
   const [selectedKey, setSelectedKey] = useState<string>(
-    () => (nodes.find((n) => n.mapping.length > 0) ?? nodes[0])?.node_key ?? ""
+    () =>
+      (
+        nodes.find((n) => n.kind === "condition") ??
+        nodes.find((n) => n.mapping.length > 2) ??
+        nodes[0]
+      )?.node_key ?? ""
   );
 
   const layout = useMemo(() => {
@@ -131,12 +262,34 @@ export default function WorkflowStudio({
 
   const selected = nodes.find((n) => n.node_key === selectedKey) ?? nodes[0];
   const cost = costEstimate.toFixed(2).replace(".", ",");
+  const showsIO = selected && (selected.kind === "agent" || selected.kind === "action");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* BARRE D'OUTILS */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {/* Navigation entre workflows */}
+          <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
+            {switcher.map((w) => (
+              <Link
+                key={w.slug}
+                href={`/workflows/${w.slug}`}
+                style={{
+                  padding: "8px 12px",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  background: w.slug === currentSlug ? "var(--paper)" : "var(--surface)",
+                  fontWeight: w.slug === currentSlug ? 700 : 400,
+                  color: "var(--ink)",
+                  borderRight: "1px solid var(--line)",
+                }}
+              >
+                {w.code}
+              </Link>
+            ))}
+          </div>
+
           <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 8, overflow: "hidden" }}>
             {(
               [
@@ -178,7 +331,7 @@ export default function WorkflowStudio({
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)" }}>
-            Coût estimé du run ≈ {cost} MAD
+            Coût estimé ≈ {cost} MAD / {costUnit}
           </span>
           {/* Simulation : affiche l'état d'un run d'exemple. À remplacer par l'appel au moteur d'exécution. */}
           <button onClick={() => setMode("run")} style={ghostBtn}>
@@ -240,10 +393,11 @@ export default function WorkflowStudio({
             {nodes.map((n) => {
               const p = layout.pos[n.node_key];
               const isSel = n.node_key === selected?.node_key;
-              const dashed = n.kind === "merge" || n.kind === "approval";
+              const dashed = n.kind === "merge" || n.kind === "approval" || n.kind === "condition";
               const dark = n.kind === "action";
               const sv = stateView(n);
               const rightTag = n.version ?? n.tag;
+              const sub = mode === "run" ? sv.text : n.design_note ?? "conçu";
               return (
                 <button
                   key={n.node_key}
@@ -273,15 +427,18 @@ export default function WorkflowStudio({
                     gap: 3,
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                     <span
+                      title={n.label}
                       style={{
                         fontSize: 13,
                         fontWeight: 700,
+                        lineHeight: 1.2,
                         color: dark ? "#f5f6f8" : "var(--ink)",
-                        whiteSpace: "nowrap",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
                         overflow: "hidden",
-                        textOverflow: "ellipsis",
                       }}
                     >
                       {n.label}
@@ -293,6 +450,7 @@ export default function WorkflowStudio({
                     )}
                   </div>
                   <span
+                    title={sub}
                     style={{
                       fontFamily: "var(--font-mono)",
                       fontSize: 11,
@@ -302,7 +460,7 @@ export default function WorkflowStudio({
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {mode === "run" ? sv.text : "conçu"}
+                    {sub}
                   </span>
                 </button>
               );
@@ -310,25 +468,49 @@ export default function WorkflowStudio({
           </div>
         </div>
 
-        {/* INSPECTEUR + VERSIONS */}
+        {/* COLONNE DROITE : bandeau d'exécution, inspecteur, versions */}
         <div style={{ flex: "1 1 340px", minWidth: 300, maxWidth: 380, display: "flex", flexDirection: "column", gap: 16 }}>
+          {mode === "run" && runBanner && (
+            <div
+              style={{
+                ...panel,
+                borderLeft: `3px solid ${runBanner.tone === "alert" ? "var(--red)" : "var(--amber)"}`,
+              }}
+            >
+              <div style={{ ...mono, color: runBanner.tone === "alert" ? "var(--red)" : "var(--amber)" }}>{runBanner.title}</div>
+              <p style={{ fontSize: 12.5, color: "var(--ink)", lineHeight: 1.55, margin: "8px 0 12px" }}>{runBanner.text}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {runBanner.actions.map((a) =>
+                  a.startsWith("Ouvrir") ? (
+                    <Link key={a} href="/approvals" style={smallBtn}>
+                      {a}
+                    </Link>
+                  ) : (
+                    <button key={a} disabled title="Bientôt disponible" style={{ ...smallBtn, opacity: 0.5, cursor: "not-allowed" }}>
+                      {a}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+
           {selected && (
             <div style={panel}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={mono}>Inspecteur</span>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--graphite)" }}>
-                  {selected.kind === "agent" ? `AGENT · ${selected.agent_code ?? "—"}` : selected.kind.toUpperCase()}
+                  {selected.kind === "agent" ? `AGENT · ${selected.agent_code ?? "—"}` : KIND_HEADER[selected.kind]}
                 </span>
               </div>
               <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, margin: "12px 0 4px" }}>
                 {selected.label}
               </div>
               <p style={{ fontSize: 12, color: "var(--graphite)", lineHeight: 1.55, margin: "0 0 14px" }}>
-                {selected.kind === "agent"
-                  ? selected.agent_name
+                {selected.blurb ??
+                  (selected.kind === "agent" && selected.agent_name
                     ? `${selected.agent_name} — ${selected.agent_role ?? ""}`
-                    : "Agent du workflow."
-                  : KIND_TEXT[selected.kind]}
+                    : "")}
               </p>
 
               {mode === "run" && (
@@ -337,9 +519,11 @@ export default function WorkflowStudio({
                 </div>
               )}
 
-              {selected.kind === "agent" && (
+              <DetailBlocks details={selected.details ?? {}} />
+
+              {showsIO && (
                 <>
-                  <div style={{ ...mono, color: "var(--graphite)", marginBottom: 6 }}>Mapping entrée ← amont</div>
+                  <div style={sectionLabel}>Mapping entrée ← amont</div>
                   {selected.mapping.length === 0 ? (
                     <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 14 }}>Mapping à définir.</div>
                   ) : (
@@ -348,7 +532,7 @@ export default function WorkflowStudio({
                         <div
                           key={m.from + m.to}
                           style={{
-                             display: "grid",
+                            display: "grid",
                             gridTemplateColumns: "1fr auto 1fr",
                             gap: 8,
                             background: "var(--paper)",
@@ -360,13 +544,13 @@ export default function WorkflowStudio({
                         >
                           <span>{m.from}</span>
                           <span style={{ color: "var(--graphite)" }}>→</span>
-                                                    <span style={{ color: "var(--steel)", textAlign: "right" }}>{m.to}</span>
+                          <span style={{ color: "var(--steel)", textAlign: "right" }}>{m.to}</span>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  <div style={{ ...mono, color: "var(--graphite)", marginBottom: 6 }}>Sortie publiée</div>
+                  <div style={sectionLabel}>Sortie publiée</div>
                   {selected.outputs.length === 0 ? (
                     <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 14 }}>
                       Sorties définies par le contrat de l&apos;agent.
@@ -380,25 +564,43 @@ export default function WorkflowStudio({
                       ))}
                     </ul>
                   )}
-
-                  {selected.agent_slug && (
-                    <Link
-                      href={`/agents/${selected.agent_slug}`}
-                      style={{
-                        display: "block",
-                        textAlign: "center",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        padding: "9px 12px",
-                        borderRadius: 8,
-                        border: "1px solid var(--line)",
-                        color: "var(--ink)",
-                      }}
-                    >
-                      Ouvrir le studio de cet agent →
-                    </Link>
-                  )}
                 </>
+              )}
+
+              {selected.details?.link && (
+                <Link
+                  href={selected.details.link.href}
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--line)",
+                    color: "var(--ink)",
+                  }}
+                >
+                  {selected.details.link.label}
+                </Link>
+              )}
+
+              {selected.kind === "agent" && selected.agent_slug && (
+                <Link
+                  href={`/agents/${selected.agent_slug}`}
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--line)",
+                    color: "var(--ink)",
+                  }}
+                >
+                  Ouvrir le studio de cet agent →
+                </Link>
               )}
             </div>
           )}
