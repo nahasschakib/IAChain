@@ -5,23 +5,47 @@ import { sql } from "@/lib/db";
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_HOVER = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
 
+function plural(n: number, one: string, many: string) {
+  return `${n} ${n > 1 ? many : one}`;
+}
+
 export default async function WorkflowsPage() {
   const rows = await sql`
-    SELECT w.slug, w.name, w.version, w.status,
+    SELECT w.slug, w.name, w.version, w.status, w.code, w.description, w.chain,
+      w.node_count, w.merge_count, w.approval_count, w.studio_ready, w.sort_order,
       COUNT(e.id) FILTER (WHERE e.status = 'en_cours') AS active_count
     FROM workflows w
     LEFT JOIN workflow_executions e ON e.workflow_id = w.id
-    GROUP BY w.id, w.slug, w.name, w.version, w.status
-    ORDER BY w.id
+    GROUP BY w.id, w.slug, w.name, w.version, w.status, w.code, w.description, w.chain,
+      w.node_count, w.merge_count, w.approval_count, w.studio_ready, w.sort_order
+    ORDER BY w.sort_order NULLS LAST, w.id
   `;
 
-  const workflows = rows.map((row) => ({
-    slug: row.slug as string,
-    name: row.name as string,
-    version: row.version as string,
-    active: row.status === "actif",
-    activeCount: Number(row.active_count),
-  }));
+  const workflows = rows.map((row) => {
+    const nodes = Number(row.node_count ?? 0);
+    const merges = Number(row.merge_count ?? 0);
+    const approvals = Number(row.approval_count ?? 0);
+    const meta = [
+      nodes > 0 ? plural(nodes, "nœud", "nœuds") : null,
+      merges > 0 ? plural(merges, "fusion", "fusions") : null,
+      approvals > 0 ? plural(approvals, "approbation", "approbations") : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    return {
+      slug: row.slug as string,
+      name: row.name as string,
+      version: row.version as string,
+      active: row.status === "actif",
+      code: (row.code as string | null) ?? "",
+      description: (row.description as string | null) ?? "",
+      chain: Array.isArray(row.chain) ? (row.chain as string[]) : [],
+      meta,
+      studioReady: Boolean(row.studio_ready),
+      activeCount: Number(row.active_count),
+    };
+  });
 
   return (
     <AppShell
@@ -49,93 +73,153 @@ export default async function WorkflowsPage() {
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {workflows.map((wf) => (
-          <Link
-            key={wf.slug}
-            href={`/workflows/${wf.slug}`}
-            className="workflow-row"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              background: "var(--surface)",
-              border: "1px solid var(--line)",
-              borderRadius: 14,
-              padding: "18px 24px",
-              textDecoration: "none",
-              color: "inherit",
-              boxShadow: CARD_SHADOW,
-              transition: "box-shadow 0.18s ease, transform 0.18s ease",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  background: "linear-gradient(135deg, var(--steel-tint), var(--steel-deep, #3d5f80))",
-                  color: "var(--steel-strong, #2f4a63)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none">
-                  <circle cx="5" cy="6" r="2.4" stroke="currentColor" strokeWidth="1.6" />
-                  <circle cx="5" cy="18" r="2.4" stroke="currentColor" strokeWidth="1.6" />
-                  <circle cx="19" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.6" />
-                  <path d="M7.3 7L16.7 11M7.3 17L16.7 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16 }}>{wf.name}</div>
+      <header style={{ marginBottom: 28, paddingBottom: 24, borderBottom: "1px solid var(--line)" }}>
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--graphite)",
+            marginBottom: 10,
+          }}
+        >
+          Formule 2 · workflows métier
+        </div>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: 30,
+            letterSpacing: "-0.01em",
+            lineHeight: 1.15,
+            margin: 0,
+          }}
+        >
+          Processus complets, plusieurs agents en chaîne
+        </h1>
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--graphite)", maxWidth: 640, margin: "12px 0 0" }}>
+          Un workflow n&apos;est pas une liste d&apos;agents : la sortie de chacun est l&apos;entrée du suivant, avec mapping
+          explicite, fusion de branches, approbation humaine et action métier finale.
+        </p>
+      </header>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
+        {workflows.map((wf) => {
+          const cardStyle: React.CSSProperties = {
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: 4,
+            padding: "22px 24px 0",
+            textDecoration: "none",
+            color: "inherit",
+            boxShadow: CARD_SHADOW,
+            transition: "box-shadow 0.18s ease, transform 0.18s ease",
+          };
+
+          const content = (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <span
                   style={{
-                    display: "inline-block",
-                    marginTop: 4,
-                    fontSize: 10,
                     fontFamily: "var(--font-mono)",
-                    color: "var(--graphite)",
-                    background: "var(--paper)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 5,
-                    padding: "1px 6px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--steel-strong, #2f4a63)",
                   }}
                 >
-                  {wf.version}
+                  {wf.code}
+                </span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--graphite)" }}>
+                  {wf.version} · {wf.active ? "actif" : "inactif"}
                 </span>
               </div>
-            </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 22, letterSpacing: "-0.01em" }}>
+                  {wf.name}
+                </div>
+                <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "var(--graphite)", margin: 0 }}>{wf.description}</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignContent: "flex-start" }}>
+                  {wf.chain.map((step, i) => (
+                    <span
+                      key={`${step}-${i}`}
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 11.5,
+                        color: "var(--graphite)",
+                        background: "var(--paper)",
+                        border: "1px solid var(--line)",
+                        padding: "3px 8px",
+                      }}
+                    >
+                      {step}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div
                 style={{
-                  display: "inline-flex",
+                  display: "flex",
+                  justifyContent: "space-between",
                   alignItems: "center",
-                  gap: 5,
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono)",
-                  color: wf.active ? "var(--signal)" : "var(--graphite)",
-                  background: wf.active ? "rgba(90,140,110,0.12)" : "var(--paper)",
-                  border: `1px solid ${wf.active ? "var(--signal)" : "var(--line)"}`,
-                  borderRadius: 20,
-                  padding: "4px 10px",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  borderTop: "1px solid var(--line)",
+                  padding: "14px 0 16px",
                 }}
               >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: wf.active ? "var(--signal)" : "var(--graphite)" }} />
-                {wf.activeCount} en cours
-              </span>
-              <span style={{ fontSize: 16, color: "var(--graphite)" }}>→</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12.5, color: "var(--graphite)" }}>{wf.meta}</span>
+                  {wf.activeCount > 0 && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        fontSize: 11,
+                        fontFamily: "var(--font-mono)",
+                        color: "var(--signal)",
+                      }}
+                    >
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--signal)" }} />
+                      {wf.activeCount} en cours
+                    </span>
+                  )}
+                </div>
+                <span
+                  title={wf.studioReady ? undefined : "Studio bientôt disponible"}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: wf.studioReady ? "var(--steel-strong, #2f4a63)" : "var(--graphite)",
+                    opacity: wf.studioReady ? 1 : 0.55,
+                  }}
+                >
+                  {wf.studioReady ? "Ouvrir le studio →" : "Aperçu →"}
+                </span>
+              </div>
+            </>
+          );
+
+          return wf.studioReady ? (
+            <Link key={wf.slug} href={`/workflows/${wf.slug}`} className="workflow-card is-link" style={cardStyle}>
+              {content}
+            </Link>
+          ) : (
+            <div key={wf.slug} className="workflow-card" style={{ ...cardStyle, cursor: "default" }}>
+              {content}
             </div>
-          </Link>
-        ))}
+          );
+        })}
       </div>
 
       <style>{`
-        .workflow-row:hover {
+        .workflow-card.is-link:hover {
           box-shadow: ${CARD_SHADOW_HOVER};
           transform: translateY(-1px);
         }
