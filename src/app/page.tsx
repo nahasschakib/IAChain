@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div
@@ -682,9 +684,9 @@ export default function Home() {
               </div>
               <div style={{ fontWeight: 600, fontSize: 15 }}>{agent.name}</div>
               <p style={{ fontSize: 13, color: "var(--graphite)", lineHeight: 1.55, margin: 0 }}>{agent.desc}</p>
-              <a href="/agents/lead-qualification"  style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)", marginTop: 6 }}>
+              <Link href="/agents/lead-qualification"  style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)", marginTop: 6 }}>
                 Ouvrir le Studio →
-              </a>
+              </Link>
             </div>
           ))}
         </div>
