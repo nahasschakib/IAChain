@@ -1,5 +1,34 @@
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import Link from "next/link";
+import type { CSSProperties } from "react";
+export const dynamic = "force-dynamic";
+
+const CARD: CSSProperties = {
+  background: "var(--surface)",
+  border: "1px solid var(--line)",
+  borderRadius: 14,
+  padding: 20,
+  boxShadow:
+    "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
+};
+
+const CARD_HEADER: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+  flexWrap: "wrap",
+  marginBottom: 14,
+};
+
+const CARD_TITLE: CSSProperties = { fontWeight: 700, fontSize: 15 };
+
+const CARD_LINK: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  color: "var(--steel)",
+};
 
 const TONE_COLORS = {
   signal: "var(--signal)",
@@ -7,47 +36,62 @@ const TONE_COLORS = {
   red: "var(--red)",
 };
 
-const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
+const CARD_SHADOW =
+  "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
-function WorkflowProgress({ done, total }: { done: number; total: number }) {
-  return (
-    <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          style={{
-            width: 16,
-            height: 4,
-            borderRadius: 2,
-            background: i < done - 1 ? "var(--signal)" : i === done - 1 ? "var(--steel)" : "var(--line)",
-          }}
-        />
-      ))}
-    </div>
-  );
+function formatSla(minutesLeft: number | null): {
+  label: string;
+  late: boolean;
+} {
+  if (minutesLeft === null) return { label: "—", late: false };
+  if (minutesLeft < 0) return { label: "En retard", late: true };
+  if (minutesLeft < 60)
+    return { label: `${Math.round(minutesLeft)} min`, late: true };
+  const h = Math.floor(minutesLeft / 60);
+  const m = Math.round(minutesLeft % 60);
+  return {
+    label: m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`,
+    late: minutesLeft < 120,
+  };
+}
+function formatMAD(n: number, digits = 2): string {
+  return `${new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(n)} MAD`;
 }
 
 export default async function DashboardPage() {
-  const agentRows = await sql`SELECT name, status FROM agents ORDER BY id`;
-  const workforce = agentRows.map((row) => ({
-    name: row.name as string,
-    status: row.status as string,
-    on: row.status === "actif",
-  }));
-
+  
   const executionRows = await sql`
-    SELECT w.name AS workflow_name, e.client_label, e.current_step, e.progress_done, e.progress_total
+    SELECT w.name AS workflow_name, e.client_label, e.current_step, e.progress_done, e.progress_total,
+      EXISTS (
+        SELECT 1 FROM approvals a
+        WHERE a.workflow_id = e.workflow_id AND a.status = 'en_attente'
+      ) AS has_approval,
+      EXISTS (
+        SELECT 1 FROM activity_log l
+        WHERE l.workflow_id = e.workflow_id AND l.status = 'Échec'
+          AND l.created_at >= now() - interval '7 days'
+      ) AS has_failure
     FROM workflow_executions e
     JOIN workflows w ON w.id = e.workflow_id
     WHERE e.status = 'en_cours'
     ORDER BY e.id
   `;
-  const activeWorkflows = executionRows.map((row) => ({
-    name: `${row.workflow_name} — ${row.client_label}`,
-    step: `Étape en cours : ${row.current_step}`,
-    done: row.progress_done as number,
-    total: row.progress_total as number,
-  }));
+  const activeWorkflows = executionRows.map((row) => {
+    const badge = row.has_failure
+      ? { label: "ATTENTION", tone: "red" as const }
+      : row.has_approval
+        ? { label: "APPROBATION", tone: "amber" as const }
+        : { label: "EN COURS", tone: "signal" as const };
+    return {
+      name: `${row.workflow_name} — ${row.client_label}`,
+      step: `Étape ${row.progress_done}/${row.progress_total} · ${row.current_step}`,
+      badge,
+    };
+  });
+
   const activityRows = await sql`
     SELECT to_char(a.created_at, 'HH24:MI') AS time, a.agent_label, w.name AS workflow_name, a.status, a.tone
     FROM activity_log a
@@ -62,41 +106,114 @@ export default async function DashboardPage() {
     status: row.status as string,
     tone: row.tone as "signal" | "amber" | "red",
   }));
+
   const approvalRows = await sql`
-    SELECT title, detail
+    SELECT title, EXTRACT(EPOCH FROM (due_at - now())) / 60 AS minutes_left
     FROM approvals
     WHERE status = 'en_attente'
-    ORDER BY created_at
+    ORDER BY due_at ASC NULLS LAST, created_at
   `;
   const approvalQueue = approvalRows.map((row) => ({
     title: row.title as string,
-    detail: row.detail as string,
+    sla: formatSla(row.minutes_left === null ? null : Number(row.minutes_left)),
+  }));
+
+  const integrationRows =
+    await sql`SELECT name, status, tone FROM integrations ORDER BY id`;
+  const integrations = integrationRows.map((row) => ({
+    name: row.name as string,
+    status: row.status as string,
+    tone: row.tone as "signal" | "amber" | "red",
   }));
 
   const kpiRows = await sql`
-  SELECT
-    (SELECT COUNT(*) FROM agents WHERE status = 'actif') AS active_agents,
-    (SELECT COUNT(*) FROM agents) AS total_agents,
-    (SELECT COUNT(*) FROM workflow_executions WHERE status = 'en_cours') AS active_workflows,
-    (SELECT COUNT(*) FROM activity_log WHERE created_at::date = CURRENT_DATE) AS today_activity,
-    (SELECT COUNT(*) FROM approvals WHERE status = 'en_attente') AS pending_approvals,
-    (SELECT COUNT(*) FROM activity_log WHERE status = 'Échec' AND created_at >= now() - interval '7 days') AS errors_7d
-`;
+    SELECT
+      (SELECT COUNT(*) FROM agents WHERE status = 'actif') AS active_agents,
+      (SELECT COUNT(*) FROM agents) AS total_agents,
+      (SELECT COUNT(*) FROM workflow_executions WHERE status = 'en_cours') AS active_workflows,
+      (SELECT STRING_AGG(DISTINCT w.name, ' · ')
+         FROM workflow_executions e JOIN workflows w ON w.id = e.workflow_id
+         WHERE e.status = 'en_cours') AS workflow_names,
+      (SELECT COUNT(*) FROM approvals WHERE status = 'en_attente') AS pending_approvals,
+      (SELECT COUNT(*) FROM activity_log
+         WHERE status = 'Échec' AND created_at >= now() - interval '7 days') AS incidents_7d,
+      (SELECT agent_label FROM activity_log
+         WHERE status = 'Échec' ORDER BY created_at DESC LIMIT 1) AS last_incident_agent,
+      (SELECT COUNT(*) FROM deliverables
+         WHERE created_at >= now() - interval '7 days') AS deliverables_7d,
+      (SELECT COUNT(*) FROM deliverables
+         WHERE created_at >= now() - interval '14 days'
+           AND created_at <  now() - interval '7 days') AS deliverables_prev,
+       (SELECT COALESCE(SUM(cost), 0) FROM deliverables
+         WHERE created_at >= now() - interval '7 days') AS cost_7d,
+         (SELECT COUNT(cost) FROM deliverables
+         WHERE created_at >= now() - interval '7 days') AS costed_7d    
+  `;
   const k = kpiRows[0];
-  const KPIS = [
-    { label: "Agents actifs", value: String(k.active_agents), suffix: `/ ${k.total_agents}` },
-    { label: "Workflows en cours", value: String(k.active_workflows) },
-    { label: "Exécutions aujourd'hui", value: String(k.today_activity) },
-    { label: "En attente d'approbation", value: String(k.pending_approvals), tone: "amber" as const },
-    { label: "Erreurs (7 jours)", value: String(k.errors_7d) },
+  const deliverables = Number(k.deliverables_7d);
+  const delta = deliverables - Number(k.deliverables_prev);
+  const pending = Number(k.pending_approvals);
+  const incidents = Number(k.incidents_7d);
+  const cost = Number(k.cost_7d);
+  const costed = Number(k.costed_7d);
+
+  type Tone = "amber" | "red" | undefined;
+
+  const KPIS: { label: string; value: string; note: string; tone: Tone }[] = [
+    {
+      label: "Agents actifs",
+      value: String(k.active_agents),
+      note: `sur ${k.total_agents} disponibles`,
+      tone: undefined,
+    },
+    {
+      label: "Workflows en cours",
+      value: String(k.active_workflows),
+      note: (k.workflow_names as string | null) ?? "Aucun en cours",
+      tone: undefined,
+    },
+    {
+      label: "Approbations",
+      value: String(pending),
+      note: pending > 0 ? "en attente de décision" : "rien en attente",
+      tone: pending > 0 ? "amber" : undefined,
+    },
+    {
+      label: "Incidents",
+      value: String(incidents),
+      note:
+        incidents > 0
+          ? `${k.last_incident_agent} · dernier échec`
+          : "aucun sur 7 jours",
+      tone: incidents > 0 ? "red" : undefined,
+    },
+    {
+      label: "Livrables / semaine",
+      value: String(deliverables),
+      note:
+        Number(k.deliverables_prev) === 0
+          ? "première semaine de données"
+          : `${delta >= 0 ? "+" : ""}${delta} vs semaine passée`,
+      tone: undefined,
+    },
+         {
+      label: "Coût / semaine",
+      value: formatMAD(cost),
+      note:
+        costed > 0
+          ? `≈ ${formatMAD(cost / costed)} / livrable · ${costed} chiffrés`
+          : "aucun livrable chiffré",
+      tone: undefined,
+    },
   ];
 
-  const todayLabel = new Date().toLocaleDateString("fr-FR", {
+  const rawDate = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+  const todayLabel = rawDate.charAt(0).toUpperCase() + rawDate.slice(1);
 
   return (
     <AppShell>
@@ -112,90 +229,178 @@ export default async function DashboardPage() {
         >
           Bonjour Chakib — voici votre AI Workforce aujourd&apos;hui
         </h1>
-        <p style={{ fontSize: 13, color: "var(--graphite)", margin: "6px 0 0", textTransform: "capitalize" }}>{todayLabel}</p>
+        <p
+          style={{ fontSize: 13, color: "var(--graphite)", margin: "6px 0 0" }}
+        >
+          {todayLabel}
+        </p>
       </div>
 
       {/* KPI ROW */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+      <div className="kpi-grid">
         {KPIS.map((kpi) => (
           <div
             key={kpi.label}
             style={{
-              background: kpi.tone === "amber" ? "#fdf6ec" : "var(--surface)",
-              border: kpi.tone === "amber" ? "1px solid #f0dfc3" : "1px solid var(--line)",
+              background:
+                kpi.tone === "amber"
+                  ? "#fdf6ec"
+                  : kpi.tone === "red"
+                    ? "#fdf0ef"
+                    : "var(--surface)",
+              border:
+                kpi.tone === "amber"
+                  ? "1px solid #f0dfc3"
+                  : kpi.tone === "red"
+                    ? "1px solid #f0d4d2"
+                    : "1px solid var(--line)",
               borderRadius: 12,
               padding: 18,
               boxShadow: CARD_SHADOW,
             }}
           >
-            <span style={{ fontSize: 12, color: kpi.tone === "amber" ? "var(--amber)" : "var(--graphite)" }}>
+            <span
+              style={{
+                fontSize: 12,
+                color: kpi.tone ? `var(--${kpi.tone})` : "var(--graphite)",
+              }}
+            >
               {kpi.label}
             </span>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 6 }}>
-              <span
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontWeight: 800,
-                  fontSize: 26,
-                  color: kpi.tone === "amber" ? "var(--amber)" : "var(--ink)",
-                }}
-              >
-                {kpi.value}
-              </span>
-              {kpi.suffix && <span style={{ fontSize: 12, color: "var(--graphite)" }}>{kpi.suffix}</span>}
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                fontSize: 26,
+                marginTop: 6,
+                color: kpi.tone ? `var(--${kpi.tone})` : "var(--ink)",
+              }}
+            >
+              {kpi.value}
+            </div>
+            <div
+              style={{ fontSize: 11.5, color: "var(--graphite)", marginTop: 4 }}
+            >
+              {kpi.note}
             </div>
           </div>
         ))}
-        <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: 18, boxShadow: CARD_SHADOW }}>
-          <span style={{ fontSize: 12, color: "var(--graphite)" }}>Consommation (plan Pro)</span>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 6 }}>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26 }}>68%</span>
-            <span style={{ fontSize: 11, color: "var(--graphite)" }}>du quota mensuel</span>
-          </div>
-          <div style={{ height: 4, borderRadius: 2, background: "var(--line)", marginTop: 8, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: "68%", background: "var(--steel)" }} />
-          </div>
-        </div>
       </div>
 
       {/* TWO COLUMN AREA */}
-      <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-        {/* LEFT: workflows + activity */}
-        <div style={{ flex: "2 1 480px", minWidth: 320, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 20, boxShadow: CARD_SHADOW }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <span style={{ fontWeight: 700, fontSize: 15 }}>Workflows actifs</span>
-              <a href="/workflows" style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 20,
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* LEFT: exécutions + activité */}
+        <div
+          style={{
+            flex: "2 1 480px",
+            minWidth: 320,
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+          }}
+        >
+          {/* Exécutions en cours */}
+          <div style={CARD}>
+            <div style={CARD_HEADER}>
+              <span style={CARD_TITLE}>Exécutions en cours</span>
+              <Link href="/workflows" style={CARD_LINK}>
                 Voir tout →
-              </a>
+              </Link>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {activeWorkflows.map((wf) => (
-                <div key={wf.name} style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{wf.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--graphite)", marginTop: 2 }}>{wf.step}</div>
-                  </div>
-                  <WorkflowProgress done={wf.done} total={wf.total} />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)", flexShrink: 0 }}>
-                    {wf.done}/{wf.total}
+            {activeWorkflows.map((wf, i) => (
+              <Link
+                key={wf.name}
+                href="/workflows"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "8px minmax(0, 1fr) auto",
+                  gap: 12,
+                  alignItems: "center",
+                  padding: "12px 0",
+                  borderBottom:
+                    i < activeWorkflows.length - 1
+                      ? "1px solid var(--line)"
+                      : "none",
+                  color: "inherit",
+                  textDecoration: "none",
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: TONE_COLORS[wf.badge.tone],
+                  }}
+                />
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 3,
+                    minWidth: 0,
+                  }}
+                >
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    {wf.name}
                   </span>
-                </div>
-              ))}
-            </div>
+                  <span style={{ fontSize: 11, color: "var(--graphite)" }}>
+                    {wf.step}
+                  </span>
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    color: TONE_COLORS[wf.badge.tone],
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {wf.badge.label}
+                </span>
+              </Link>
+            ))}
           </div>
 
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 20, boxShadow: CARD_SHADOW }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontWeight: 700, fontSize: 15 }}>Activité récente</span>
-              <a href="#" style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)" }}>
+          {/* Activité récente (inchangée) */}
+          <div
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: 14,
+              padding: 20,
+              boxShadow: CARD_SHADOW,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <span style={{ fontWeight: 700, fontSize: 15 }}>
+                Activité récente
+              </span>
+              <a
+                href="#"
+                style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)" }}
+              >
                 Journal complet →
               </a>
             </div>
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "70px 1.6fr 1fr 90px",
+                gridTemplateColumns: "70px 1.6fr 1fr 140px",
                 gap: 8,
                 fontSize: 11,
                 color: "var(--graphite)",
@@ -214,19 +419,41 @@ export default async function DashboardPage() {
                 key={`${row.time}-${row.agent}-${i}`}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "70px 1.6fr 1fr 90px",
+                  gridTemplateColumns: "70px 1.6fr 1fr 140px",
                   gap: 8,
                   fontSize: 12,
                   padding: "10px 0",
-                  borderBottom: i < activity.length - 1 ? "1px solid var(--line)" : "none",
+                  borderBottom:
+                    i < activity.length - 1 ? "1px solid var(--line)" : "none",
                   alignItems: "center",
                 }}
               >
-                <span style={{ fontFamily: "var(--font-mono)", color: "var(--graphite)" }}>{row.time}</span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    color: "var(--graphite)",
+                  }}
+                >
+                  {row.time}
+                </span>
                 <span>{row.agent}</span>
                 <span style={{ color: "var(--graphite)" }}>{row.workflow}</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: TONE_COLORS[row.tone] }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: TONE_COLORS[row.tone] }} />
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    color: TONE_COLORS[row.tone],
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: TONE_COLORS[row.tone],
+                    }}
+                  />
                   {row.status}
                 </span>
               </div>
@@ -234,75 +461,103 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* RIGHT: approvals + agent status */}
-        <div style={{ flex: "1 1 300px", minWidth: 280, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div
-            style={{
-              background: "var(--steel-deep)",
-              color: "#f5f6f8",
-              borderRadius: 14,
-              padding: 20,
-              boxShadow: "0 4px 12px rgba(15, 23, 42, 0.18), 0 2px 4px rgba(15, 23, 42, 0.10)",
-            }}
-          >
-            <span style={{ fontWeight: 700, fontSize: 15 }}>File d&apos;approbation</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
-              {approvalQueue.map((item) => (
-                <div
-                  key={item.title}
+        {/* RIGHT: approbations + integrations */}
+        <div
+          style={{
+            flex: "1 1 300px",
+            minWidth: 280,
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+          }}
+        >
+          {/* Approbations */}
+          <div style={CARD}>
+            <div style={CARD_HEADER}>
+              <span style={CARD_TITLE}>Approbations</span>
+              <Link href="/approvals" style={CARD_LINK}>
+                Ouvrir la boîte →
+              </Link>
+            </div>
+            {approvalQueue.map((item, i) => (
+              <div
+                key={item.title}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 0",
+                  borderBottom:
+                    i < approvalQueue.length - 1
+                      ? "1px solid var(--line)"
+                      : "none",
+                }}
+              >
+                <span style={{ flex: 1, fontSize: 12 }}>{item.title}</span>
+                <span
                   style={{
-                    background: "rgba(255,255,255,0.06)",
-                    borderRadius: 10,
-                    padding: 12,
-                    transition: "background 0.15s ease",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    border: "1px solid",
+                    whiteSpace: "nowrap",
+                    borderColor: item.sla.late ? "var(--red)" : "var(--line)",
+                    color: item.sla.late ? "var(--red)" : "var(--graphite)",
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 600 }}>{item.title}</div>
-                  <div style={{ fontSize: 11, color: "#c7ccd4", marginTop: 2 }}>{item.detail}</div>
-                </div>
-              ))}
-            </div>
-            <a
-              href="/approvals"
-              style={{
-                display: "block",
-                textAlign: "center",
-                marginTop: 14,
-                fontSize: 12,
-                fontWeight: 600,
-                background: "#f5f6f8",
-                color: "var(--steel-deep)",
-                padding: 9,
-                borderRadius: 8,
-              }}
-            >
-              Traiter les approbations
-            </a>
+                  {item.sla.label}
+                </span>
+              </div>
+            ))}
           </div>
-
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 20, boxShadow: CARD_SHADOW }}>
-            <span style={{ fontWeight: 700, fontSize: 15 }}>Mon AI Workforce</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 14 }}>
-              {workforce.map((agent) => (
-                <div key={agent.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: agent.on ? "var(--signal)" : "var(--graphite)",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span style={{ fontSize: 13, flex: 1, color: agent.on ? "var(--ink)" : "var(--graphite)" }}>
-                    {agent.name}
-                  </span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)" }}>
-                    {agent.status}
-                  </span>
-                </div>
-              ))}
+        
+          {/* Intégrations */}
+          <div style={CARD}>
+            <div style={CARD_HEADER}>
+              <span style={CARD_TITLE}>Intégrations</span>
+              <Link href="/integrations" style={CARD_LINK}>
+                Gérer les connecteurs →
+              </Link>
             </div>
+            {integrations.map((item, i) => (
+              <div
+                key={item.name}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 0",
+                  borderBottom:
+                    i < integrations.length - 1
+                      ? "1px solid var(--line)"
+                      : "none",
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: TONE_COLORS[item.tone],
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ flex: 1, fontSize: 13 }}>{item.name}</span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    color:
+                      item.tone === "signal"
+                        ? "var(--graphite)"
+                        : TONE_COLORS[item.tone],
+                  }}
+                >
+                  {item.status}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
