@@ -140,8 +140,8 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 10,
-        padding: "9px 10px 9px 9px",
+        gap: 8,
+        padding: "5px 6px 5px 5px",
         borderRadius: 8,
         background: active
           ? "linear-gradient(90deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06))"
@@ -165,7 +165,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
             fontFamily: "var(--font-mono)",
             fontSize: 10,
             fontWeight: 700,
-            padding: "1px 6px",
+            padding: "1px 4px",
             borderRadius: 999,
             boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
           }}
