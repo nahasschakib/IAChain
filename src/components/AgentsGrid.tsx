@@ -21,6 +21,15 @@ import {
   Users,
   TrendingUp,
   ShoppingCart,
+  Activity,
+  Gauge,
+  ShieldCheck,
+  Waves,
+  GitFork,
+  Wrench,
+  Shield,
+  RefreshCw,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,9 +67,19 @@ const ICONS: Record<string, LucideIcon> = {
   users: Users,
   "trending-up": TrendingUp,
   "shopping-cart": ShoppingCart,
+   activity: Activity,
+  gauge: Gauge,
+  "shield-check": ShieldCheck,
+  waves: Waves,
+  "git-fork": GitFork,
+  wrench: Wrench,
+  shield: Shield,
+  "refresh-cw": RefreshCw,
+  "book-open": BookOpen,
+  
 };
 
-const CATEGORIES = ["TOUS", "SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH"];
+const CATEGORIES = ["TOUS", "SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH", "QUALITÉ"];
 
 function useColumns() {
   const [columns, setColumns] = useState(4);
