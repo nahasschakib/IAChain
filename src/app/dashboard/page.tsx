@@ -220,11 +220,11 @@ export default async function DashboardPage() {
       <div>
         <h1
           style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 800,
-            fontSize: 26,
+           fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: 34,
             margin: 0,
-            letterSpacing: "-0.01em",
+            letterSpacing: "0.005em",
           }}
         >
           Bonjour Chakib — voici votre AI Workforce aujourd&apos;hui
@@ -270,8 +270,8 @@ export default async function DashboardPage() {
             <div
               style={{
                 fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                fontSize: 26,
+                fontWeight: 700,
+                fontSize: 34,
                 marginTop: 6,
                 color: kpi.tone ? `var(--${kpi.tone})` : "var(--ink)",
               }}
