@@ -13,7 +13,8 @@ export type NodeDetails = {
   intro?: string;
   blocks?: DetailBlock[];
   note?: string;
-  link?: { label: string; href: string };
+ link?: { label: string; href: string };
+  loops?: { to: string; label: string }[];
 };
 export type RunBanner = {
   title: string;
@@ -54,6 +55,7 @@ const W_MAX = 900; // au-delà, le graphe reste centré
 const NODE_H = 76;
 const ROW_PITCH = 112;
 const PAD = 12;
+const LOOP_GUTTER = 72; // marge droite réservée aux flèches de boucle
 
 const panel: React.CSSProperties = {
   background: "var(--surface)",
@@ -315,10 +317,12 @@ export default function WorkflowStudio({
     nodes.forEach((n) =>
       perRow.set(n.row_index, (perRow.get(n.row_index) ?? 0) + 1),
     );
+        const hasLoops = nodes.some((n) => (n.details?.loops?.length ?? 0) > 0);
+    const usableW = hasLoops ? graphW - LOOP_GUTTER : graphW;
     const pos: Record<string, { x: number; y: number; w: number }> = {};
     nodes.forEach((n) => {
       const count = perRow.get(n.row_index) ?? 1;
-      const slot = graphW / count;
+      const slot = usableW / count;
       const w = Math.min(250, slot - 16);
       pos[n.node_key] = {
         x: slot * n.col_index + slot / 2 - w / 2,
@@ -327,7 +331,7 @@ export default function WorkflowStudio({
       };
     });
     const maxRow = Math.max(0, ...nodes.map((n) => n.row_index));
-    return { pos, height: PAD * 2 + maxRow * ROW_PITCH + NODE_H };
+      return { pos, usableW, height: PAD * 2 + maxRow * ROW_PITCH + NODE_H };
   }, [nodes, graphW]);
 
   const edges = useMemo(() => {
@@ -345,6 +349,28 @@ export default function WorkflowStudio({
         out.push({
           key: `${p}-${n.node_key}`,
           d: `M ${x1} ${y1} L ${x1} ${mid} L ${x2} ${mid} L ${x2} ${y2}`,
+        });
+      }),
+    );
+    return out;
+  }, [nodes, layout]);
+
+    const loopEdges = useMemo(() => {
+    const out: { key: string; label: string; d: string }[] = [];
+    let k = 0;
+    nodes.forEach((n) =>
+      (n.details?.loops ?? []).forEach((l) => {
+        const from = layout.pos[n.node_key];
+        const to = layout.pos[l.to];
+        if (!from || !to) return;
+        const xLoop = layout.usableW + 14 + k * 22;
+        k += 1;
+        const y1 = from.y + NODE_H / 2;
+        const y2 = to.y + NODE_H / 2;
+        out.push({
+          key: `loop-${n.node_key}-${l.to}`,
+          label: l.label,
+          d: `M ${from.x + from.w} ${y1} L ${xLoop} ${y1} L ${xLoop} ${y2} L ${to.x + to.w + 2} ${y2}`,
         });
       }),
     );
@@ -579,6 +605,32 @@ export default function WorkflowStudio({
                     strokeWidth="1.6"
                     fill="none"
                   />
+                              ))}
+                <defs>
+                  <marker
+                    id="loop-arrow"
+                    viewBox="0 0 8 8"
+                    refX="7"
+                    refY="4"
+                    markerWidth="7"
+                    markerHeight="7"
+                    orient="auto"
+                  >
+                    <path d="M 0 0 L 8 4 L 0 8 z" style={{ fill: "var(--amber)" }} />
+                  </marker>
+                </defs>
+                {loopEdges.map((e) => (
+                  <path
+                    key={e.key}
+                    d={e.d}
+                    fill="none"
+                    strokeWidth="1.6"
+                    strokeDasharray="5 4"
+                    markerEnd="url(#loop-arrow)"
+                    style={{ stroke: "var(--amber)" }}
+                  >
+                    <title>{`↺ ${e.label}`}</title>
+                  </path>
                 ))}
               </svg>
 
