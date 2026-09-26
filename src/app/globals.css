@@ -19,7 +19,7 @@
   --signal: #3e8e6f;
   --amber: #b8802f;
   --red: #b8433f;
-  --font-display: 'Archivo', sans-serif;
+    --font-display: var(--font-barlow-condensed), 'Archivo', sans-serif;
   --font-body: 'IBM Plex Sans', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
   --background: var(--paper);
