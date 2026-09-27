@@ -27,7 +27,18 @@ const PILOTAGE_ITEMS: NavItem[] = [
       </svg>
     ),
   },
-  {
+    {
+    href: "/processes",
+    label: "Processus",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="4" width="7" height="6" rx="1.2" stroke="#f5f6f8" strokeWidth="1.5" />
+        <rect x="14" y="14" width="7" height="6" rx="1.2" stroke="#f5f6f8" strokeWidth="1.5" />
+        <path d="M6.5 10V13.5C6.5 14.6 7.4 15.5 8.5 15.5H14" stroke="#f5f6f8" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+    {
     href: "/agents",
     label: "Mes agents",
     icon: (
@@ -284,7 +295,7 @@ export default function AppShellClient({
                   ? { ...item, badge: String(approvalsCount) }
                   : item
               }
-              active={pathname === item.href}
+              active={pathname === item.href || pathname.startsWith(item.href + "/")}
             />
           ))}
 
@@ -300,7 +311,7 @@ export default function AppShellClient({
             SYSTÈME
           </span>
           {SYSTEM_ITEMS.map((item) => (
-            <NavLink key={item.href} item={item} active={pathname === item.href} />
+            <NavLink key={item.href} item={item}active={pathname === item.href || pathname.startsWith(item.href + "/")} />
           ))}
         </div>
 
