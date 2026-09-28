@@ -329,8 +329,8 @@ export default async function Home() {
           }}
         >
           {[
-            { value: "15", label: "Agents assistants spécialisés" },
-            { value: "3", label: "Workflows métier bout-en-bout" },
+            { value: "10", label: "Agents assistants spécialisés" },
+            { value: "1", label: "Workflow métier bout-en-bout, en production" },
             { value: "5", label: "Étapes d'implémentation, de l'audit à l'optimisation" },
             { value: "6", label: "Domaines métier couverts" },
           ].map((stat) => (
