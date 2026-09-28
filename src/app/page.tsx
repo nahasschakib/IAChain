@@ -1,7 +1,14 @@
-import Link from "next/link";
 
-export default function Home() {
-  return (
+import { auth } from "@clerk/nextjs/server";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+export default async function Home() {
+  const { userId } = await auth();
+  if (userId) {
+    redirect("/dashboard");
+  }
+   return (
     <div
       style={{
         width: "100%",
@@ -915,5 +922,5 @@ export default function Home() {
         <span>Conception : Agents spécialisés → Studios individuels → Workflows multi-agents → Business Deliverables.</span>
       </div>
     </div>
-  );
+   )
 }
