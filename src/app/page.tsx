@@ -528,15 +528,15 @@ export default async function Home() {
               letterSpacing: "-0.01em",
             }}
           >
-            Prospect to Cash, étape par étape
+            Amélioration continue, étape par étape · NC-041
           </h2>
 
           <div style={{ display: "flex", alignItems: "stretch", gap: 0, overflowX: "auto", paddingBottom: 10 }}>
             {[
-              { title: "Lead Capture", sub: "Lead Profile" },
-              { title: "Qualification", sub: "Qualification Result" },
-              { title: "Sales Strategy", sub: "Sales Strategy" },
-              { title: "Proposal", sub: "Proposal" },
+              { title: "Adil · Relevé KPI", sub: "Dérive détectée" },
+              { title: "Ghita · Anomalie", sub: "Anomalie confirmée" },
+              { title: "Rim · Diagnostic", sub: "Diagnostic initial" },
+              { title: "Soufiane · Analyse", sub: "Hypothèses de cause" },
             ].map((step) => (
               <div key={step.title} style={{ display: "contents" }}>
                 <div
@@ -577,12 +577,12 @@ export default async function Home() {
                   <circle cx="12" cy="8" r="4" stroke="#2f5a82" strokeWidth="1.8" />
                   <path d="M4 20C4 15.6 7.6 13 12 13C16.4 13 20 15.6 20 20" stroke="#2f5a82" strokeWidth="1.8" />
                 </svg>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)" }}>Human Approval</div>
+                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)" }}>Human Approval</div>
               </div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--steel)", marginTop: 4 }}>
-                Validation requise
+                A. Kettani · Cause retenue
               </div>
-            </div>
+             </div>
             <div style={{ display: "flex", alignItems: "center", padding: "0 10px", flexShrink: 0, color: "var(--graphite)" }}>
               →
             </div>
@@ -598,9 +598,9 @@ export default async function Home() {
                 flexShrink: 0,
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>CRM / Sales Action</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Meryem · Action corrective</div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)", marginTop: 4 }}>
-                Sale · Invoice
+                AC-017 · échéance 19 sept.
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", padding: "0 10px", flexShrink: 0, color: "var(--graphite)" }}>
@@ -618,9 +618,9 @@ export default async function Home() {
                 flexShrink: 0,
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#f5f6f8" }}>Cash</div>
+               <div style={{ fontSize: 13, fontWeight: 600, color: "#f5f6f8" }}>Houda · Leçon apprise</div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#c7ccd4", marginTop: 4 }}>
-                Résultat final
+                Capitalisée · LL-023
               </div>
             </div>
           </div>
