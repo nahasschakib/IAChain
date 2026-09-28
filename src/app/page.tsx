@@ -1,14 +1,141 @@
-
-import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import type { CSSProperties } from "react";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+/* ---------------------------------------------------------------------- */
+/* Style helpers — repris tels quels du design system app (dashboard/AppShell) */
+/* ---------------------------------------------------------------------- */
+
+const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
+
+const CARD: CSSProperties = {
+  background: "var(--surface)",
+  border: "1px solid var(--line)",
+  borderRadius: 14,
+  padding: 22,
+  boxShadow: CARD_SHADOW,
+};
+
+const SECTION: CSSProperties = {
+  padding: "0 clamp(24px,4vw,64px) 96px",
+  maxWidth: 1320,
+  margin: "0 auto",
+  width: "100%",
+  boxSizing: "border-box",
+};
+
+const EYEBROW: CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 12,
+  letterSpacing: "0.06em",
+  color: "var(--steel)",
+};
+
+const H2: CSSProperties = {
+  fontFamily: "var(--font-display)",
+  fontWeight: 700,
+  fontSize: "clamp(24px,2.6vw,32px)",
+  margin: "8px 0 32px",
+  letterSpacing: "-0.01em",
+};
+
+const BTN_PRIMARY: CSSProperties = {
+  background: "var(--steel-deep)",
+  color: "#f5f6f8",
+  fontSize: 14,
+  fontWeight: 600,
+  padding: "13px 22px",
+  borderRadius: 9,
+  whiteSpace: "nowrap",
+  display: "inline-block",
+};
+
+const BTN_SECONDARY: CSSProperties = {
+  background: "var(--surface)",
+  color: "var(--ink)",
+  fontSize: 14,
+  fontWeight: 600,
+  padding: "13px 22px",
+  borderRadius: 9,
+  border: "1px solid var(--line)",
+  whiteSpace: "nowrap",
+  display: "inline-block",
+};
+
+const TONE_COLORS = {
+  signal: "var(--signal)",
+  amber: "var(--amber)",
+  red: "var(--red)",
+  steel: "var(--steel)",
+};
+
+function Dot({ tone = "signal" }: { tone?: keyof typeof TONE_COLORS }) {
+  return (
+    <span
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: "50%",
+        background: TONE_COLORS[tone],
+        flexShrink: 0,
+        display: "inline-block",
+      }}
+    />
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Data                                                                    */
+/* ---------------------------------------------------------------------- */
+
+type AgentRow = { slug: string; name: string; category: string; role: string };
+
+const AGENT_BUCKETS: { label: string; categories: string[]; accent?: boolean }[] = [
+  { label: "Ventes", categories: ["Sales"] },
+  { label: "Marketing & e-commerce", categories: ["Marketing", "E-commerce"] },
+  { label: "Finance, support, ops, RH", categories: ["Finance", "Support", "Ops", "RH"] },
+  { label: "Qualité", categories: ["Qualité"], accent: true },
+];
+
+const WORKFLOWS = [
+  {
+    code: "WF-01",
+    name: "Prospect to Cash",
+    desc: "Yasmine → Mehdi → Karim → Salma, Anas et Nadia en parallèle → fusion → approbation → écriture au CRM.",
+  },
+  {
+    code: "WF-02",
+    name: "De l'idée au marketing",
+    desc: "Sofia repère le signal, Othmane chiffre le plan, Lina et Anas produisent en parallèle, la direction valide, la publication part.",
+  },
+  {
+    code: "WF-03",
+    name: "Service client",
+    desc: "Imane trie ; une condition oriente vers Imane, Zineb ou un humain ; Hamza analyse les causes en fin de semaine.",
+  },
+  {
+    code: "WF-04",
+    name: "Non-conformité → amélioration continue",
+    desc: "14 nœuds, 2 tâches humaines et une boucle : si l'action n'est pas efficace, le cas repart vers l'analyse.",
+  },
+];
 
 export default async function Home() {
-  const { userId } = await auth();
-  if (userId) {
-    redirect("/dashboard");
-  }
-   return (
+  const agentRows = (await sql`
+    SELECT slug, name, category, role FROM agents WHERE status = 'actif' ORDER BY category, name
+  `) as AgentRow[];
+
+  const agentCount = agentRows.length;
+  const categoryCount = new Set(agentRows.map((a) => a.category)).size;
+
+  const agentBuckets = AGENT_BUCKETS.map((bucket) => {
+    const members = agentRows.filter((a) => bucket.categories.includes(a.category));
+    return { ...bucket, count: members.length, members };
+  });
+
+  return (
     <div
       style={{
         width: "100%",
@@ -55,70 +182,25 @@ export default async function Home() {
               <path d="M16.2 13L8 17.8" stroke="#f5f6f8" strokeWidth="1.6" />
             </svg>
           </div>
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 800,
-              fontSize: 18,
-              letterSpacing: "-0.01em",
-            }}
-          >
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 18, letterSpacing: "-0.01em" }}>
             IAChain
           </span>
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 30,
-            fontSize: 14,
-            fontWeight: 500,
-            color: "var(--graphite)",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: 26, fontSize: 14, fontWeight: 500, color: "var(--graphite)" }}>
           <a href="#agents" style={{ whiteSpace: "nowrap" }}>Agents</a>
           <a href="#workflows" style={{ whiteSpace: "nowrap" }}>Workflows</a>
+          <a href="#qualite" style={{ whiteSpace: "nowrap" }}>Qualité</a>
+          <a href="#gouvernance" style={{ whiteSpace: "nowrap" }}>Gouvernance</a>
+          <a href="#offre" style={{ whiteSpace: "nowrap" }}>Offre</a>
+          <Link href="/tarifs" style={{ whiteSpace: "nowrap" }}>Tarifs</Link>
           <a href="/agency" style={{ whiteSpace: "nowrap" }}>Agence IA</a>
-          <a href="#implementation" style={{ whiteSpace: "nowrap" }}>Implémentation</a>
         </div>
-        <a
-          href="#contact"
-          style={{
-            background: "var(--steel-deep)",
-            color: "#f5f6f8",
-            fontSize: 14,
-            fontWeight: 600,
-            padding: "10px 20px",
-            borderRadius: 8,
-            whiteSpace: "nowrap",
-          }}
-        >
-          Demander une démo
-        </a>
+        <a href="#contact" style={BTN_PRIMARY}>Demander une démo</a>
       </div>
 
       {/* HERO */}
-      <div
-        style={{
-          padding: "clamp(56px,7vw,96px) clamp(24px,4vw,64px) 72px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-          display: "flex",
-          gap: 56,
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          style={{
-            flex: "1 1 440px",
-            minWidth: 320,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-          }}
-        >
+      <div style={{ padding: "clamp(56px,7vw,96px) clamp(24px,4vw,64px) 72px", maxWidth: 1320, margin: "0 auto", width: "100%", boxSizing: "border-box", display: "flex", gap: 56, flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 440px", minWidth: 320, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
           <div
             style={{
               display: "inline-flex",
@@ -134,15 +216,7 @@ export default async function Home() {
               color: "var(--steel)",
             }}
           >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "var(--signal)",
-                flexShrink: 0,
-              }}
-            />
+            <Dot />
             INFRASTRUCTURE IA D&apos;ENTREPRISE
           </div>
           <h1
@@ -155,49 +229,16 @@ export default async function Home() {
               margin: "22px 0 0",
             }}
           >
-            Une main-d&apos;œuvre numérique, spécialisée par métier.
+            Vos processus métier, exécutés par une équipe d&apos;agents IA.
           </h1>
-          <p
-            style={{
-              fontSize: 17,
-              lineHeight: 1.65,
-              color: "var(--graphite)",
-              margin: "20px 0 0",
-              maxWidth: 480,
-            }}
-          >
-           IAChain orchestre des agents assistants spécialisés au sein de workflows métier complets. Chaque agent
-            reçoit l&apos;output du précédent, exécute sa mission et transmet un résultat structuré au suivant — d&apos;une
-            dérive qualité détectée jusqu&apos;à l&apos;action corrective validée et capitalisée.
+          <p style={{ fontSize: 17, lineHeight: 1.65, color: "var(--graphite)", margin: "20px 0 0", maxWidth: 480 }}>
+            IAChain donne à chaque compétence un agent nommé, avec son studio et son livrable réel. Chaînés en
+            workflows, ils exécutent un processus de bout en bout — de la détection à l&apos;action — pendant que vos
+            équipes gardent la décision.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
-            <a
-              href="#agents"
-              style={{
-                background: "var(--steel-deep)",
-                color: "#f5f6f8",
-                fontSize: 14,
-                fontWeight: 600,
-                padding: "13px 22px",
-                borderRadius: 9,
-              }}
-            >
-              Explorer les agents
-            </a>
-            <a
-              href="#workflows"
-              style={{
-                background: "var(--surface)",
-                color: "var(--ink)",
-                fontSize: 14,
-                fontWeight: 600,
-                padding: "13px 22px",
-                borderRadius: 9,
-                border: "1px solid var(--line)",
-              }}
-            >
-              Voir un workflow en action →
-            </a>
+            <a href="#agents" style={BTN_PRIMARY}>Explorer les agents</a>
+            <a href="#qualite" style={BTN_SECONDARY}>Voir Quality Management →</a>
           </div>
           <p style={{ fontSize: 13, color: "var(--graphite)", margin: "36px 0 0" }}>
             Conçu pour direction générale, commercial, marketing, finance, opérations, support et IT.
@@ -205,707 +246,375 @@ export default async function Home() {
         </div>
 
         <div style={{ flex: "1 1 400px", minWidth: 340, display: "flex", alignItems: "flex-start" }}>
-          <div
-            style={{
-              width: "100%",
-              background: "var(--surface)",
-              border: "1px solid var(--line)",
-              borderRadius: 16,
-              padding: 22,
-              boxShadow: "0 1px 2px rgba(18,21,26,0.04), 0 12px 32px rgba(18,21,26,0.05)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 18,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  letterSpacing: "0.06em",
-                  color: "var(--graphite)",
-                }}
-              >
-                WORKFLOW · AMÉLIORATION CONTINUE · NC-041
+          <div style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 22, boxShadow: "0 1px 2px rgba(18,21,26,0.04), 0 12px 32px rgba(18,21,26,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.06em", color: "var(--graphite)" }}>
+                WORKFLOW · PROSPECT TO CASH
               </span>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  color: "var(--signal)",
-                }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--signal)" }} />
-                ACTIF
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--signal)" }}>
+                <Dot tone="signal" /> ACTIF
               </span>
             </div>
-
-            <div
-              style={{
-                border: "1px solid var(--line)",
-                borderRadius: 10,
-                padding: "14px 16px",
-                background: "var(--paper)",
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Adil · Relevé KPI</div>
-              <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>
-                Taux d&apos;erreur de saisie : 3,8 % (seuil 1,5 %)
-              </div>
+            <div style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px", background: "var(--paper)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Yasmine — Qualification</div>
+              <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>Analyse le lead entrant</div>
             </div>
-
             <div style={{ display: "flex", justifyContent: "center", padding: "6px 0" }}>
               <svg width="14" height="20" viewBox="0 0 14 20" fill="none">
                 <path d="M7 0V17" stroke="#c7ccd4" strokeWidth="1.4" />
                 <path d="M2 13L7 18L12 13" stroke="#c7ccd4" strokeWidth="1.4" />
               </svg>
             </div>
-
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
-              {["écart", "risque", "priorité"].map((tag) => (
-                <span
-                  key={tag}
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 11,
-                    background: "var(--steel-tint)",
-                    color: "var(--steel)",
-                    padding: "4px 9px",
-                    borderRadius: 6,
-                  }}
-                >
+              {["score", "priority", "next_action"].map((tag) => (
+                <span key={tag} style={{ fontFamily: "var(--font-mono)", fontSize: 11, background: "var(--steel-tint)", color: "var(--steel)", padding: "4px 9px", borderRadius: 6 }}>
                   {tag}
                 </span>
               ))}
             </div>
-
             <div style={{ display: "flex", justifyContent: "center", padding: "6px 0" }}>
               <svg width="14" height="20" viewBox="0 0 14 20" fill="none">
                 <path d="M7 0V17" stroke="#c7ccd4" strokeWidth="1.4" />
                 <path d="M2 13L7 18L12 13" stroke="#c7ccd4" strokeWidth="1.4" />
               </svg>
             </div>
-
-            <div
-              style={{
-                border: "1px solid var(--line)",
-                borderRadius: 10,
-                padding: "14px 16px",
-                background: "var(--paper)",
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Rim · Diagnostic qualité</div>
-              <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>
-                Écart de +2,6 pts vs objectif, priorité haute — déclenche l&apos;analyse des causes
-              </div>
+            <div style={{ border: "1px solid var(--line)", borderRadius: 10, padding: "14px 16px", background: "var(--paper)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Mehdi — Sales Strategy</div>
+              <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>Exploite le résultat de qualification, sans reprendre le travail</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* STATS BENTO */}
-      <div
-        style={{
-          padding: "0 clamp(24px,4vw,64px) 88px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 14,
-          }}
-        >
+      {/* STATS BENTO — chiffres réels de la plateforme */}
+      <div style={{ ...SECTION, paddingBottom: 88 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
           {[
-            { value: "10", label: "Agents assistants spécialisés" },
-            { value: "1", label: "Workflow métier bout-en-bout, en production" },
-            { value: "5", label: "Étapes d'implémentation, de l'audit à l'optimisation" },
-            { value: "6", label: "Domaines métier couverts" },
+            { value: String(agentCount), label: "Agents spécialisés, chacun nommé" },
+            { value: String(categoryCount), label: "Métiers couverts" },
+            { value: "4", label: "Workflows métier bout-en-bout" },
+            { value: "5", label: "Types de décisions humaines tracées" },
           ].map((stat) => (
-            <div
-              key={stat.label}
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                padding: 22,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-            >
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 32 }}>{stat.value}</span>
-              <span style={{ fontSize: 13, color: "var(--graphite)" }}>{stat.label}</span>
+            <div key={stat.label} style={CARD}>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 34, letterSpacing: "-0.01em" }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--graphite)", marginTop: 6, lineHeight: 1.4 }}>{stat.label}</div>
             </div>
           ))}
-          <div
-            style={{
-              gridColumn: "span 2",
-              background: "var(--steel-deep)",
-              color: "#f5f6f8",
-              borderRadius: 12,
-              padding: 24,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              minWidth: 260,
-            }}
-          >
-            <p style={{ fontSize: 15, lineHeight: 1.55, margin: 0 }}>
-              « Pas une collection de chatbots. Une infrastructure où plusieurs spécialistes collaborent sur un même
-              processus. »
-            </p>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, opacity: 0.6, marginTop: 12 }}>
-              — POSITIONNEMENT PRODUIT
-            </span>
-          </div>
         </div>
       </div>
 
-      {/* FORMULES */}
-      <div
-        id="agents"
-        style={{
-          padding: "0 clamp(24px,4vw,64px) 96px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 12,
-            marginBottom: 32,
-          }}
-        >
-          <div>
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 12,
-                letterSpacing: "0.06em",
-                color: "var(--steel)",
-              }}
-            >
-              TROIS NIVEAUX D&apos;ENGAGEMENT
-            </span>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 700,
-                fontSize: "clamp(24px,2.6vw,32px)",
-                margin: "8px 0 0",
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Du premier agent à la transformation complète
-            </h2>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 20,
-          }}
-        >
+      {/* PRINCIPE — pas un chatbot */}
+      <div style={SECTION}>
+        <span style={EYEBROW}>LE PRINCIPE</span>
+        <h2 style={H2}>Pas un chatbot. Des exécutants qui livrent.</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))", gap: 18 }}>
           {[
             {
-              num: "01",
-              title: "Agents indépendants",
-              desc: "Sélectionnez, dans une bibliothèque de 15 agents spécialisés, ceux qui répondent à un besoin précis. Chacun a sa mission, ses outils, ses livrables.",
-              tags: ["Marketing", "Sales", "Support"],
-              id: undefined as string | undefined,
+              title: "Un studio par agent",
+              sub: "Des entrées qui disent d'où elles viennent",
+              desc: "Chaque champ affiche sa provenance — workflow amont, intégration ou saisie. Le studio résout d'abord ce qu'il peut ; vous ne saisissez que ce qui ne se déduit pas.",
             },
             {
-              num: "02",
-              title: "Workflows métier",
-              desc: "Confiez un processus complet à une chaîne d'agents. L'output de chacun devient l'input du suivant, sans double saisie.",
-              tags: ["Idée → Marketing", "Prospect to Cash", "Support Client"],
-              id: undefined as string | undefined,
+              title: "Un livrable réel",
+              sub: "L'aperçu, c'est le document final",
+              desc: "Salma produit une proposition chiffrée, Ilyas une liste de comptes, Zineb une fiche produit avec ses variantes, Soufiane une analyse de causes. Pas une réponse à relire.",
             },
             {
-              num: "03",
-              title: "Agence IA",
-              desc: "Diagnostic, conception et intégration dans votre environnement réel — ERP, CRM, outils métier — par notre équipe.",
-              tags: ["Diagnostic", "Intégration", "Déploiement"],
-              id: "agence",
+              title: "Une action métier",
+              sub: "Le résultat part dans vos systèmes",
+              desc: "Écriture au CRM, facture à l'ERP, publication, relance WhatsApp Business : l'agent déclenche l'action, derrière une approbation quand elle engage l'entreprise.",
             },
-          ].map((card) => (
-            <div
-              key={card.num}
-              id={card.id}
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--line)",
-                borderRadius: 14,
-                padding: 26,
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--graphite)" }}>
-                  {card.num}
-                </span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12H19" stroke="#5b6472" strokeWidth="1.6" />
-                  <path d="M13 6L19 12L13 18" stroke="#5b6472" strokeWidth="1.6" />
-                </svg>
+          ].map((item) => (
+            <div key={item.title} style={{ ...CARD, display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ ...EYEBROW, fontSize: 11 }}>{item.title.toUpperCase()}</span>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, lineHeight: 1.25 }}>{item.sub}</span>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CHAÎNE — processus > workflow > agent > tâche humaine > amélioration */}
+      <div style={SECTION}>
+        <span style={EYEBROW}>L&apos;ARCHITECTURE</span>
+        <h2 style={H2}>Un moteur, autant de processus que d&apos;entreprise.</h2>
+        <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "var(--graphite)", margin: "-20px 0 28px", maxWidth: 620 }}>
+          Ajouter la finance, les achats ou les risques ne réécrit ni le moteur de workflow, ni les agents : chaque
+          processus reprend la même structure.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px,1fr))", gap: 12 }}>
+          {[
+            { label: "Processus", q: "Quel résultat métier pilote-t-on ?", ex: "Quality Management" },
+            { label: "Workflow", q: "Comment est-il exécuté ?", ex: "Non-conformité → amélioration" },
+            { label: "Agent", q: "Qui exécute la tâche spécialisée ?", ex: "Soufiane · Causes racines" },
+            { label: "Tâche humaine", q: "Qu'est-ce qui exige un humain ?", ex: "Approuver l'action corrective" },
+            { label: "Amélioration", q: "Comment apprend-il de ses résultats ?", ex: "Leçon apprise réutilisée" },
+          ].map((step) => (
+            <div key={step.label} style={{ ...CARD, padding: 18, display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.04em", color: "var(--steel)" }}>{step.label}</span>
+              <span style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>{step.q}</span>
+              <span style={{ fontSize: 12, color: "var(--graphite)" }}>{step.ex}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 18 }}>
+          {["Processus", "Workflow", "Agents IA", "Tâches humaines", "Exécution", "KPI", "Connaissance"].map((tag, i, arr) => (
+            <span key={tag} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, background: "var(--steel-tint)", color: "var(--steel)", padding: "4px 9px", borderRadius: 6 }}>
+                {tag}
+              </span>
+              {i < arr.length - 1 && <span style={{ color: "var(--graphite)", fontSize: 12 }}>→</span>}
+            </span>
+          ))}
+          <span style={{ color: "var(--graphite)", fontSize: 12 }}>→</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, background: "var(--steel-deep)", color: "#f5f6f8", padding: "4px 9px", borderRadius: 6 }}>
+            ↺ Amélioration continue
+          </span>
+        </div>
+      </div>
+
+      {/* AGENT LIBRARY — données réelles */}
+      <div id="agents" style={SECTION}>
+        <span style={EYEBROW}>LA BIBLIOTHÈQUE D&apos;AGENTS</span>
+        <h2 style={H2}>{agentCount} agents, un prénom, un métier.</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))", gap: 18 }}>
+          {agentBuckets.map((bucket) => (
+            <div key={bucket.label} style={{ ...CARD, display: "flex", flexDirection: "column", gap: 12, border: bucket.accent ? "1px solid var(--steel)" : CARD.border }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16 }}>{bucket.label}</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--steel)" }}>{bucket.count}</span>
               </div>
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 19 }}>{card.title}</div>
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>{card.desc}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: "auto" }}>
-                {card.tags.map((tag) => (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {bucket.members.map((agent) => (
                   <span
-                    key={tag}
+                    key={agent.slug}
+                    title={`${agent.name} — ${agent.role}`}
                     style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: bucket.accent ? "var(--steel-deep)" : "var(--steel-tint)",
+                      color: bucket.accent ? "#f5f6f8" : "var(--steel)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: 600,
                       fontSize: 12,
-                      color: "var(--graphite)",
-                      border: "1px solid var(--line)",
-                      padding: "4px 10px",
-                      borderRadius: 999,
                     }}
                   >
-                    {tag}
+                    {agent.name[0]}
                   </span>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* WORKFLOW DEEP DIVE */}
-      <div
-        id="workflows"
-        style={{
-          padding: "0 clamp(24px,4vw,64px) 96px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <div
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--line)",
-            borderRadius: 16,
-            padding: "clamp(20px,3vw,34px)",
-          }}
-        >
-          <span
-            style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "var(--steel)" }}
-          >
-            WORKFLOW STUDIO — APERÇU
-          </span>
-          <h2
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 700,
-              fontSize: "clamp(22px,2.4vw,28px)",
-              margin: "8px 0 26px",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Amélioration continue, étape par étape · NC-041
-          </h2>
-
-          <div style={{ display: "flex", alignItems: "stretch", gap: 0, overflowX: "auto", paddingBottom: 10 }}>
-            {[
-              { title: "Adil · Relevé KPI", sub: "Dérive détectée" },
-              { title: "Ghita · Anomalie", sub: "Anomalie confirmée" },
-              { title: "Rim · Diagnostic", sub: "Diagnostic initial" },
-              { title: "Soufiane · Analyse", sub: "Hypothèses de cause" },
-            ].map((step) => (
-              <div key={step.title} style={{ display: "contents" }}>
-                <div
-                  style={{
-                    minWidth: 148,
-                    padding: "14px 14px",
-                    border: "1px solid var(--line)",
-                    borderRadius: 10,
-                    background: "var(--paper)",
-                    textAlign: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{step.title}</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)", marginTop: 4 }}>
-                    {step.sub}
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", padding: "0 10px", flexShrink: 0, color: "var(--graphite)" }}>
-                  →
-                </div>
-              </div>
-            ))}
-
-            <div
-              style={{
-                minWidth: 148,
-                padding: "14px 14px",
-                border: "1px dashed var(--steel)",
-                borderRadius: 10,
-                background: "var(--steel-tint)",
-                textAlign: "center",
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="8" r="4" stroke="#2f5a82" strokeWidth="1.8" />
-                  <path d="M4 20C4 15.6 7.6 13 12 13C16.4 13 20 15.6 20 20" stroke="#2f5a82" strokeWidth="1.8" />
-                </svg>
-                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)" }}>Human Approval</div>
-              </div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--steel)", marginTop: 4 }}>
-                A. Kettani · Cause retenue
-              </div>
-             </div>
-            <div style={{ display: "flex", alignItems: "center", padding: "0 10px", flexShrink: 0, color: "var(--graphite)" }}>
-              →
-            </div>
-
-            <div
-              style={{
-                minWidth: 148,
-                padding: "14px 14px",
-                border: "1px solid var(--line)",
-                borderRadius: 10,
-                background: "var(--paper)",
-                textAlign: "center",
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Meryem · Action corrective</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)", marginTop: 4 }}>
-                AC-017 · échéance 19 sept.
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", padding: "0 10px", flexShrink: 0, color: "var(--graphite)" }}>
-              →
-            </div>
-
-            <div
-              style={{
-                minWidth: 148,
-                padding: "14px 14px",
-                border: "1px solid var(--steel-deep)",
-                borderRadius: 10,
-                background: "var(--steel-deep)",
-                textAlign: "center",
-                flexShrink: 0,
-              }}
-            >
-               <div style={{ fontSize: 13, fontWeight: 600, color: "#f5f6f8" }}>Houda · Leçon apprise</div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "#c7ccd4", marginTop: 4 }}>
-                Capitalisée · LL-023
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AGENT LIBRARY */}
-      <div
-        style={{
-          padding: "0 clamp(24px,4vw,64px) 96px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "var(--steel)" }}>
-          BIBLIOTHÈQUE D&apos;AGENTS
-        </span>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: "clamp(24px,2.6vw,32px)",
-            margin: "8px 0 32px",
-            letterSpacing: "-0.01em",
-          }}
-        >
-         Dix agents qualité, prêts à l&apos;emploi
-        </h2>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
-          {[
-            { code: "QM-01", slug: "rim", name: "Rim · Diagnostic qualité", desc: "Croise KPI, anomalies et objectifs qualité pour produire un diagnostic structuré et une priorité d'action." },
-            { code: "QM-02", slug: "adil", name: "Adil · Relevé KPI", desc: "Calcule les indicateurs qualité hebdomadaires depuis l'ERP et détecte toute dérive par rapport au seuil." },
-            { code: "QM-03", slug: "walid", name: "Walid · Contrôle de conformité", desc: "Vérifie qu'une procédure ou un paramétrage respecte les règles qualité et ouvre une exception si besoin." },
-            { code: "QM-04", slug: "ghita", name: "Ghita · Anomalie", desc: "Repère les ruptures de tendance dans les séries KPI et les relie aux changements survenus." },
-            { code: "QM-05", slug: "soufiane", name: "Soufiane · Analyse des causes", desc: "Formule et classe des hypothèses de cause racine à partir du diagnostic et de l'historique." },
-            { code: "QM-06", slug: "meryem", name: "Meryem · Action corrective", desc: "Propose une action corrective ciblant la cause retenue, avec responsable et échéance." },
-            { code: "QM-07", slug: "bilal", name: "Bilal · Actions préventives", desc: "Repère les risques similaires ailleurs dans le système et propose une prévention étendue." },
-            { code: "QM-08", slug: "kenza", name: "Kenza · Opportunités d'amélioration", desc: "Identifie des opportunités d'amélioration à partir des tendances KPI et de l'efficacité des actions passées." },
-            { code: "QM-09", slug: "tarik", name: "Tarik · Mesure d'efficacité", desc: "Compare les résultats avant/après une action corrective pour juger de son efficacité." },
-            { code: "QM-10", slug: "houda", name: "Houda · Leçon apprise", desc: "Capitalise le dossier clos en leçon apprise réutilisable par les autres agents qualité." },
-          ].map((agent) => (
-            <div
-              key={agent.code}
-              style={{
-                border: "1px solid var(--line)",
-                borderRadius: 12,
-                padding: 20,
-                background: "var(--surface)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <div
-                style={{
-                  width: "fit-content",
-                  minWidth: 34,
-                  height: 34,
-                  padding: "0 8px",
-                  borderRadius: 8,
-                  background: "var(--steel-tint)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: 600,
-                  color: "var(--steel)",
-                  fontSize: 13,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {agent.code}
-              </div>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{agent.name}</div>
-              <p style={{ fontSize: 13, color: "var(--graphite)", lineHeight: 1.55, margin: 0 }}>{agent.desc}</p>
-              <Link href={`/agents/${agent.slug}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)", marginTop: 6 }}>
-                Ouvrir le Studio →
+              <p style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--graphite)", margin: 0 }}>
+                {bucket.members.map((a) => a.name).join(" · ") || "À venir"}
+              </p>
+              <Link href="/dashboard" style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)" }}>
+                Parcourir la bibliothèque →
               </Link>
             </div>
           ))}
         </div>
       </div>
 
-      {/* INTEGRATIONS */}
-      <div
-        style={{
-          padding: "0 clamp(24px,4vw,64px) 96px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "var(--steel)" }}>
-          COUCHE D&apos;INTÉGRATION
-        </span>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: "clamp(24px,2.6vw,32px)",
-            margin: "8px 0 8px",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Les agents parlent à vos outils, pas l&apos;inverse
-        </h2>
-        <p style={{ fontSize: 14, color: "var(--graphite)", margin: "0 0 28px", maxWidth: 560 }}>
-          Des connecteurs globaux (Stripe, Salesforce, Google Workspace…) partout dans le monde, complétés par des
-          connecteurs locaux activés selon votre marché.
-        </p>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
-          {["ERP", "CRM"].map((item) => (
-            <div
-              key={item}
+      {/* WORKFLOWS */}
+      <div id="workflows" style={SECTION}>
+        <span style={EYEBROW}>LES WORKFLOWS</span>
+        <h2 style={H2}>La sortie de l&apos;un devient l&apos;entrée du suivant.</h2>
+        <div style={{ ...CARD, padding: 0 }}>
+          {WORKFLOWS.map((wf, i) => (
+            <Link
+              key={wf.code}
+              href="/workflows"
               style={{
-                border: "1px solid var(--line)",
-                borderRadius: 10,
-                padding: 16,
-                background: "var(--surface)",
-                textAlign: "center",
-                fontSize: 13,
-                fontWeight: 600,
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "baseline",
+                gap: "6px 20px",
+                padding: "18px 22px",
+                borderBottom: i < WORKFLOWS.length - 1 ? "1px solid var(--line)" : "none",
+                color: "inherit",
               }}
             >
-              {item}
-            </div>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: "var(--steel)", minWidth: 56 }}>
+                {wf.code}
+              </span>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 17, flex: "1 1 220px" }}>
+                {wf.name}
+              </span>
+              <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--graphite)", flex: "2 1 340px" }}>
+                {wf.desc}
+              </span>
+            </Link>
           ))}
-          <div
-            style={{
-              border: "1.5px solid var(--steel)",
-              borderRadius: 10,
-              padding: 16,
-              background: "var(--steel-tint)",
-              textAlign: "center",
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--steel)",
-            }}
-          >
-            WhatsApp Business
-          </div>
-          {["Comptabilité", "Email", "OMPIC", "Excel / CSV", "API / Webhooks", "Bases de données", "CIH · CMI"].map(
-            (item) => (
-              <div
-                key={item}
-                style={{
-                  border: "1px solid var(--line)",
-                  borderRadius: 10,
-                  padding: 16,
-                  background: "var(--surface)",
-                  textAlign: "center",
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                {item}
-              </div>
-            )
-          )}
         </div>
       </div>
 
-      {/* IMPLEMENTATION TIMELINE */}
-      <div
-        id="implementation"
-        style={{
-          padding: "0 clamp(24px,4vw,64px) 100px",
-          maxWidth: 1320,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "var(--steel)" }}>
-          RÔLE DE L&apos;AGENCE
-        </span>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: "clamp(24px,2.6vw,32px)",
-            margin: "8px 0 36px",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Cinq étapes, de l&apos;audit à l&apos;optimisation continue
-        </h2>
+      {/* QUALITY MANAGEMENT — cas de référence */}
+      <div id="qualite" style={SECTION}>
+        <span style={EYEBROW}>PROCESSUS DE RÉFÉRENCE</span>
+        <h2 style={H2}>Quality Management, la boucle complète.</h2>
+        <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "var(--graphite)", margin: "-20px 0 28px", maxWidth: 640 }}>
+          La preuve qu&apos;un processus réel devient un système de travail augmenté : 11 sous-processus, 10 agents,
+          un cycle PDCA qui apprend de ses propres résultats.
+        </p>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 0,
-            position: "relative",
-          }}
-        >
-          {[
-            { step: "01 · IDENTIFY", title: "Identifier", desc: "Cartographier les processus automatisables." },
-            { step: "02 · DESIGN", title: "Concevoir", desc: "Définir agents, workflows et contrats de données." },
-            { step: "03 · INTEGRATE", title: "Intégrer", desc: "Connecter les agents à vos outils réels." },
-            { step: "04 · DEPLOY", title: "Déployer", desc: "Mettre en production et former les équipes." },
-            { step: "05 · OPTIMIZE", title: "Optimiser", desc: "Mesurer les résultats et ajuster en continu." },
-          ].map((phase) => (
-            <div
-              key={phase.step}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-                paddingRight: 16,
-                borderTop: "2px solid var(--steel-deep)",
-                paddingTop: 16,
-              }}
-            >
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--steel)" }}>
-                {phase.step}
+        <div style={CARD}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 18 }}>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>
+              Scénario NC-041 · hausse du taux d&apos;erreur de saisie
+            </span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)" }}>
+              Données de démonstration
+            </span>
+          </div>
+          <div className="kpi-grid" style={{ marginBottom: 20 }}>
+            {[
+              { label: "Pic détecté", value: "3,8 %" },
+              { label: "Après action", value: "1,4 %", tone: "signal" as const },
+              { label: "Par rapport au pic", value: "−63 %" },
+              { label: "Étapes tracées", value: "12" },
+              { label: "Décisions humaines", value: "3" },
+            ].map((k) => (
+              <div key={k.label} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "var(--paper)" }}>
+                <div style={{ fontSize: 11, color: "var(--graphite)" }}>{k.label}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, marginTop: 4, color: k.tone ? "var(--signal)" : "var(--ink)" }}>
+                  {k.value}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 10 }}>
+            {[
+              { step: "PLAN", desc: "Rim diagnostique, Soufiane classe les hypothèses, un humain retient la cause." },
+              { step: "DO", desc: "Meryem propose l'action corrective, le manager l'approuve, l'équipe l'exécute." },
+              { step: "CHECK", desc: "Adil et Ghita détectent la dérive, Tarik mesure l'effet avant / après." },
+              { step: "ACT", desc: "Kenza évalue l'efficacité, Bilal étend la prévention aux cas similaires." },
+            ].map((p) => (
+              <div key={p.step} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: "var(--steel)" }}>{p.step}</span>
+                <span style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--graphite)" }}>{p.desc}</span>
+              </div>
+            ))}
+            <div style={{ border: "1px solid var(--steel)", background: "var(--steel-tint)", borderRadius: 10, padding: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: "var(--steel-deep)" }}>LEARN ↺</span>
+              <span style={{ fontSize: 12.5, lineHeight: 1.5, color: "var(--steel-deep)" }}>
+                Houda publie la leçon ; elle devient une règle que Walid contrôle au cycle suivant.
               </span>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{phase.title}</div>
-              <p style={{ fontSize: 13, color: "var(--graphite)", lineHeight: 1.55, margin: 0 }}>{phase.desc}</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 20 }}>
+          <Link href="/processes/quality-management" style={BTN_PRIMARY}>Dérouler le scénario</Link>
+        </div>
+      </div>
+
+      {/* GOUVERNANCE */}
+      <div id="gouvernance" style={SECTION}>
+        <span style={EYEBROW}>GOUVERNANCE</span>
+        <h2 style={H2}>L&apos;IA recommande. Vos équipes décident.</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px,1fr))", gap: 18 }}>
+          {[
+            {
+              title: "Human-in-the-loop",
+              desc: "Toute action qui engage l'entreprise attend un propriétaire identifié, avec une échéance. Le registre garde côte à côte la recommandation de l'IA et la décision finale.",
+            },
+            {
+              title: "Explicabilité",
+              desc: "Chaque sortie sépare ce qui est constaté de ce qui est supposé, et cite ses sources, ses règles et son niveau de confiance. Aucune hypothèse n'est présentée comme certaine.",
+            },
+            {
+              title: "Traçabilité",
+              desc: "Journal d'audit par dossier, où IA, humain et système sont distingués. Chaque livrable porte sa lignée : quel agent, quelle entrée, quelle approbation.",
+            },
+            {
+              title: "Intégrations",
+              desc: "CRM, ERP, messagerie, stockage, API internes, avec un mapping par paire système ↔ agent et une vue d'impact avant toute déconnexion. Seules des sources publiques ou sous contrat sont interrogées.",
+            },
+          ].map((item) => (
+            <div key={item.title} style={{ ...CARD, display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ ...EYEBROW, fontSize: 11 }}>{item.title.toUpperCase()}</span>
+              <p style={{ fontSize: 13.5, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* OFFRE */}
+      <div id="offre" style={SECTION}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 8 }}>
+          <div>
+            <span style={EYEBROW}>L&apos;OFFRE</span>
+            <h2 style={{ ...H2, margin: "8px 0 0" }}>Un agent aujourd&apos;hui, un processus demain.</h2>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
+            <span style={{ fontSize: 13, color: "var(--graphite)" }}>
+              Socle dès <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--ink)" }}>1 490 MAD</span> HT / mois
+            </span>
+            <Link href="/tarifs" style={BTN_PRIMARY}>Simuler mon tarif</Link>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 18, marginTop: 28 }}>
+          <div style={CARD}>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>FORMULE 1</span>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, margin: "8px 0" }}>
+              Bibliothèque d&apos;agents
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
+              Activez une compétence précise, branchez une intégration, produisez un premier livrable. L&apos;agent
+              rejoint un workflow plus tard sans reconfiguration.
+            </p>
+          </div>
+          <div style={{ ...CARD, border: "1px solid var(--steel)" }}>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>FORMULE 2</span>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, margin: "8px 0" }}>
+              Processus métier
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
+              Des workflows complets — branches parallèles, fusions, approbations, action finale et boucle
+              d&apos;amélioration — suivis en temps réel.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px,1fr))", gap: 12, marginTop: 20 }}>
+          {[
+            { n: "01 · Agence", t: "Diagnostic", d: "Cartographie des processus automatisables." },
+            { n: "02", t: "Conception", d: "Agents et workflows sur mesure, dans le même moteur." },
+            { n: "03", t: "Intégration", d: "Câblage CRM, ERP, messagerie, API." },
+            { n: "04", t: "Déploiement", d: "Mise en service, rôles, formation." },
+            { n: "05", t: "Optimisation", d: "Calibrage des seuils de confiance, itérations." },
+          ].map((s) => (
+            <div key={s.t} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "var(--surface)", display: "flex", flexDirection: "column", gap: 4 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, color: "var(--steel)" }}>{s.n}</span>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>{s.t}</span>
+              <span style={{ fontSize: 12, lineHeight: 1.5, color: "var(--graphite)" }}>{s.d}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* FINAL CTA */}
-      <div
-        id="contact"
-        style={{
-          background: "var(--steel-deep)",
-          color: "#f5f6f8",
-          padding: "clamp(48px,6vw,72px) clamp(24px,4vw,64px)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1320,
-            margin: "0 auto",
-            display: "flex",
-            gap: 56,
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-          }}
-        >
+      <div id="contact" style={{ background: "var(--steel-deep)", color: "#f5f6f8", padding: "clamp(48px,6vw,72px) clamp(24px,4vw,64px)" }}>
+        <div style={{ maxWidth: 1320, margin: "0 auto", display: "flex", gap: 56, flexWrap: "wrap", justifyContent: "space-between" }}>
           <div style={{ flex: "1 1 380px", minWidth: 300 }}>
-            <h2
-              style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                fontSize: "clamp(24px,3vw,34px)",
-                lineHeight: 1.1,
-                margin: 0,
-                letterSpacing: "-0.01em",
-              }}
-            >
+            <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "clamp(24px,3vw,34px)", lineHeight: 1.1, margin: 0, letterSpacing: "-0.01em" }}>
               Prêt à transformer un processus métier en workflow d&apos;agents ?
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: "#c7ccd4", margin: "16px 0 0", maxWidth: 440 }}>
               Un premier échange suffit pour identifier le processus le plus rentable à automatiser dans votre
               organisation.
             </p>
-            <a
-              href="#contact"
-              style={{
-                display: "inline-block",
-                background: "#f5f6f8",
-                color: "var(--steel-deep)",
-                fontSize: 14,
-                fontWeight: 700,
-                padding: "13px 24px",
-                borderRadius: 9,
-                marginTop: 28,
-              }}
-            >
+            <a href="mailto:contact@iachain.ai" style={{ display: "inline-block", background: "#f5f6f8", color: "var(--steel-deep)", fontSize: 14, fontWeight: 700, padding: "13px 24px", borderRadius: 9, marginTop: 28 }}>
               Demander un diagnostic
             </a>
           </div>
           <div style={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "#8b93a1" }}>
-              CONTACT
-            </span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "#8b93a1" }}>CONTACT</span>
             <span>contact@iachain.ai</span>
             <span>Casablanca, Maroc</span>
             <span style={{ color: "#8b93a1" }}>Un produit SOCYTAY</span>
@@ -914,21 +623,10 @@ export default async function Home() {
       </div>
 
       {/* FOOTER */}
-      <div
-        style={{
-          padding: "20px clamp(24px,4vw,64px)",
-          borderTop: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 8,
-          fontSize: 12,
-          color: "var(--graphite)",
-        }}
-      >
+      <div style={{ padding: "20px clamp(24px,4vw,64px)", borderTop: "1px solid var(--line)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 12, color: "var(--graphite)" }}>
         <span>© 2026 IAChain. Tous droits réservés.</span>
         <span>Conception : Agents spécialisés → Studios individuels → Workflows multi-agents → Business Deliverables.</span>
       </div>
     </div>
-   )
+  );
 }

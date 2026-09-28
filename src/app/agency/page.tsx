@@ -21,6 +21,7 @@ const CAS_USAGE = [
   { num: "01", title: "De l'idée au Marketing", desc: "D'une intention produit à une campagne prête à lancer, en passant par positionnement et contenus." },
   { num: "02", title: "Prospect to Cash", desc: "De la capture d'un lead jusqu'à l'encaissement, avec validation humaine sur les étapes sensibles." },
   { num: "03", title: "Support Client", desc: "Classification, résolution automatique et escalade humaine si la demande dépasse l'IA." },
+  { num: "04", title: "Non-conformité → amélioration continue", desc: "Diagnostic, action corrective, contrôle d'efficacité et leçon apprise réutilisée au cycle suivant." },
 ];
 
 export default function AgencyPage() {
@@ -260,9 +261,9 @@ export default function AgencyPage() {
       <div id="cas" style={{ padding: "0 clamp(24px,4vw,64px) 96px", maxWidth: 1320, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "var(--steel)" }}>CAS D&apos;USAGE</span>
         <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "clamp(24px,2.6vw,32px)", margin: "8px 0 32px", letterSpacing: "-0.01em" }}>
-          Trois processus, un même principe
+          Quatre processus, un même principe
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))", gap: 20 }}>
           {CAS_USAGE.map((c) => (
             <div key={c.num} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 26 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--graphite)" }}>{c.num}</span>

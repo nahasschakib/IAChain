@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -21,15 +21,6 @@ import {
   Users,
   TrendingUp,
   ShoppingCart,
-  Activity,
-  Gauge,
-  ShieldCheck,
-  Waves,
-  GitFork,
-  Wrench,
-  Shield,
-  RefreshCw,
-  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,19 +58,7 @@ const ICONS: Record<string, LucideIcon> = {
   users: Users,
   "trending-up": TrendingUp,
   "shopping-cart": ShoppingCart,
-   activity: Activity,
-  gauge: Gauge,
-  "shield-check": ShieldCheck,
-  waves: Waves,
-  "git-fork": GitFork,
-  wrench: Wrench,
-  shield: Shield,
-  "refresh-cw": RefreshCw,
-  "book-open": BookOpen,
-  
 };
-
-const CATEGORIES = ["TOUS", "SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH", "QUALITÉ"];
 
 function useColumns() {
   const [columns, setColumns] = useState(4);
@@ -111,12 +90,19 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const columns = useColumns();
 
+  // Dérivées des catégories réellement présentes en base plutôt qu'une liste figée,
+  // pour ne plus jamais "perdre" une catégorie (ex. Qualité) ajoutée après coup.
+  const categories = useMemo(() => {
+    const distinct = Array.from(new Set(agents.map((a) => a.category.toUpperCase()))).sort();
+    return ["TOUS", ...distinct];
+  }, [agents]);
+
   const filtered = active === "TOUS" ? agents : agents.filter((a) => a.category.toUpperCase() === active);
 
   return (
     <div>
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActive(cat)}
@@ -162,8 +148,8 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
                 padding: "22px",
                 background: "var(--surface, #fff)",
                 boxShadow: isHovered
-                  ? "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)"
-                  : "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
+                  ? "0 4px 12px rgba(10, 4, 20, 0.08), 0 2px 4px rgba(10, 4, 20, 0.05)"
+                  : "0 1px 3px rgba(10, 4, 20, 0.06), 0 1px 2px rgba(10, 4, 20, 0.04)",
                 transform: isHovered ? "translateY(-2px)" : "translateY(0)",
                 transition: "all 0.18s ease",
               }}
@@ -174,7 +160,7 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
                     style={{
                       width: "56px",
                       height: "56px",
-                      background: "linear-gradient(135deg, var(--steel-tint), var(--steel-deep, #3d5f80))",
+                      background: "linear-gradient(135deg, var(--steel-tint), var(--steel-deep, #7c3aed))",
                       border: "1px solid var(--border)",
                       display: "flex",
                       alignItems: "center",
@@ -198,7 +184,7 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 1px 2px rgba(15, 23, 42, 0.15)",
+                      boxShadow: "0 1px 2px rgba(10, 4, 20, 0.15)",
                     }}
                   >
                     <Icon size={14} color="#fff" />

@@ -1,0 +1,289 @@
+html { scroll-behavior: smooth; }
+
+.iac-public {
+  --color-bg: #f2f2f3;
+  --color-surface: #e9e9ea;
+  --color-text: #1d1f20;
+  --color-accent: #5980a6;
+  --color-accent-2: #728fab;
+  --color-divider: color-mix(in srgb, #1d1f20 16%, transparent);
+
+  /* Tonal ramps — generated in OKLCH on one shared lightness scale, so the
+     same step of any role matches the others in visual value. */
+  --color-neutral-100: #f5f5f8;
+  --color-neutral-200: #e7e7ea;
+  --color-neutral-300: #d4d4d7;
+  --color-neutral-400: #b7b7ba;
+  --color-neutral-500: #98989b;
+  --color-neutral-600: #7a7a7d;
+  --color-neutral-700: #5d5d60;
+  --color-neutral-800: #424244;
+  --color-neutral-900: #2b2b2d;
+
+  --color-accent-100: #eef6ff;
+  --color-accent-200: #d6ebff;
+  --color-accent-300: #b5d9fd;
+  --color-accent-400: #94bce3;
+  --color-accent-500: #749dc4;
+  --color-accent-600: #597ea3;
+  --color-accent-700: #416180;
+  --color-accent-800: #2c455d;
+  --color-accent-900: #1d2d3d;
+
+  --color-accent-2-100: #eef6ff;
+  --color-accent-2-200: #d6ebff;
+  --color-accent-2-300: #bdd8f2;
+  --color-accent-2-400: #9ebbd8;
+  --color-accent-2-500: #7e9cb8;
+  --color-accent-2-600: #627d98;
+  --color-accent-2-700: #486077;
+  --color-accent-2-800: #314457;
+  --color-accent-2-900: #1f2d3a;
+
+  --font-heading: var(--font-barlow-condensed), system-ui, sans-serif;
+  --font-heading-weight: 600;
+  --font-body: var(--font-barlow), system-ui, sans-serif;
+
+  --space-1: 3.4px;
+  --space-2: 6.8px;
+  --space-3: 10.2px;
+  --space-4: 13.6px;
+  --space-6: 20.4px;
+  --space-8: 27.2px;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 7px;
+
+  /* Elevation — derived from the ground: soft ink-tinted shadows on a
+     light theme, a hairline edge + ambient darkness on a dark one. */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2b2b2d 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2b2b2d 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2b2b2d 22%, transparent);
+}
+
+.iac-public {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+.iac-public h1, .iac-public h2, .iac-public h3, .iac-public h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+
+.iac-public .blueprint {
+  position: relative;
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+}
+/* The overlay image treatments (halftone, duotone) clip their overlay
+   (overflow:hidden); a blueprint wrapper draws its registration marks
+   outside the box, so when both classes share a wrapper the frame must
+   win. */
+.iac-public .blueprint.halftone, .iac-public .blueprint.plate, .iac-public .blueprint.duotone { overflow: visible; }
+.iac-public .blueprint > .corner {
+  position: absolute; width: 11px; height: 11px;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.iac-public .blueprint > .corner::before, .iac-public .blueprint > .corner::after {
+  content: ""; position: absolute; background: currentColor;
+}
+.iac-public .blueprint > .corner::before { left: 5px; top: 0; width: 1px; height: 100%; }
+.iac-public .blueprint > .corner::after { top: 5px; left: 0; width: 100%; height: 1px; }
+.iac-public .blueprint > .corner.tl { top: -6px; left: -6px; }
+.iac-public .blueprint > .corner.tr { top: -6px; right: -6px; }
+.iac-public .blueprint > .corner.bl { bottom: -6px; left: -6px; }
+.iac-public .blueprint > .corner.br { bottom: -6px; right: -6px; }
+
+.iac-public .duotone {position:relative;overflow:hidden}
+.iac-public .duotone::after {content:"";position:absolute;inset:0;pointer-events:none;
+  background:var(--color-accent);mix-blend-mode:color}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Components — built with the tokens above. Plain CSS
+   on plain HTML: no JavaScript, no build step. Each class is documented in
+   readme.md and demonstrated in foundations/ and components/.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.iac-public *, .iac-public *::before, .iac-public *::after { box-sizing: border-box; }
+.iac-public { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
+.iac-public h1, .iac-public h2, .iac-public h3, .iac-public h4, .iac-public h5, .iac-public h6 {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
+}
+.iac-public h1 { font-size: 42px; }
+.iac-public h2 { font-size: 32px; }
+.iac-public h3 { font-size: 25px; }
+.iac-public h4 { font-size: 20px; }
+.iac-public h5 { font-size: 16px; }
+.iac-public h6 { font-size: 13px; }
+.iac-public h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+.iac-public p { margin: 0 0 var(--space-3); }
+.iac-public a { color: var(--color-accent); text-underline-offset: 3px; }
+.iac-public img { display: block; max-width: 100%; }
+.iac-public figure { margin: 0; }
+.iac-public figcaption {
+  font-size: 11px; margin-top: var(--space-1);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.iac-public .text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+.iac-public :focus { outline: none; }
+.iac-public :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.iac-public ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+/* — rules — */
+.iac-public .hr {
+  height: 1px; border: 0; margin: var(--space-4) 0;
+  background: var(--color-divider);
+}
+
+/* — buttons — */
+.iac-public .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; text-decoration: none;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 14px; line-height: 1.2; color: var(--color-text); /* matches the .input's 14px —
+     the pair sits side by side in sign-up rows */
+  background: transparent; border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+}
+.iac-public .btn svg { display: block; }
+.iac-public .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.iac-public .btn-primary { background: var(--color-accent); color: var(--color-bg); }
+.iac-public .btn-primary:hover { background: var(--color-accent-600); }
+.iac-public .btn-primary:active { background: var(--color-accent-700); }
+.iac-public .btn-secondary { border-color: var(--color-divider); }
+.iac-public .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.iac-public .btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.iac-public .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+.iac-public .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.iac-public .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.iac-public .btn-icon { width: 36px; height: 36px; padding: 0; }
+.iac-public .btn-block { width: 100%; margin-top: var(--space-2); }
+
+/* — forms — */
+.iac-public .field > label {
+  display: block; font-size: 12px; margin-bottom: 5px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.iac-public .input {
+  width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
+  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.iac-public .input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.iac-public .input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+.iac-public textarea.input { min-height: 90px; resize: vertical; }
+.iac-public .radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.iac-public .radio input, .iac-public .seg-opt input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.iac-public .radio .dot {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 1.5px solid var(--color-divider);
+}
+.iac-public .radio:hover .dot { border-color: var(--color-accent); }
+.iac-public .radio input:checked + .dot {
+  border-color: var(--color-accent); background: var(--color-accent);
+  box-shadow: inset 0 0 0 4px var(--color-bg);
+}
+.iac-public .radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.iac-public .seg {
+  display: inline-flex; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.iac-public .seg-opt {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
+}
+.iac-public .seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
+.iac-public .seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
+.iac-public .seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.iac-public .seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* — cards — */
+.iac-public .card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.iac-public .card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent); }
+.iac-public .card-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 17px; line-height: 1.2;
+}
+.iac-public .card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
+.iac-public .card-meta {
+  display: flex; align-items: center; gap: 6px; font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.iac-public .elev-sm { box-shadow: var(--shadow-sm); }
+.iac-public .elev-md { box-shadow: var(--shadow-md); }
+.iac-public .elev-lg { box-shadow: var(--shadow-lg); }
+
+/* — tags — */
+.iac-public .tag {
+  display: inline-flex; align-items: center; font-size: 11px;
+  letter-spacing: 0.02em; padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+.iac-public .tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+.iac-public .tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.iac-public .tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
+.iac-public .tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
+
+/* — navigation — */
+.iac-public .nav {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: none;
+}
+.iac-public .nav-brand {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; margin-right: auto;
+}
+.iac-public .nav a { color: inherit; text-decoration: none; font-size: 14px; }
+.iac-public .nav a:hover, .iac-public .nav a[aria-current='page'] { color: var(--color-accent); }
+
+/* — tables — */
+.iac-public .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.iac-public .table th {
+  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  padding: var(--space-2); border-bottom: 1px solid var(--color-divider);
+}
+.iac-public .table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.iac-public .table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+
+/* — dialog — */
+.iac-public .dialog-backdrop {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+.iac-public .dialog {
+  width: min(440px, 100%); display: flex; flex-direction: column; gap: var(--space-3);
+  padding: var(--space-4); border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-lg);
+}
+.iac-public .dialog-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 20px;
+}
+.iac-public .dialog-body { font-size: 14px; opacity: 0.85; }
+.iac-public .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* — blueprint frame: components are wireframe objects (see .blueprint
+     and .corner above) — square, transparent, hairline-bordered — */
+.iac-public .card, .iac-public .btn, .iac-public .input, .iac-public .tag, .iac-public .seg, .iac-public .dialog { border-radius: 0; }
+.iac-public .card, .iac-public .dialog { background: transparent; border: 1px solid var(--color-divider); }
+.iac-public .btn { border: 1px solid var(--color-divider); }
+.iac-public .btn-primary { border-color: var(--color-accent); }
+.iac-public .btn-ghost { border-color: transparent; }
+
+.iac-public { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); -webkit-font-smoothing: antialiased; text-wrap: pretty; }
+.iac-public a { color: var(--color-accent-700); text-decoration: none; }
+.iac-public a:hover { color: var(--color-accent-800); }
+.iac-public :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
