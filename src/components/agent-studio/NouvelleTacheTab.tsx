@@ -27,6 +27,17 @@ import MehdiPreview from "./previews/MehdiPreview";
 import ZinebPreview from "./previews/ZinebPreview";
 import { useAgentRun } from "./useAgentRun";
 import { getRunConfig, APPROVAL_ACTION } from "./runConfig";
+import RimPreview from "./previews/RimPreview";
+import AdilPreview from "./previews/AdilPreview";
+import WalidPreview from "./previews/WalidPreview";
+import GhitaPreview from "./previews/GhitaPreview";
+import SoufianePreview from "./previews/SoufiaanePreview";
+import { mergePropsN } from "@base-ui/react/merge-props";
+import MeryemPreview from "./previews/MeryemPreview";
+import BilalPreview from "./previews/BilalPreview";
+import KenzaPreview from "./previews/KenzaPreview";
+import TarikPreview from "./previews/TarikPreview";
+import HoudaPreview from "./previews/HoudaPreview";
 
 type FieldValue = string | boolean | string[];
 type Values = Record<string, FieldValue>;
@@ -50,6 +61,16 @@ const PREVIEWS: Record<string, React.ComponentType<{ values: Values }>> = {
   sofia: SofiaPreview,
   mehdi: MehdiPreview,
   zineb: ZinebPreview,
+  rim: RimPreview,
+  adil: AdilPreview,
+  walid: WalidPreview,
+  ghita: GhitaPreview,
+  soufiane:SoufianePreview,
+  meryem: MeryemPreview,
+  bilal: BilalPreview,
+  kenza: KenzaPreview,
+  tarik: TarikPreview,
+  houda: HoudaPreview,
 };
 
 const monoLabel: React.CSSProperties = {
