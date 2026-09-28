@@ -649,18 +649,21 @@ export default async function Home() {
             letterSpacing: "-0.01em",
           }}
         >
-          Quinze compétences spécialisées, prêtes à l&apos;emploi
+         Dix agents qualité, prêts à l&apos;emploi
         </h2>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 18 }}>
           {[
-            { code: "PR", name: "Prospecting Agent", desc: "Détecte de nouveaux prospects via OMPIC, LinkedIn Sales Navigator et Pages Jaunes Maroc, puis alimente le pipeline commercial." },
-            { code: "MK", name: "Marketing Assistant", desc: "Conçoit positionnement, plan et contenus à partir d'une intention marché." },
-            { code: "SL", name: "Sales Assistant", desc: "Construit stratégie commerciale et proposition à partir d'un lead qualifié." },
-            { code: "LQ", name: "Lead Qualification", desc: "Score, priorise et transmet un résultat structuré au commercial." },
-            { code: "CS", name: "Customer Support", desc: "Classe, résout ou escalade une demande client vers un humain si besoin." },
-            { code: "FN", name: "Finance Assistant", desc: "Analyse, chiffre et documente une décision financière courante." },
-            { code: "OP", name: "Operations Assistant", desc: "Suit l'exécution d'un processus et signale les écarts à traiter." },
+            { code: "QM-01", slug: "rim", name: "Rim · Diagnostic qualité", desc: "Croise KPI, anomalies et objectifs qualité pour produire un diagnostic structuré et une priorité d'action." },
+            { code: "QM-02", slug: "adil", name: "Adil · Relevé KPI", desc: "Calcule les indicateurs qualité hebdomadaires depuis l'ERP et détecte toute dérive par rapport au seuil." },
+            { code: "QM-03", slug: "walid", name: "Walid · Contrôle de conformité", desc: "Vérifie qu'une procédure ou un paramétrage respecte les règles qualité et ouvre une exception si besoin." },
+            { code: "QM-04", slug: "ghita", name: "Ghita · Anomalie", desc: "Repère les ruptures de tendance dans les séries KPI et les relie aux changements survenus." },
+            { code: "QM-05", slug: "soufiane", name: "Soufiane · Analyse des causes", desc: "Formule et classe des hypothèses de cause racine à partir du diagnostic et de l'historique." },
+            { code: "QM-06", slug: "meryem", name: "Meryem · Action corrective", desc: "Propose une action corrective ciblant la cause retenue, avec responsable et échéance." },
+            { code: "QM-07", slug: "bilal", name: "Bilal · Actions préventives", desc: "Repère les risques similaires ailleurs dans le système et propose une prévention étendue." },
+            { code: "QM-08", slug: "kenza", name: "Kenza · Opportunités d'amélioration", desc: "Identifie des opportunités d'amélioration à partir des tendances KPI et de l'efficacité des actions passées." },
+            { code: "QM-09", slug: "tarik", name: "Tarik · Mesure d'efficacité", desc: "Compare les résultats avant/après une action corrective pour juger de son efficacité." },
+            { code: "QM-10", slug: "houda", name: "Houda · Leçon apprise", desc: "Capitalise le dossier clos en leçon apprise réutilisable par les autres agents qualité." },
           ].map((agent) => (
             <div
               key={agent.code}
@@ -676,8 +679,10 @@ export default async function Home() {
             >
               <div
                 style={{
-                  width: 34,
+                  width: "fit-content",
+                  minWidth: 34,
                   height: 34,
+                  padding: "0 8px",
                   borderRadius: 8,
                   background: "var(--steel-tint)",
                   display: "flex",
@@ -687,13 +692,14 @@ export default async function Home() {
                   fontWeight: 600,
                   color: "var(--steel)",
                   fontSize: 13,
+                  whiteSpace: "nowrap",
                 }}
               >
                 {agent.code}
               </div>
               <div style={{ fontWeight: 600, fontSize: 15 }}>{agent.name}</div>
               <p style={{ fontSize: 13, color: "var(--graphite)", lineHeight: 1.55, margin: 0 }}>{agent.desc}</p>
-              <Link href="/agents/lead-qualification"  style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)", marginTop: 6 }}>
+              <Link href={`/agents/${agent.slug}`} style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)", marginTop: 6 }}>
                 Ouvrir le Studio →
               </Link>
             </div>
