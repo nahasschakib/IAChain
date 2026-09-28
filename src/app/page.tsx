@@ -166,9 +166,9 @@ export default async function Home() {
               maxWidth: 480,
             }}
           >
-            IAChain orchestre des agents assistants spécialisés au sein de workflows métier complets. Chaque agent
-            reçoit l&apos;output du précédent, exécute sa mission et transmet un résultat structuré au suivant — de la
-            qualification d&apos;un prospect jusqu&apos;à l&apos;encaissement.
+           IAChain orchestre des agents assistants spécialisés au sein de workflows métier complets. Chaque agent
+            reçoit l&apos;output du précédent, exécute sa mission et transmet un résultat structuré au suivant — d&apos;une
+            dérive qualité détectée jusqu&apos;à l&apos;action corrective validée et capitalisée.
           </p>
           <div style={{ display: "flex", gap: 12, marginTop: 32, flexWrap: "wrap" }}>
             <a
@@ -231,7 +231,7 @@ export default async function Home() {
                   color: "var(--graphite)",
                 }}
               >
-                WORKFLOW · PROSPECT TO CASH
+                WORKFLOW · AMÉLIORATION CONTINUE · NC-041
               </span>
               <span
                 style={{
@@ -256,8 +256,10 @@ export default async function Home() {
                 background: "var(--paper)",
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Agent Qualification</div>
-              <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>Analyse le lead entrant</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Adil · Relevé KPI</div>
+              <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>
+                Taux d&apos;erreur de saisie : 3,8 % (seuil 1,5 %)
+              </div>
             </div>
 
             <div style={{ display: "flex", justifyContent: "center", padding: "6px 0" }}>
@@ -268,7 +270,7 @@ export default async function Home() {
             </div>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
-              {["score", "priority", "next_action"].map((tag) => (
+              {["écart", "risque", "priorité"].map((tag) => (
                 <span
                   key={tag}
                   style={{
@@ -300,9 +302,9 @@ export default async function Home() {
                 background: "var(--paper)",
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Agent Sales Strategy</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Rim · Diagnostic qualité</div>
               <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 2 }}>
-                Exploite le résultat de qualification, sans reprendre le travail
+                Écart de +2,6 pts vs objectif, priorité haute — déclenche l&apos;analyse des causes
               </div>
             </div>
           </div>
