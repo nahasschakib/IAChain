@@ -4,7 +4,9 @@ export type RunConfig = {
   inputsNote: string;
   steps: string[];
   actions: string[];
+  actionDone?: Record<string, string>;
 };
+
 
 export const APPROVAL_ACTION = "Demander approbation";
 
@@ -36,7 +38,12 @@ const CONFIGS: Record<string, Partial<RunConfig>> = {
       "Fiche, réponses FR/AR et relance rédigées",
       "Livrable publié — Fiche v1",
     ],
-    actions: ["Éditer la fiche", "Publier sur la boutique", "Activer les réponses", "Programmer la relance", APPROVAL_ACTION],
+      actions: ["Éditer la fiche", "Publier sur la boutique", "Activer les réponses", "Programmer la relance", APPROVAL_ACTION],
+    actionDone: {
+      "Publier sur la boutique": "Publiée sur la boutique",
+      "Activer les réponses": "Réponses activées",
+      "Programmer la relance": "Relance programmée",
+    },
   },
   ilyas: {
     buttonLabel: "Construire la liste",

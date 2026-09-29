@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 
+// Valeur de démonstration (canvas). Remplacée plus tard par le vrai catalogue synchronisé du client.
+const CATALOG_COUNT = 412;
+
 type FieldValue = string | boolean | string[];
 
 const VARIANTS = [
@@ -169,6 +172,22 @@ export default function ZinebPreview({ values }: { values: Record<string, FieldV
           <div style={{ ...monoLabel, color: "var(--steel-strong, #2f4a63)" }}>RÉF · ECO-0342-DRAFT</div>
           <div style={monoLabel}>SKU · TBO-200300</div>
         </div>
+      </div>
+            {/* Bandeau catalogue */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          border: "1px solid var(--border)",
+          background: "var(--steel-tint)",
+          padding: "8px 12px",
+          fontSize: "12.5px",
+        }}
+      >
+        <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#166534", flexShrink: 0 }} />
+        <span style={{ fontWeight: 600 }}>Catalogue synchronisé</span>
+        <span style={{ color: "var(--muted-foreground)" }}>· {CATALOG_COUNT} produits</span>
       </div>
 
       {/* Visuels + description */}

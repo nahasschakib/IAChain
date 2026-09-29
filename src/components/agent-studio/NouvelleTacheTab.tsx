@@ -92,6 +92,12 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const config = getRunConfig(agent.slug);
   const { status, step, run } = useAgentRun(config.steps.length);
   const cost = formatCost(agent.cost_estimate);
+    const [doneActions, setDoneActions] = useState<string[]>([]);
+  const doneMap = config.actionDone ?? {};
+  const handleRun = () => {
+    setDoneActions([]);
+    run();
+  };
 
   const [values, setValues] = useState<Values>(() => {
     const initial: Values = {};
@@ -188,12 +194,32 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
                 <Button key={label} type="button" variant="outline" size="sm" onClick={() => router.push("/approvals")}>
                   {label}
                 </Button>
+              ) : doneMap[label] ? (
+                <Button
+                  key={label}
+                  type="button"
+                  size="sm"
+                  variant={doneActions.includes(label) ? "default" : "outline"}
+                  onClick={() =>
+                    setDoneActions((prev) =>
+                      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
+                    )
+                  }
+                >
+                  {doneActions.includes(label) ? `✓ ${doneMap[label]}` : label}
+                </Button>
               ) : (
                 <Button key={label} type="button" variant="outline" size="sm" disabled title="Bientôt disponible">
                   {label}
                 </Button>
               )
             )}
+          </div>
+        )}
+
+        {status === "done" && doneActions.length > 0 && (
+          <div style={{ fontSize: "11.5px", color: "var(--muted-foreground)", marginTop: "8px" }}>
+            Simulé : rien n&apos;a été envoyé à la boutique ni à WhatsApp.
           </div>
         )}
 
