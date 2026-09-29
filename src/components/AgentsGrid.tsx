@@ -116,6 +116,30 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
 
   return (
     <div>
+               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+        <div style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
+          {(["carte", "contrat", "liste"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              style={{
+                font: "inherit",
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "7px 14px",
+                border: "none",
+                cursor: "pointer",
+                textTransform: "capitalize",
+                background: view === v ? "var(--steel-deep)" : "transparent",
+                color: view === v ? "#f5f6f8" : "var(--muted-foreground)",
+              }}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
       
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
         {CATEGORIES.map((cat) => (
@@ -149,30 +173,7 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
           gap: "20px",
         }}
       >
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
-        <div style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
-          {(["carte", "contrat", "liste"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              style={{
-                font: "inherit",
-                fontSize: "12px",
-                fontWeight: 600,
-                padding: "7px 14px",
-                border: "none",
-                cursor: "pointer",
-                textTransform: "capitalize",
-                background: view === v ? "var(--steel-deep)" : "transparent",
-                color: view === v ? "#f5f6f8" : "var(--muted-foreground)",
-              }}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-      </div>
+     
         {filtered.map((agent) => {
           const Icon = ICONS[agent.icon] ?? Search;
           const initial = agent.name.charAt(0).toUpperCase();

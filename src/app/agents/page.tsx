@@ -2,20 +2,9 @@ import { sql } from "@/lib/db";
 import AppShell from "@/components/AppShell";
 import AgentsGrid, { type Agent } from "@/components/AgentsGrid";
 
-const NUMBER_WORDS = [
-  "zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix",
-  "onze", "douze", "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf", "vingt",
-];
 
-function numberWord(n: number) {
-  return NUMBER_WORDS[n] ?? String(n);
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
+const CARD_SHADOW =
+  "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
 export default async function AgentsPage() {
   const agents = (await sql`
@@ -33,8 +22,8 @@ export default async function AgentsPage() {
       (SELECT COUNT(*) FROM deliverables WHERE created_at >= now() - interval '7 days') AS deliverables_week
   `;
   const s = statsRows[0];
-  const agentCount = Number(s.agent_count);
-  const word = numberWord(agentCount);
+   const agentCount = Number(s.agent_count);
+  const categoryCount = Number(s.category_count);
 
   const stats = [
     { value: agentCount, label: "Agents nommés" },
@@ -46,7 +35,13 @@ export default async function AgentsPage() {
   return (
     <AppShell>
       <div>
-        <header style={{ paddingBottom: "24px", borderBottom: "1px solid var(--border)", marginBottom: "24px" }}>
+        <header
+          style={{
+            paddingBottom: "24px",
+            borderBottom: "1px solid var(--border)",
+            marginBottom: "24px",
+          }}
+        >
           <div
             style={{
               fontFamily: "var(--font-mono, monospace)",
@@ -59,12 +54,30 @@ export default async function AgentsPage() {
           >
             Formule 1 · Bibliothèque d&apos;agents
           </div>
-          <h1 style={{ fontSize: "30px", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.15, margin: 0 }}>
-            {capitalize(word)} agents, {word} métiers
+                    <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "34px",
+              fontWeight: 700,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.1,
+              margin: 0,
+            }}
+          >
+            {agentCount} agents, {categoryCount} métiers
           </h1>
-          <p style={{ color: "var(--muted-foreground)", fontSize: "14px", lineHeight: 1.6, maxWidth: "640px", margin: "12px 0 0" }}>
-            Chacun porte un nom, un contrat d&apos;entrée/sortie typé et son propre studio. Seul, il produit un livrable.
-            Chaîné, sa sortie devient l&apos;entrée du suivant.
+          <p
+            style={{
+              color: "var(--muted-foreground)",
+              fontSize: "14px",
+              lineHeight: 1.6,
+              maxWidth: "640px",
+              margin: "12px 0 0",
+            }}
+          >
+            Chacun porte un nom, un contrat d&apos;entrée/sortie typé et son
+            propre studio. Seul, il produit un livrable. Chaîné, sa sortie
+            devient l&apos;entrée du suivant.
           </p>
         </header>
 
@@ -87,7 +100,14 @@ export default async function AgentsPage() {
                 boxShadow: CARD_SHADOW,
               }}
             >
-              <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--steel-strong, #2f4a63)", lineHeight: 1.1 }}>
+              <div
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  color: "var(--steel-strong, #2f4a63)",
+                  lineHeight: 1.1,
+                }}
+              >
                 {stat.value}
               </div>
               <div
