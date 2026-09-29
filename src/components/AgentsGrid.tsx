@@ -110,11 +110,13 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
   const [active, setActive] = useState("TOUS");
   const [hovered, setHovered] = useState<string | null>(null);
   const columns = useColumns();
+  const [view, setView] = useState<"carte" | "contrat" | "liste">("carte");
 
   const filtered = active === "TOUS" ? agents : agents.filter((a) => a.category.toUpperCase() === active);
 
   return (
     <div>
+      
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
         {CATEGORIES.map((cat) => (
           <button
@@ -139,6 +141,7 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
         ))}
       </div>
 
+            {view === "carte" && (
       <div
         style={{
           display: "grid",
@@ -146,6 +149,30 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
           gap: "20px",
         }}
       >
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+        <div style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
+          {(["carte", "contrat", "liste"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              style={{
+                font: "inherit",
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "7px 14px",
+                border: "none",
+                cursor: "pointer",
+                textTransform: "capitalize",
+                background: view === v ? "var(--steel-deep)" : "transparent",
+                color: view === v ? "#f5f6f8" : "var(--muted-foreground)",
+              }}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
         {filtered.map((agent) => {
           const Icon = ICONS[agent.icon] ?? Search;
           const initial = agent.name.charAt(0).toUpperCase();
@@ -274,8 +301,85 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
               </div>
             </div>
           );
-        })}
+                })}
       </div>
+      )}
+
+      {view === "contrat" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {filtered.map((agent) => (
+            <Link
+              key={agent.slug}
+              href={`/agents/${agent.slug}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "84px minmax(140px, 1fr) minmax(0, 2fr) 60px",
+                alignItems: "center",
+                gap: "16px",
+                padding: "14px 18px",
+                border: "1px solid var(--border)",
+                borderRadius: "10px",
+                background: "var(--surface, #fff)",
+                boxShadow: "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
+                color: "inherit",
+              }}
+            >
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px", fontWeight: 600 }}>{agent.code}</span>
+              <span>
+                <span style={{ fontWeight: 700, fontSize: "15px" }}>{agent.name}</span>
+                <span style={{ display: "block", fontSize: "12px", color: "var(--muted-foreground)" }}>{agent.role}</span>
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", flexWrap: "wrap" }}>
+                <span style={{ background: "var(--steel-tint)", padding: "4px 9px", borderRadius: "6px" }}>{agent.input_label}</span>
+                <span style={{ color: "var(--muted-foreground)" }}>→</span>
+                <span style={{ background: "var(--steel-tint)", padding: "4px 9px", borderRadius: "6px" }}>{agent.output_label}</span>
+              </span>
+              <span style={{ fontFamily: "monospace", fontSize: "11px", color: "var(--muted-foreground)", textAlign: "right" }}>
+                {agent.version}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {view === "liste" && (
+        <div
+          style={{
+            border: "1px solid var(--border)",
+            borderRadius: "10px",
+            background: "var(--surface, #fff)",
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)",
+          }}
+        >
+          {filtered.map((agent, i) => (
+            <Link
+              key={agent.slug}
+              href={`/agents/${agent.slug}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "84px minmax(120px, 1fr) minmax(0, 2fr) 110px 90px",
+                alignItems: "center",
+                gap: "16px",
+                padding: "12px 18px",
+                borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                color: "inherit",
+                fontSize: "13px",
+              }}
+            >
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px", fontWeight: 600 }}>{agent.code}</span>
+              <span style={{ fontWeight: 700 }}>{agent.name}</span>
+              <span style={{ color: "var(--muted-foreground)" }}>{agent.role}</span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "11px", textTransform: "uppercase" }}>
+                {agent.category}
+              </span>
+              <span style={{ fontSize: "12px", color: "var(--muted-foreground)", textAlign: "right" }}>
+                {`${agent.workflow_count} workflow${agent.workflow_count > 1 ? "s" : ""}`}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
