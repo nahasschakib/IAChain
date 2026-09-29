@@ -44,7 +44,7 @@ export default function LivrablesTab({ deliverables }: { deliverables: Deliverab
                 <ApprovalBadge status={d.approval_status} />
               </td>
               <td style={{ fontSize: "13px", color: "var(--muted-foreground)", fontFamily: "monospace" }}>
-                {d.cost ? `${Number(d.cost).toFixed(2)} MAD` : "—"}
+                {d.cost ? `${Number(d.cost).toFixed(2).replace(".", ",")} MAD` : "—"}
               </td>
             </tr>
           ))}
