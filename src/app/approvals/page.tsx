@@ -3,6 +3,8 @@ import ApprovalsInbox, {
   type ApprovalPayload,
   type HistoryItem,
   type PendingItem,
+  type ProcessedItem,
+  type Stats,
 } from "@/components/approvals/ApprovalsInbox";
 import { sql } from "@/lib/db";
 
@@ -34,6 +36,17 @@ function formatSla(minutesLeft: number | null): { label: string; late: boolean }
   return { label: m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`, late: total < 120 };
 }
 
+function formatDuration(min: number | null): string {
+  if (min === null || Number.isNaN(min)) return "—";
+  const t = Math.round(min);
+  if (t < 60) return `${t} min`;
+  if (t < 1440) {
+    const h = Math.floor(t / 60);
+    const m = t % 60;
+    return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+  }
+  return `${Math.round(t / 1440)} j`;
+}
 export default async function ApprovalsPage() {
   const pendingRows = await sql`
     SELECT a.id, a.title, a.tag, a.agent_label, a.payload, a.created_at,
@@ -69,18 +82,56 @@ export default async function ApprovalsPage() {
     tone: (row.status === "approuve" ? "signal" : "red") as "signal" | "red",
   }));
 
+    const processedRows = await sql`
+    SELECT id, title, tag, agent_label, status, resolved_at, decision_reason,
+           payload->>'ref' AS ref
+    FROM approvals
+    WHERE status IN ('approuve', 'rejete')
+    ORDER BY resolved_at DESC
+    LIMIT 50
+  `;
+  const processed: ProcessedItem[] = processedRows.map((row) => ({
+    id: Number(row.id),
+    ref: (row.ref as string | null) ?? null,
+    title: row.title as string,
+    tag: row.tag as string,
+    agentLabel: row.agent_label as string,
+    approved: row.status === "approuve",
+    when: formatHistoryDate(new Date(row.resolved_at as string)),
+    reason: (row.decision_reason as string | null) ?? null,
+  }));
+
+  const statsRows = await sql`
+    SELECT COUNT(*) FILTER (WHERE status = 'approuve') AS approved,
+           COUNT(*) FILTER (WHERE status = 'rejete') AS rejected,
+           AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 60) AS avg_min
+    FROM approvals
+    WHERE status IN ('approuve', 'rejete')
+  `;
+  const stats: Stats = {
+    approved: Number(statsRows[0].approved),
+    rejected: Number(statsRows[0].rejected),
+    avgSla: formatDuration(statsRows[0].avg_min === null ? null : Number(statsRows[0].avg_min)),
+  };
+
   return (
     <AppShell
       topbar={
         <>
           <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18 }}>File d&apos;approbation</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 12, color: "var(--graphite)" }}>{`${pending.length} actions nécessitent une validation humaine`}</span>
+              <span style={{ fontSize: 12, color: "var(--graphite)" }}>
+                {pending.length === 0
+                  ? "Aucune action en attente"
+                  : pending.length === 1
+                    ? "1 action nécessite une validation humaine"
+                    : `${pending.length} actions nécessitent une validation humaine`}
+              </span>
           </div>
         </>
       }
     >
-      <ApprovalsInbox pending={pending} history={history} />
+    <ApprovalsInbox pending={pending} history={history} processed={processed} stats={stats} />
     </AppShell>
   );
 }

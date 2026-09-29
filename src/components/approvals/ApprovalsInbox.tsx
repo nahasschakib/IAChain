@@ -35,6 +35,19 @@ export type PendingItem = {
 
 export type HistoryItem = { title: string; status: string; tone: "signal" | "red" };
 
+export type ProcessedItem = {
+  id: number;
+  ref: string | null;
+  title: string;
+  tag: string;
+  agentLabel: string;
+  approved: boolean;
+  when: string;
+  reason: string | null;
+};
+
+export type Stats = { approved: number; rejected: number; avgSla: string };
+
 const DEFAULT_ACTIONS = ["Rejeter", "Modifier", "Approuver"];
 
 const MONO_LABEL: CSSProperties = {
@@ -47,9 +60,13 @@ const MONO_LABEL: CSSProperties = {
 export default function ApprovalsInbox({
   pending,
   history,
+  processed,
+  stats,
 }: {
   pending: PendingItem[];
   history: HistoryItem[];
+  processed: ProcessedItem[];
+  stats: Stats;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(pending[0]?.id ?? null);
   const selected = pending.find((p) => p.id === selectedId) ?? pending[0];
@@ -63,6 +80,9 @@ export default function ApprovalsInbox({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+    const [tab, setTab] = useState<"pending" | "processed">("pending");
+  const [processedId, setProcessedId] = useState<number | null>(null);
+  const selectedProcessed = processed.find((p) => p.id === processedId) ?? processed[0];
 
   function decide(decision: "approuve" | "rejete", why?: string) {
     if (!selected) return;
@@ -82,28 +102,42 @@ export default function ApprovalsInbox({
     <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
       {/* LIST */}
       <div style={{ flex: "1 1 380px", minWidth: 320, display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "flex", gap: 8, fontSize: 13, fontWeight: 600 }}>
-          <span
-            style={{
-              padding: "8px 14px",
-              borderRadius: 999,
-              background: "var(--steel-deep)",
-              color: "#f5f6f8",
-              boxShadow: "0 2px 6px rgba(15, 23, 42, 0.15)",
-            }}
-          >
-            {`En attente · ${pending.length}`}
-          </span>
-          <span style={{ padding: "8px 14px", borderRadius: 999, color: "var(--graphite)", cursor: "pointer" }}>
-            Traitées
-          </span>
+                <div style={{ display: "flex", gap: 8, fontSize: 13, fontWeight: 600 }}>
+          {(
+            [
+              ["pending", `En attente · ${pending.length}`],
+              ["processed", `Traitées · ${processed.length}`],
+            ] as const
+          ).map(([key, label]) => {
+            const on = tab === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setTab(key)}
+                style={{
+                  font: "inherit",
+                  fontWeight: 600,
+                  border: "none",
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  background: on ? "var(--steel-deep)" : "transparent",
+                  color: on ? "#f5f6f8" : "var(--graphite)",
+                  boxShadow: on ? "0 2px 6px rgba(15, 23, 42, 0.15)" : "none",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
-        {pending.length === 0 && (
+           {tab === "pending" && pending.length === 0 && (
           <div style={{ fontSize: 13, color: "var(--graphite)", padding: 16 }}>Aucune approbation en attente.</div>
         )}
 
-        {pending.map((item) => {
+        {tab === "pending" && pending.map((item) => {
           const active = item.id === selected?.id;
           return (
             <button
@@ -147,9 +181,70 @@ export default function ApprovalsInbox({
               </div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{item.title}</div>
               <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 3 }}>{item.subtitle}</div>
+                            {item.sla && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginTop: 8,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10.5,
+                    padding: "2px 7px",
+                    borderRadius: 6,
+                    border: `1px solid ${item.sla.late ? "var(--red)" : "var(--line)"}`,
+                    color: item.sla.late ? "var(--red)" : "var(--graphite)",
+                  }}
+                >
+                  {`SLA restant ${item.sla.label}`}
+                </span>
+              )}
             </button>
           );
         })}
+                {tab === "processed" && processed.length === 0 && (
+          <div style={{ fontSize: 13, color: "var(--graphite)", padding: 16 }}>Aucune demande traitée.</div>
+        )}
+        {tab === "processed" &&
+          processed.map((item) => {
+            const active = item.id === selectedProcessed?.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setProcessedId(item.id)}
+                style={{
+                  textAlign: "left",
+                  font: "inherit",
+                  color: "inherit",
+                  background: "var(--surface)",
+                  border: active ? "2px solid var(--steel)" : "1px solid var(--line)",
+                  borderRadius: 12,
+                  padding: active ? 15 : 16,
+                  cursor: "pointer",
+                  boxShadow: active ? CARD_SHADOW_ELEVATED : CARD_SHADOW,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      background: "var(--paper)",
+                      color: item.approved ? "var(--signal)" : "var(--red)",
+                    }}
+                  >
+                    {item.approved ? "Approuvée" : "Rejetée"}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--graphite)" }}>{item.when}</span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{item.title}</div>
+                <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 3 }}>
+                  {item.ref ? `${item.ref} · Agent ${item.agentLabel}` : `Agent ${item.agentLabel}`}
+                </div>
+              </button>
+            );
+          })}
       </div>
 
       {/* DETAIL */}
@@ -165,7 +260,29 @@ export default function ApprovalsInbox({
           boxShadow: CARD_SHADOW,
         }}
       >
-        {selected ? (
+                {tab === "processed" ? (
+          selectedProcessed ? (
+            <>
+              <span style={{ ...MONO_LABEL, color: selectedProcessed.approved ? "var(--signal)" : "var(--red)" }}>
+                {`DEMANDE ${selectedProcessed.approved ? "APPROUVÉE" : "REJETÉE"}${selectedProcessed.ref ? ` · ${selectedProcessed.ref}` : ""}`}
+              </span>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, margin: "10px 0 4px" }}>
+                {selectedProcessed.title}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--graphite)", marginBottom: 18 }}>
+                {`${selectedProcessed.tag} · Agent ${selectedProcessed.agentLabel} · ${selectedProcessed.when}`}
+              </div>
+              <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 10, padding: 16 }}>
+                <div style={{ ...MONO_LABEL, marginBottom: 6 }}>MOTIF</div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                  {selectedProcessed.reason ?? "Aucun motif renseigné."}
+                </p>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--graphite)" }}>Aucune demande traitée pour l&apos;instant.</div>
+          )
+        ) : selected ? (
           <>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.06em", color: "var(--steel)" }}>
@@ -426,6 +543,27 @@ export default function ApprovalsInbox({
           <div style={{ fontSize: 13, color: "var(--graphite)" }}>Sélectionne une demande pour voir son détail.</div>
         )}
 
+                <div
+          style={{
+            marginTop: 24,
+            paddingTop: 18,
+            borderTop: "1px solid var(--line)",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 12,
+          }}
+        >
+          {[
+            ["Approuvées", String(stats.approved)],
+            ["Rejetées", String(stats.rejected)],
+            ["SLA moyen", stats.avgSla],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <div style={{ ...MONO_LABEL, marginBottom: 4 }}>{k.toUpperCase()}</div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20 }}>{v}</div>
+            </div>
+          ))}
+        </div>
         <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid var(--line)" }}>
           <span style={MONO_LABEL}>HISTORIQUE RÉCENT</span>
           {history.map((item, i) => (
