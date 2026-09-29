@@ -1,0 +1,17 @@
+-- 007 · Détail des approbations en attente (payload jsonb) : recommandation, extrait, propriétaire, chaîne de décision.
+-- Idempotent (UPDATE). Valeurs de démonstration, à remplacer par le vrai code de création des approbations.
+
+UPDATE approvals SET payload = '{"ref": "APR-0447", "owner": "S. Idrissi · Manager opérations", "source": "Qualité · WF-04 · Meryem (QM-06) · Non-conformité → Amélioration continue", "aiReco": "Approuver AC-017, échéance 19 sept.", "chips": ["NC-041", "priorité haute", "coût estimé 2 j/h DSI"], "extractTitle": "AC-017 · Rétablir l''unité « carton » par défaut", "extract": "Cause retenue par A. Kettani : unité par défaut « pièce » du formulaire mis en production le 1er sept. Action : unité « carton » par défaut et contrôle bloquant au-delà de 500 unités. Vérification : taux d''erreur ≤ 1,5 % sur 2 semaines.", "props": [{"k": "Propriétaire", "v": "S. Idrissi · Manager opérations"}, {"k": "Échéance proposée", "v": "19 sept. 2026"}, {"k": "Nature", "v": "Recommandation IA · cause validée par un humain"}, {"k": "Preuves", "v": "Test de reproduction 48/50 · Pareto"}], "lineage": ["Adil · dérive 3,8 %", "Ghita · anomalie", "Soufiane · 3 hypothèses", "A. Kettani · cause retenue", "Meryem · AC-017"], "actions": ["Rejeter", "Modifier", "Reporter", "Approuver l''action"]}'::jsonb
+WHERE status = 'en_attente' AND title = 'Action corrective AC-017 · unité de saisie ERP';
+
+UPDATE approvals SET payload = '{"ref": "APR-0442", "owner": "S. Benali · Responsable commercial", "aiReco": "Envoyer la proposition v1", "chips": ["score 82", "priority high", "montant 120 000 MAD"], "email": {"to": "achats@atlas.ma", "subject": "Votre proposition IAChain — Atlas SARL", "body": "Bonjour, suite à notre échange, vous trouverez ci-joint notre proposition pour l''automatisation de votre processus commercial. Elle inclut la mise en place de 3 agents spécialisés et leur intégration à votre CRM existant…"}, "props": [{"k": "Propriétaire", "v": "S. Benali · Responsable commercial"}, {"k": "Origine", "v": "Nœud Approbation · Prospect to Cash v3"}], "lineage": ["Yasmine · signal", "Mehdi · score 82", "Karim · angle « conformité »", "Salma · proposition v1"], "actions": ["Rejeter", "Modifier", "Approuver et envoyer"]}'::jsonb
+WHERE status = 'en_attente' AND title = 'Proposal — Atlas SARL';
+
+UPDATE approvals SET payload = '{"ref": "APR-0441", "owner": "L. Amrani · Responsable support", "aiReco": "Envoyer la réponse proposée au client", "chips": ["ticket #4821"], "props": [{"k": "Propriétaire", "v": "L. Amrani · Responsable support"}, {"k": "Origine", "v": "Support Client v2"}], "lineage": ["Imane · tri & réponse"], "actions": ["Rejeter", "Modifier", "Approuver et envoyer"]}'::jsonb
+WHERE status = 'en_attente' AND title = 'Réponse ticket #4821';
+
+UPDATE approvals SET payload = '{"ref": "APR-0440", "owner": "S. Benali · Responsable commercial", "aiReco": "Appliquer la modification à la fiche client", "chips": ["écriture CRM"], "props": [{"k": "Propriétaire", "v": "S. Benali · Responsable commercial"}, {"k": "Origine", "v": "Prospect to Cash v3"}], "lineage": ["Yasmine · signal", "Mehdi · qualification"], "actions": ["Rejeter", "Modifier", "Approuver"]}'::jsonb
+WHERE status = 'en_attente' AND title = 'Modification fiche client';
+
+-- Vérification attendue : 4 approbations en attente, toutes avec un détail
+SELECT COUNT(*) AS en_attente, COUNT(payload) AS avec_detail FROM approvals WHERE status = 'en_attente';
