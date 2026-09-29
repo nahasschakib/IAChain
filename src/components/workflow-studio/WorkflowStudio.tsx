@@ -278,6 +278,7 @@ export default function WorkflowStudio({
   runBanner,
   switcher,
   currentSlug,
+  initialMode = "design",
 }: {
   nodes: StudioNode[];
   palette: PaletteAgent[];
@@ -288,16 +289,25 @@ export default function WorkflowStudio({
   runBanner: RunBanner | null;
   switcher: SwitchItem[];
   currentSlug: string;
+  initialMode?: Mode;
 }) {
-  const [mode, setMode] = useState<Mode>("design");
-  const [selectedKey, setSelectedKey] = useState<string>(
-    () =>
+    const [mode, setMode] = useState<Mode>(initialMode);
+    const [selectedKey, setSelectedKey] = useState<string>(() => {
+    if (initialMode === "run") {
+      const current =
+        nodes.find((n) => n.kind === "approval" && n.run_state === "waiting") ??
+        nodes.find((n) => n.run_state === "running") ??
+        nodes.find((n) => n.run_state === "waiting");
+      if (current) return current.node_key;
+    }
+    return (
       (
         nodes.find((n) => n.kind === "condition") ??
         nodes.find((n) => n.mapping.length > 2) ??
         nodes[0]
-      )?.node_key ?? "",
-  );
+      )?.node_key ?? ""
+    );
+  });
   // Largeur du graphe : suit la largeur disponible du panneau
   const boxRef = useRef<HTMLDivElement>(null);
   const [boxW, setBoxW] = useState(W_MAX);

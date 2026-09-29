@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import { resolveApproval, delegateApproval } from "@/app/approvals/actions";
+import Link from "next/link";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_ELEVATED = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
@@ -29,9 +30,10 @@ export type PendingItem = {
   subtitle: string;
   agentLabel: string;
   workflowName: string;
+  workflowSlug: string | null;
   sla: { label: string; late: boolean } | null;
   payload: ApprovalPayload | null;
-    domains: string[];
+  domains: string[];
   delegation: Delegation | null;
 };
 
@@ -475,6 +477,16 @@ export default function ApprovalsInbox({
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+              {selected.workflowSlug && (
+              <div style={{ marginBottom: 14 }}>
+                <Link
+                  href={`/workflows/${selected.workflowSlug}?vue=execution`}
+                  style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)" }}
+                >
+                  Voir l&apos;exécution →
+                </Link>
               </div>
             )}
 

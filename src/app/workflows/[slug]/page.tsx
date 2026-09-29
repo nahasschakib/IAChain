@@ -21,8 +21,15 @@ const VERSIONS: Record<string, VersionItem[]> = {
   ],
 };
 
-export default async function WorkflowStudioPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function WorkflowStudioPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ vue?: string }>;
+}) {
   const { slug } = await params;
+  const { vue } = await searchParams;
 
   const wfRows = await sql`
     SELECT slug, name, version, cost_estimate, cost_unit, run_label, run_banner, studio_ready
@@ -100,6 +107,7 @@ export default async function WorkflowStudioPage({ params }: { params: Promise<{
         runBanner={(wf.run_banner as RunBanner | null) ?? null}
         switcher={switcher}
         currentSlug={slug}
+        initialMode={vue === "execution" ? "run" : "design"}
       />
     </AppShell>
   );
