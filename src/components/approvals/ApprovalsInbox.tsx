@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { CSSProperties } from "react";
-import { resolveApproval } from "@/app/approvals/actions";
+import { resolveApproval, delegateApproval } from "@/app/approvals/actions";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_ELEVATED = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
@@ -31,9 +31,14 @@ export type PendingItem = {
   workflowName: string;
   sla: { label: string; late: boolean } | null;
   payload: ApprovalPayload | null;
+    domains: string[];
+  delegation: Delegation | null;
 };
 
 export type HistoryItem = { title: string; status: string; tone: "signal" | "red" };
+
+export type Expert = { id: number; name: string; roleTitle: string; domain: string };
+export type Delegation = { expertName: string; roleTitle: string; when: string; reason: string | null };
 
 export type ProcessedItem = {
   id: number;
@@ -62,11 +67,13 @@ export default function ApprovalsInbox({
   history,
   processed,
   stats,
+  experts,
 }: {
   pending: PendingItem[];
   history: HistoryItem[];
   processed: ProcessedItem[];
   stats: Stats;
+  experts: Expert[];
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(pending[0]?.id ?? null);
   const selected = pending.find((p) => p.id === selectedId) ?? pending[0];
@@ -80,6 +87,27 @@ export default function ApprovalsInbox({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+    const [delegating, setDelegating] = useState(false);
+  const [expertId, setExpertId] = useState<number | "">("");
+  const [delegReason, setDelegReason] = useState("");
+
+  const matching = selected ? experts.filter((e) => selected.domains.length === 0 || selected.domains.includes(e.domain)) : [];
+  const candidates = matching.length > 0 ? matching : experts;
+
+  function delegate() {
+    if (!selected || expertId === "") return;
+    setError(null);
+    startTransition(async () => {
+      const res = await delegateApproval(selected.id, Number(expertId), delegReason);
+      if (!res.ok) {
+        setError(res.error ?? "Erreur");
+        return;
+      }
+      setDelegating(false);
+      setExpertId("");
+      setDelegReason("");
+    });
+  }
     const [tab, setTab] = useState<"pending" | "processed">("pending");
   const [processedId, setProcessedId] = useState<number | null>(null);
   const selectedProcessed = processed.find((p) => p.id === processedId) ?? processed[0];
@@ -148,6 +176,9 @@ export default function ApprovalsInbox({
                 setRejecting(false);
                 setReason("");
                 setError(null);
+                setDelegating(false);
+                setExpertId("");
+                setDelegReason("");
               }}
               style={{
                 textAlign: "left",
@@ -181,7 +212,12 @@ export default function ApprovalsInbox({
               </div>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{item.title}</div>
               <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 3 }}>{item.subtitle}</div>
-                            {item.sla && (
+                            {item.delegation && (
+                <div style={{ fontSize: 11, color: "var(--steel)", marginTop: 8, fontWeight: 600 }}>
+                  {`Déléguée à ${item.delegation.expertName}`}
+                </div>
+              )}
+                    {item.sla && (
                 <span
                   style={{
                     display: "inline-block",
@@ -194,7 +230,7 @@ export default function ApprovalsInbox({
                     color: item.sla.late ? "var(--red)" : "var(--graphite)",
                   }}
                 >
-                  {`SLA restant ${item.sla.label}`}
+                 {item.sla.label === "en retard" ? "SLA dépassé" : `SLA restant ${item.sla.label}`}
                 </span>
               )}
             </button>
@@ -343,6 +379,26 @@ export default function ApprovalsInbox({
               </div>
             )}
 
+                        {selected.delegation && (
+              <div
+                style={{
+                  background: "var(--paper)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ ...MONO_LABEL, color: "var(--steel)", marginBottom: 6 }}>DÉLÉGUÉE</div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {`${selected.delegation.expertName} · ${selected.delegation.roleTitle}`}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--graphite)", marginTop: 3 }}>
+                  {`${selected.delegation.when}${selected.delegation.reason ? ` · ${selected.delegation.reason}` : ""} · le SLA continue de courir`}
+                </div>
+              </div>
+            )}
+
             {payload?.aiReco && (
               <div
                 style={{
@@ -422,7 +478,7 @@ export default function ApprovalsInbox({
               </div>
             )}
 
-                        {rejecting && (
+            {rejecting && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ ...MONO_LABEL, marginBottom: 6 }}>MOTIF DU REJET</div>
                 <textarea
@@ -442,6 +498,53 @@ export default function ApprovalsInbox({
                     resize: "vertical",
                   }}
                 />
+              </div>
+            )}
+              {delegating && (
+              <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <div style={{ ...MONO_LABEL, marginBottom: 6 }}>DÉLÉGUER À UN EXPERT MÉTIER</div>
+                  <select
+                    value={expertId}
+                    onChange={(e) => setExpertId(e.target.value === "" ? "" : Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      font: "inherit",
+                      fontSize: 13,
+                      padding: 10,
+                      border: "1px solid var(--line)",
+                      borderRadius: 8,
+                      background: "var(--paper)",
+                    }}
+                  >
+                    <option value="">Choisir un expert…</option>
+                    {candidates.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {`${e.name} · ${e.roleTitle} (${e.domain})`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <div style={{ ...MONO_LABEL, marginBottom: 6 }}>MOTIF DE LA DÉLÉGATION</div>
+                  <textarea
+                    value={delegReason}
+                    onChange={(e) => setDelegReason(e.target.value)}
+                    rows={3}
+                    placeholder="Pourquoi cet expert ? Que doit-il vérifier ou décider ?"
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      font: "inherit",
+                      fontSize: 13,
+                      padding: 10,
+                      border: "1px solid var(--line)",
+                      borderRadius: 8,
+                      background: "var(--paper)",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
               </div>
             )}
             {error && <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10 }}>{error}</div>}
@@ -491,9 +594,54 @@ export default function ApprovalsInbox({
                     {isPending ? "Enregistrement…" : "Confirmer le rejet"}
                   </button>
                 </>
+               ) : delegating ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      setDelegating(false);
+                      setExpertId("");
+                      setDelegReason("");
+                      setError(null);
+                    }}
+                    style={{
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      background: "transparent",
+                      border: "1px solid var(--line)",
+                      padding: "10px 18px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending || expertId === "" || !delegReason.trim()}
+                    onClick={delegate}
+                    style={{
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      background: "var(--steel-deep)",
+                      color: "#f5f6f8",
+                      border: "none",
+                      padding: "10px 20px",
+                      borderRadius: 8,
+                      marginLeft: "auto",
+                      cursor: isPending || expertId === "" || !delegReason.trim() ? "not-allowed" : "pointer",
+                      opacity: isPending || expertId === "" || !delegReason.trim() ? 0.6 : 1,
+                    }}
+                  >
+                    {isPending ? "Enregistrement…" : "Confirmer la délégation"}
+                  </button>
+                </>
               ) : (
                 <>
-                  {otherActions.map((label) => (
+                    {otherActions.map((label) => (
                     <button
                       key={label}
                       type="button"
@@ -514,6 +662,23 @@ export default function ApprovalsInbox({
                       {label}
                     </button>
                   ))}
+                                    <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => setDelegating(true)}
+                    style={{
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      background: "transparent",
+                      border: "1px solid var(--line)",
+                      padding: "10px 18px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Déléguer
+                  </button>
                   <button
                     type="button"
                     disabled={isPending}

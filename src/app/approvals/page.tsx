@@ -5,15 +5,17 @@ import ApprovalsInbox, {
   type PendingItem,
   type ProcessedItem,
   type Stats,
+  type Expert,
 } from "@/components/approvals/ApprovalsInbox";
 import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 function formatRelativeTime(date: Date): string {
-  const diffMin = Math.round((Date.now() - date.getTime()) / 60000);
+  const diffMin = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
   if (diffMin < 60) return `il y a ${diffMin} min`;
-  return `il y a ${Math.round(diffMin / 60)} h`;
+  if (diffMin < 1440) return `il y a ${Math.round(diffMin / 60)} h`;
+  return `il y a ${Math.round(diffMin / 1440)} j`;
 }
 
 function formatHistoryDate(date: Date): string {
@@ -48,12 +50,18 @@ function formatDuration(min: number | null): string {
   return `${Math.round(t / 1440)} j`;
 }
 export default async function ApprovalsPage() {
-  const pendingRows = await sql`
+   const pendingRows = await sql`
     SELECT a.id, a.title, a.tag, a.agent_label, a.payload, a.created_at,
            w.name AS workflow_name,
+           w.slug AS workflow_slug,
+           p.agent_categories AS domains,
+           a.delegated_at, a.delegation_reason,
+           e.name AS delegate_name, e.role_title AS delegate_role,
            EXTRACT(EPOCH FROM (a.due_at - now())) / 60 AS minutes_left
     FROM approvals a
     LEFT JOIN workflows w ON w.id = a.workflow_id
+    LEFT JOIN processes p ON p.slug = w.process_slug
+    LEFT JOIN org_experts e ON e.id = a.delegated_to
     WHERE a.status = 'en_attente'
     ORDER BY a.created_at DESC
   `;
@@ -65,6 +73,16 @@ export default async function ApprovalsPage() {
     subtitle: `Agent ${row.agent_label} · ${row.workflow_name}`,
     agentLabel: row.agent_label as string,
     workflowName: row.workflow_name as string,
+    workflowSlug: (row.workflow_slug as string | null) ?? null,
+    domains: (row.domains as string[] | null) ?? [],
+    delegation: row.delegate_name
+      ? {
+          expertName: row.delegate_name as string,
+          roleTitle: row.delegate_role as string,
+          when: formatRelativeTime(new Date(row.delegated_at as string)),
+          reason: (row.delegation_reason as string | null) ?? null,
+        }
+      : null,
     sla: formatSla(row.minutes_left === null ? null : Number(row.minutes_left)),
     payload: (row.payload as ApprovalPayload | null) ?? null,
   }));
@@ -114,6 +132,14 @@ export default async function ApprovalsPage() {
     avgSla: formatDuration(statsRows[0].avg_min === null ? null : Number(statsRows[0].avg_min)),
   };
 
+    const expertRows = await sql`SELECT id, name, role_title, domain FROM org_experts ORDER BY name`;
+  const experts: Expert[] = expertRows.map((r) => ({
+    id: Number(r.id),
+    name: r.name as string,
+    roleTitle: r.role_title as string,
+    domain: r.domain as string,
+  }));
+
   return (
     <AppShell
       topbar={
@@ -131,7 +157,7 @@ export default async function ApprovalsPage() {
         </>
       }
     >
-    <ApprovalsInbox pending={pending} history={history} processed={processed} stats={stats} />
+          <ApprovalsInbox pending={pending} history={history} processed={processed} stats={stats} experts={experts} />
     </AppShell>
   );
 }
