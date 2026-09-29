@@ -3,6 +3,14 @@ export default function SalmaPreview({ values }: { values: Record<string, string
   const remise = Number((values.remise as string) || "12");
   const totalHT = 40357;
   const totalTTC = Math.round(totalHT * (1 - remise / 100) * 1.2);
+  const registre = (values.registre as string) || "Direct";
+  const ttc = totalTTC.toLocaleString("fr-FR");
+
+  const INTROS: Record<string, string> = {
+    Direct: `Bonjour, voici notre proposition pour ${client}. Nous automatisons vos commandes sur 3 sites, reliées à votre ERP et à votre CRM, pour ${ttc} MAD TTC. Mise en service 8 semaines après signature.`,
+    Institutionnel: `Madame, Monsieur, nous avons le plaisir de vous soumettre la présente proposition à l'attention de ${client}. Elle porte sur l'automatisation de vos commandes et leur intégration à votre système d'information, pour un montant de ${ttc} MAD TTC. Nous restons à votre entière disposition pour tout complément d'information.`,
+    Technique: `Périmètre : automatisation du flux de commandes sur 3 sites, connecteurs ERP et CRM. Livraison : 8 semaines après signature, 2 sessions de formation incluses. Chiffrage : ${totalHT.toLocaleString("fr-FR")} MAD HT, remise de ${remise} %, soit ${ttc} MAD TTC.`,
+  };
 
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: "12px", padding: "24px" }}>
@@ -12,9 +20,16 @@ export default function SalmaPreview({ values }: { values: Record<string, string
       </div>
 
       <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "4px" }}>Proposition · {client}</h2>
-      <p style={{ color: "var(--muted-foreground)", fontSize: "13px", marginBottom: "20px" }}>
+            <p style={{ color: "var(--muted-foreground)", fontSize: "13px", marginBottom: "20px" }}>
         Remise appliquée {remise} % · mise en service 8 semaines après signature
       </p>
+
+      <div style={{ border: "1px solid var(--border)", borderRadius: "8px", padding: "14px 16px", marginBottom: "24px" }}>
+        <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "10px", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: "8px" }}>
+          {`MOT D'INTRODUCTION · REGISTRE ${registre.toUpperCase()}`}
+        </div>
+        <p style={{ fontSize: "13px", lineHeight: 1.6, margin: 0 }}>{INTROS[registre] ?? INTROS.Direct}</p>
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
         {[
