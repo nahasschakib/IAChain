@@ -32,7 +32,6 @@ import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
 import GhitaPreview from "./previews/GhitaPreview";
 import SoufianePreview from "./previews/SoufiaanePreview";
-import { mergePropsN } from "@base-ui/react/merge-props";
 import MeryemPreview from "./previews/MeryemPreview";
 import BilalPreview from "./previews/BilalPreview";
 import KenzaPreview from "./previews/KenzaPreview";
@@ -250,6 +249,7 @@ function FieldRenderer({
 }) {
   return (
     <div style={{ marginBottom: "20px" }}>
+      
       {field.field_type !== "checkbox" && (
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
           <label style={{ fontSize: "13px", fontWeight: 600 }}>{field.label}</label>
@@ -331,7 +331,29 @@ function FieldRenderer({
           ))}
         </div>
       )}
-
+            {field.field_type === "choice" && (
+        <div style={{ display: "inline-flex", border: "1px solid var(--border)", borderRadius: "8px", overflow: "hidden" }}>
+          {((field.options as unknown as string[]) ?? []).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChange(opt)}
+              style={{
+                font: "inherit",
+                fontSize: "12px",
+                fontWeight: 600,
+                padding: "7px 14px",
+                border: "none",
+                cursor: "pointer",
+                background: value === opt ? "var(--steel-deep)" : "transparent",
+                color: value === opt ? "#f5f6f8" : "var(--muted-foreground)",
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
       {field.field_type === "checkbox" && (
         <label style={{ display: "flex", gap: "8px", alignItems: "center", fontSize: "13px" }}>
           <Checkbox checked={!!value} onCheckedChange={(c) => onChange(c === true)} />

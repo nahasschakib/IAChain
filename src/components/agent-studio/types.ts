@@ -23,7 +23,7 @@ export interface TaskField {
   agent_id: number;
   field_key: string;
   label: string;
-  field_type: "textarea" | "checkbox-group" | "source-list" | "volume-select" | "checkbox";
+  field_type: "textarea" | "checkbox-group" | "source-list" | "volume-select" | "checkbox" | "choice";
   provenance: string | null;
   required: boolean;
   options: CheckboxGroupOption[] | SourceListOption[] | number[] | null;
