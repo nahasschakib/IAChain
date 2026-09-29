@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import IlyasPreview from "./previews/IlyasPreview";
 import AminePreview from "./previews/AminePreview";
@@ -27,6 +27,7 @@ import MehdiPreview from "./previews/MehdiPreview";
 import ZinebPreview from "./previews/ZinebPreview";
 import { useAgentRun } from "./useAgentRun";
 import { getRunConfig, APPROVAL_ACTION } from "./runConfig";
+import { recordRun } from "@/app/agents/actions";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -98,6 +99,14 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
     setDoneActions([]);
     run();
   };
+    const recorded = useRef(false);
+  useEffect(() => {
+    if (status === "running") recorded.current = false;
+    if (status === "done" && !recorded.current) {
+      recorded.current = true;
+      recordRun(agent.id).then(() => router.refresh());
+    }
+  }, [status, agent.id, router]);
 
   const [values, setValues] = useState<Values>(() => {
     const initial: Values = {};
