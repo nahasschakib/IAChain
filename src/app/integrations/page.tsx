@@ -49,6 +49,16 @@ const SECTION_LABEL_STYLE = {
   letterSpacing: "0.06em",
   color: "var(--steel)",
 };
+function formatRelative(value: string | null): string {
+  if (!value) return "—";
+  const min = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  if (min < 1440) return `il y a ${Math.round(min / 60)} h`;
+  return `il y a ${Math.round(min / 1440)} j`;
+}
+
+const LEVEL_TONE: Record<string, string> = { ok: "signal", warn: "amber", error: "red" };
 
 export default async function IntegrationsPage() {
   const rows = await sql`SELECT name, status, tone, description, meta FROM integrations ORDER BY id`;
@@ -59,26 +69,63 @@ export default async function IntegrationsPage() {
     desc: row.description as string,
     meta: row.meta as string,
   }));
+    const healthRows = await sql`
+    SELECT i.name, i.tone, i.status, i.last_sync_at,
+           COUNT(l.id) FILTER (WHERE l.level = 'error' AND l.created_at > now() - interval '7 days') AS errors_7d
+    FROM integrations i
+    LEFT JOIN integration_logs l ON l.integration_id = i.id
+    GROUP BY i.id
+    ORDER BY i.id
+  `;
+  const logRows = await sql`
+    SELECT i.name, l.level, l.message, l.created_at
+    FROM integration_logs l
+    JOIN integrations i ON i.id = l.integration_id
+    ORDER BY l.created_at DESC
+    LIMIT 6
+  `;
+  const mappingRows = await sql`
+    SELECT m.source_field, m.agent_field, m.transform
+    FROM integration_mappings m
+    JOIN integrations i ON i.id = m.integration_id
+    WHERE i.name ILIKE 'CRM%'
+    ORDER BY m.position
+  `;
 
   return (
     <AppShell
       topbar={
         <>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18 }}>Intégrations</span>
-          <a
-            href="#"
-            style={{
-              background: "var(--steel-deep)",
-              color: "#f5f6f8",
-              fontSize: 13,
-              fontWeight: 600,
-              padding: "9px 16px",
-              borderRadius: 8,
-              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
-            }}
-          >
-            + Ajouter une intégration
-          </a>
+                    <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18 }}>Intégrations</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                letterSpacing: "0.04em",
+                color: "var(--graphite)",
+                border: "1px solid var(--line)",
+                borderRadius: 6,
+                padding: "5px 9px",
+              }}
+            >
+              Rôle requis · Admin / IT
+            </span>
+            <a
+              href="#"
+              style={{
+                background: "var(--steel-deep)",
+                color: "#f5f6f8",
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "9px 16px",
+                borderRadius: 8,
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
+              }}
+            >
+              + Ajouter une intégration
+            </a>
+          </div>
         </>
       }
     >
@@ -185,6 +232,109 @@ export default async function IntegrationsPage() {
               <div style={{ fontSize: 11, color: "var(--graphite)" }}>{item.meta}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+            {/* MAPPING + SANTÉ & LOGS */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 14 }}>
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: 12,
+            padding: 18,
+            boxShadow: CARD_SHADOW,
+          }}
+        >
+          <div style={{ marginBottom: 12 }}>
+            <span style={SECTION_LABEL_STYLE}>MAPPING · CRM ↔ AGENT</span>
+          </div>
+          {mappingRows.length === 0 ? (
+            <div style={{ fontSize: 12, color: "var(--graphite)" }}>Aucun mapping configuré.</div>
+          ) : (
+            mappingRows.map((m, i) => (
+              <div
+                key={`${m.source_field}-${i}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto 1fr",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "9px 0",
+                  borderBottom: i < mappingRows.length - 1 ? "1px solid var(--line)" : "none",
+                }}
+              >
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{m.source_field as string}</span>
+                <span style={{ color: "var(--graphite)" }}>→</span>
+                <div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--steel)" }}>
+                    {m.agent_field as string}
+                  </div>
+                  {m.transform ? (
+                    <div style={{ fontSize: 11, color: "var(--graphite)", marginTop: 2 }}>{m.transform as string}</div>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: 12,
+            padding: 18,
+            boxShadow: CARD_SHADOW,
+          }}
+        >
+          <div style={{ marginBottom: 12 }}>
+            <span style={SECTION_LABEL_STYLE}>SANTÉ & LOGS</span>
+          </div>
+          {healthRows.map((h, i) => (
+            <div
+              key={h.name as string}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "8px 0",
+                borderBottom: i < healthRows.length - 1 ? "1px solid var(--line)" : "none",
+                fontSize: 12,
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: `var(--${h.tone as string})` }} />
+                {h.name as string}
+              </span>
+              <span style={{ color: "var(--graphite)", fontFamily: "var(--font-mono)", fontSize: 11 }}>
+                {`sync ${formatRelative(h.last_sync_at as string | null)} · ${Number(h.errors_7d)} err. 7 j`}
+              </span>
+            </div>
+          ))}
+          <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+            <div style={{ ...SECTION_LABEL_STYLE, color: "var(--graphite)", marginBottom: 8 }}>JOURNAL RÉCENT</div>
+            {logRows.map((l, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, fontSize: 12, padding: "5px 0", alignItems: "baseline" }}>
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    background: `var(--${LEVEL_TONE[l.level as string] ?? "graphite"})`,
+                  }}
+                />
+                <span style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 600 }}>{l.name as string}</span> · {l.message as string}
+                </span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--graphite)", whiteSpace: "nowrap" }}>
+                  {formatRelative(l.created_at as string)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
