@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { CSSProperties } from "react";
+import { resolveApproval } from "@/app/approvals/actions";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_ELEVATED = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
@@ -58,6 +59,24 @@ export default function ApprovalsInbox({
   const primaryAction = actions[actions.length - 1];
   const otherActions = actions.slice(0, -1);
   const chips = payload?.chips ?? [];
+   const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function decide(decision: "approuve" | "rejete", why?: string) {
+    if (!selected) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await resolveApproval(selected.id, decision, why);
+      if (!res.ok) {
+        setError(res.error ?? "Erreur");
+        return;
+      }
+      setRejecting(false);
+      setReason("");
+    });
+  }
 
   return (
     <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -90,7 +109,12 @@ export default function ApprovalsInbox({
             <button
               key={item.id}
               type="button"
-              onClick={() => setSelectedId(item.id)}
+                onClick={() => {
+                setSelectedId(item.id);
+                setRejecting(false);
+                setReason("");
+                setError(null);
+              }}
               style={{
                 textAlign: "left",
                 font: "inherit",
@@ -281,44 +305,121 @@ export default function ApprovalsInbox({
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {otherActions.map((label) => (
-                <button
-                  key={label}
-                  type="button"
+                        {rejecting && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ ...MONO_LABEL, marginBottom: 6 }}>MOTIF DU REJET</div>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  placeholder="Expliquez pourquoi cette demande est rejetée…"
                   style={{
+                    width: "100%",
+                    boxSizing: "border-box",
                     font: "inherit",
                     fontSize: 13,
-                    fontWeight: 600,
-                    color: label === "Rejeter" ? "var(--red)" : "inherit",
-                    background: "transparent",
+                    padding: 10,
                     border: "1px solid var(--line)",
-                    padding: "10px 18px",
                     borderRadius: 8,
-                    cursor: "pointer",
+                    background: "var(--paper)",
+                    resize: "vertical",
                   }}
-                >
-                  {label}
-                </button>
-              ))}
-              <button
-                type="button"
-                style={{
-                  font: "inherit",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  background: "var(--steel-deep)",
-                  color: "#f5f6f8",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: 8,
-                  marginLeft: "auto",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
-                }}
-              >
-                {primaryAction}
-              </button>
+                />
+              </div>
+            )}
+            {error && <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10 }}>{error}</div>}
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {rejecting ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => {
+                      setRejecting(false);
+                      setReason("");
+                      setError(null);
+                    }}
+                    style={{
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      background: "transparent",
+                      border: "1px solid var(--line)",
+                      padding: "10px 18px",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPending || !reason.trim()}
+                    onClick={() => decide("rejete", reason)}
+                    style={{
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      background: "var(--red)",
+                      color: "#fff",
+                      border: "none",
+                      padding: "10px 20px",
+                      borderRadius: 8,
+                      marginLeft: "auto",
+                      cursor: isPending || !reason.trim() ? "not-allowed" : "pointer",
+                      opacity: isPending || !reason.trim() ? 0.6 : 1,
+                    }}
+                  >
+                    {isPending ? "Enregistrement…" : "Confirmer le rejet"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {otherActions.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      disabled={isPending}
+                      onClick={label === "Rejeter" ? () => setRejecting(true) : undefined}
+                      style={{
+                        font: "inherit",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: label === "Rejeter" ? "var(--red)" : "inherit",
+                        background: "transparent",
+                        border: "1px solid var(--line)",
+                        padding: "10px 18px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => decide("approuve")}
+                    style={{
+                      font: "inherit",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      background: "var(--steel-deep)",
+                      color: "#f5f6f8",
+                      border: "none",
+                      padding: "10px 20px",
+                      borderRadius: 8,
+                      marginLeft: "auto",
+                      cursor: isPending ? "wait" : "pointer",
+                      opacity: isPending ? 0.7 : 1,
+                      boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
+                    }}
+                  >
+                    {isPending ? "Enregistrement…" : primaryAction}
+                  </button>
+                </>
+              )}
             </div>
           </>
         ) : (
