@@ -486,7 +486,9 @@ export default function WorkflowStudio({
           >
             {mode === "design"
               ? "brouillon"
-              : `run ${runLabel ?? "#—"} · en cours`}
+              : runLabel
+                ? `run ${runLabel} · en cours`
+                : "aucune exécution"}
           </span>
         </div>
 
