@@ -8,6 +8,7 @@ import ApprovalsInbox, {
   type Expert,
 } from "@/components/approvals/ApprovalsInbox";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -49,8 +50,11 @@ function formatDuration(min: number | null): string {
   }
   return `${Math.round(t / 1440)} j`;
 }
+
 export default async function ApprovalsPage() {
-   const pendingRows = await sql`
+  const { orgId } = await getTenantContext();
+
+  const pendingRows = await sql`
     SELECT a.id, a.title, a.tag, a.agent_label, a.payload, a.created_at,
            w.name AS workflow_name,
            w.slug AS workflow_slug,
@@ -62,7 +66,7 @@ export default async function ApprovalsPage() {
     LEFT JOIN workflows w ON w.id = a.workflow_id
     LEFT JOIN processes p ON p.slug = w.process_slug
     LEFT JOIN org_experts e ON e.id = a.delegated_to
-    WHERE a.status = 'en_attente'
+    WHERE a.org_id = ${orgId} AND a.status = 'en_attente'
     ORDER BY a.created_at DESC
   `;
   const pending: PendingItem[] = pendingRows.map((row) => ({
@@ -90,7 +94,7 @@ export default async function ApprovalsPage() {
   const historyRows = await sql`
     SELECT title, tag, status, resolved_at
     FROM approvals
-    WHERE status IN ('approuve', 'rejete')
+    WHERE org_id = ${orgId} AND status IN ('approuve', 'rejete')
     ORDER BY resolved_at DESC
     LIMIT 5
   `;
@@ -100,11 +104,11 @@ export default async function ApprovalsPage() {
     tone: (row.status === "approuve" ? "signal" : "red") as "signal" | "red",
   }));
 
-    const processedRows = await sql`
+  const processedRows = await sql`
     SELECT id, title, tag, agent_label, status, resolved_at, decision_reason,
            payload->>'ref' AS ref
     FROM approvals
-    WHERE status IN ('approuve', 'rejete')
+    WHERE org_id = ${orgId} AND status IN ('approuve', 'rejete')
     ORDER BY resolved_at DESC
     LIMIT 50
   `;
@@ -124,7 +128,7 @@ export default async function ApprovalsPage() {
            COUNT(*) FILTER (WHERE status = 'rejete') AS rejected,
            AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 60) AS avg_min
     FROM approvals
-    WHERE status IN ('approuve', 'rejete')
+    WHERE org_id = ${orgId} AND status IN ('approuve', 'rejete')
   `;
   const stats: Stats = {
     approved: Number(statsRows[0].approved),
@@ -132,7 +136,9 @@ export default async function ApprovalsPage() {
     avgSla: formatDuration(statsRows[0].avg_min === null ? null : Number(statsRows[0].avg_min)),
   };
 
-    const expertRows = await sql`SELECT id, name, role_title, domain FROM org_experts ORDER BY name`;
+  const expertRows = await sql`
+    SELECT id, name, role_title, domain FROM org_experts WHERE org_id = ${orgId} ORDER BY name
+  `;
   const experts: Expert[] = expertRows.map((r) => ({
     id: Number(r.id),
     name: r.name as string,
@@ -146,18 +152,18 @@ export default async function ApprovalsPage() {
         <>
           <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18 }}>File d&apos;approbation</span>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 12, color: "var(--graphite)" }}>
-                {pending.length === 0
-                  ? "Aucune action en attente"
-                  : pending.length === 1
-                    ? "1 action nécessite une validation humaine"
-                    : `${pending.length} actions nécessitent une validation humaine`}
-              </span>
+            <span style={{ fontSize: 12, color: "var(--graphite)" }}>
+              {pending.length === 0
+                ? "Aucune action en attente"
+                : pending.length === 1
+                  ? "1 action nécessite une validation humaine"
+                  : `${pending.length} actions nécessitent une validation humaine`}
+            </span>
           </div>
         </>
       }
     >
-          <ApprovalsInbox pending={pending} history={history} processed={processed} stats={stats} experts={experts} />
+      <ApprovalsInbox pending={pending} history={history} processed={processed} stats={stats} experts={experts} />
     </AppShell>
   );
 }
