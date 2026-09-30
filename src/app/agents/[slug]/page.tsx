@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { sql } from "@/lib/db";
 import AppShell from "@/components/AppShell";
 import AgentStudio from "@/components/agent-studio/AgentStudio";
+import { getTenantContext } from "@/lib/tenant";
 import type {
   Agent,
   TaskField,
@@ -15,6 +16,7 @@ import type {
 } from "@/components/agent-studio/types";
 
 export default async function AgentStudioPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { orgId } = await getTenantContext();
   const { slug } = await params;
 
   const agentRows = await sql`SELECT * FROM agents WHERE slug = ${slug}`;
@@ -28,8 +30,8 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     sql`SELECT * FROM agent_contract_meta WHERE agent_id = ${agent.id}`,
     sql`SELECT * FROM agent_contract_workflow_usage WHERE agent_id = ${agent.id} ORDER BY sort_order`,
     sql`SELECT * FROM agent_permissions WHERE agent_id = ${agent.id} ORDER BY sort_order`,
-    sql`SELECT * FROM agent_execution_history WHERE agent_id = ${agent.id} ORDER BY exec_date DESC, id DESC`,
-    sql`SELECT *, title AS name FROM deliverables WHERE agent_id = ${agent.id} ORDER BY id DESC`,
+    sql`SELECT * FROM agent_execution_history WHERE agent_id = ${agent.id} AND org_id = ${orgId} ORDER BY exec_date DESC, id DESC`,
+    sql`SELECT *, title AS name FROM deliverables WHERE agent_id = ${agent.id} AND org_id = ${orgId} ORDER BY id DESC`,
   ]);
 
   return (

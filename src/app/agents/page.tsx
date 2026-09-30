@@ -1,12 +1,14 @@
 import { sql } from "@/lib/db";
 import AppShell from "@/components/AppShell";
 import AgentsGrid, { type Agent } from "@/components/AgentsGrid";
-
+import { getTenantContext } from "@/lib/tenant";
 
 const CARD_SHADOW =
   "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
 export default async function AgentsPage() {
+  const { orgId } = await getTenantContext();
+
   const agents = (await sql`
     SELECT name, slug, code, category, role, description, version,
            icon, input_label, output_label, workflow_count, status
@@ -19,10 +21,11 @@ export default async function AgentsPage() {
       (SELECT COUNT(*) FROM agents) AS agent_count,
       (SELECT COUNT(DISTINCT category) FROM agents) AS category_count,
       (SELECT COUNT(*) FROM workflows) AS workflow_count,
-      (SELECT COUNT(*) FROM deliverables WHERE created_at >= now() - interval '7 days') AS deliverables_week
+      (SELECT COUNT(*) FROM deliverables
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS deliverables_week
   `;
   const s = statsRows[0];
-   const agentCount = Number(s.agent_count);
+  const agentCount = Number(s.agent_count);
   const categoryCount = Number(s.category_count);
 
   const stats = [
@@ -54,7 +57,7 @@ export default async function AgentsPage() {
           >
             Formule 1 · Bibliothèque d&apos;agents
           </div>
-                    <h1
+          <h1
             style={{
               fontFamily: "var(--font-display)",
               fontSize: "34px",
