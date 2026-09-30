@@ -1,5 +1,7 @@
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
+import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 export const dynamic = "force-dynamic";
@@ -62,21 +64,27 @@ function formatMAD(n: number, digits = 2): string {
 }
 
 export default async function DashboardPage() {
-  
+  const { orgId } = await getTenantContext();
+  const user = await currentUser();
+  const firstName = user?.firstName?.trim();
+  const greeting = firstName
+    ? `Bonjour ${firstName.charAt(0).toUpperCase()}${firstName.slice(1)} — voici votre AI Workforce aujourd'hui`
+    : "Bonjour — voici votre AI Workforce aujourd'hui";
+
   const executionRows = await sql`
     SELECT w.name AS workflow_name, e.client_label, e.current_step, e.progress_done, e.progress_total,
       EXISTS (
         SELECT 1 FROM approvals a
-        WHERE a.workflow_id = e.workflow_id AND a.status = 'en_attente'
+        WHERE a.org_id = ${orgId} AND a.workflow_id = e.workflow_id AND a.status = 'en_attente'
       ) AS has_approval,
       EXISTS (
         SELECT 1 FROM activity_log l
-        WHERE l.workflow_id = e.workflow_id AND l.status = 'Échec'
+        WHERE l.org_id = ${orgId} AND l.workflow_id = e.workflow_id AND l.status = 'Échec'
           AND l.created_at >= now() - interval '7 days'
       ) AS has_failure
     FROM workflow_executions e
     JOIN workflows w ON w.id = e.workflow_id
-    WHERE e.status = 'en_cours'
+    WHERE e.org_id = ${orgId} AND e.status = 'en_cours'
     ORDER BY e.id
   `;
   const activeWorkflows = executionRows.map((row) => {
@@ -96,6 +104,7 @@ export default async function DashboardPage() {
     SELECT to_char(a.created_at, 'HH24:MI') AS time, a.agent_label, w.name AS workflow_name, a.status, a.tone
     FROM activity_log a
     JOIN workflows w ON w.id = a.workflow_id
+    WHERE a.org_id = ${orgId}
     ORDER BY a.created_at DESC
     LIMIT 4
   `;
@@ -110,7 +119,7 @@ export default async function DashboardPage() {
   const approvalRows = await sql`
     SELECT title, EXTRACT(EPOCH FROM (due_at - now())) / 60 AS minutes_left
     FROM approvals
-    WHERE status = 'en_attente'
+    WHERE org_id = ${orgId} AND status = 'en_attente'
     ORDER BY due_at ASC NULLS LAST, created_at
   `;
   const approvalQueue = approvalRows.map((row) => ({
@@ -118,8 +127,9 @@ export default async function DashboardPage() {
     sla: formatSla(row.minutes_left === null ? null : Number(row.minutes_left)),
   }));
 
-  const integrationRows =
-    await sql`SELECT name, status, tone FROM integrations ORDER BY id`;
+  const integrationRows = await sql`
+    SELECT name, status, tone FROM integrations WHERE org_id = ${orgId} ORDER BY id
+  `;
   const integrations = integrationRows.map((row) => ({
     name: row.name as string,
     status: row.status as string,
@@ -130,24 +140,29 @@ export default async function DashboardPage() {
     SELECT
       (SELECT COUNT(*) FROM agents WHERE status = 'actif') AS active_agents,
       (SELECT COUNT(*) FROM agents) AS total_agents,
-      (SELECT COUNT(*) FROM workflow_executions WHERE status = 'en_cours') AS active_workflows,
+      (SELECT COUNT(*) FROM workflow_executions
+         WHERE org_id = ${orgId} AND status = 'en_cours') AS active_workflows,
       (SELECT STRING_AGG(DISTINCT w.name, ' · ')
          FROM workflow_executions e JOIN workflows w ON w.id = e.workflow_id
-         WHERE e.status = 'en_cours') AS workflow_names,
-      (SELECT COUNT(*) FROM approvals WHERE status = 'en_attente') AS pending_approvals,
+         WHERE e.org_id = ${orgId} AND e.status = 'en_cours') AS workflow_names,
+      (SELECT COUNT(*) FROM approvals
+         WHERE org_id = ${orgId} AND status = 'en_attente') AS pending_approvals,
       (SELECT COUNT(*) FROM activity_log
-         WHERE status = 'Échec' AND created_at >= now() - interval '7 days') AS incidents_7d,
+         WHERE org_id = ${orgId} AND status = 'Échec'
+           AND created_at >= now() - interval '7 days') AS incidents_7d,
       (SELECT agent_label FROM activity_log
-         WHERE status = 'Échec' ORDER BY created_at DESC LIMIT 1) AS last_incident_agent,
+         WHERE org_id = ${orgId} AND status = 'Échec'
+         ORDER BY created_at DESC LIMIT 1) AS last_incident_agent,
       (SELECT COUNT(*) FROM deliverables
-         WHERE created_at >= now() - interval '7 days') AS deliverables_7d,
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS deliverables_7d,
       (SELECT COUNT(*) FROM deliverables
-         WHERE created_at >= now() - interval '14 days'
+         WHERE org_id = ${orgId}
+           AND created_at >= now() - interval '14 days'
            AND created_at <  now() - interval '7 days') AS deliverables_prev,
-       (SELECT COALESCE(SUM(cost), 0) FROM deliverables
-         WHERE created_at >= now() - interval '7 days') AS cost_7d,
-         (SELECT COUNT(cost) FROM deliverables
-         WHERE created_at >= now() - interval '7 days') AS costed_7d    
+      (SELECT COALESCE(SUM(cost), 0) FROM deliverables
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS cost_7d,
+      (SELECT COUNT(cost) FROM deliverables
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS costed_7d
   `;
   const k = kpiRows[0];
   const deliverables = Number(k.deliverables_7d);
@@ -196,7 +211,7 @@ export default async function DashboardPage() {
           : `${delta >= 0 ? "+" : ""}${delta} vs semaine passée`,
       tone: undefined,
     },
-         {
+    {
       label: "Coût / semaine",
       value: formatMAD(cost),
       note:
@@ -220,14 +235,14 @@ export default async function DashboardPage() {
       <div>
         <h1
           style={{
-           fontFamily: "var(--font-display)",
+            fontFamily: "var(--font-display)",
             fontWeight: 700,
             fontSize: 34,
             margin: 0,
             letterSpacing: "0.005em",
           }}
         >
-          Bonjour Chakib — voici votre AI Workforce aujourd&apos;hui
+          {greeting}
         </h1>
         <p
           style={{ fontSize: 13, color: "var(--graphite)", margin: "6px 0 0" }}
@@ -369,7 +384,7 @@ export default async function DashboardPage() {
             ))}
           </div>
 
-          {/* Activité récente (inchangée) */}
+          {/* Activité récente */}
           <div
             style={{
               background: "var(--surface)",
@@ -511,7 +526,7 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
-        
+
           {/* Intégrations */}
           <div style={CARD}>
             <div style={CARD_HEADER}>
