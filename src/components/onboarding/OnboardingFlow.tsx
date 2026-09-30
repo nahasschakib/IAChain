@@ -70,7 +70,7 @@ export default function OnboardingFlow({
   workflows: OnboardingWorkflow[];
 }) {
   const { organization } = useOrganization();
-  const orgName = organization?.name ?? "SOCYTAY";
+  const orgName = organization?.name ?? "Votre organisation";
 
   const [step, setStep] = useState(1);
   const [secteur, setSecteur] = useState(SECTEURS[0]);
