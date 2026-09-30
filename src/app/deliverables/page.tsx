@@ -1,5 +1,6 @@
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
@@ -63,10 +64,12 @@ function formatDeliverableDate(date: Date): string {
 }
 
 export default async function DeliverablesPage() {
+  const { orgId } = await getTenantContext();
   const rows = await sql`
     SELECT d.title, d.agent_label, d.kind, d.version, d.created_at, w.name AS workflow_name
     FROM deliverables d
     LEFT JOIN workflows w ON w.id = d.workflow_id
+    WHERE d.org_id = ${orgId}
     ORDER BY d.created_at DESC
   `;
   const deliverables = rows.map((row) => ({
@@ -173,9 +176,9 @@ export default async function DeliverablesPage() {
             <span>Version</span>
           </div>
 
-          {deliverables.map((item, i) => (
+           {deliverables.map((item, i) => (
             <div
-              key={item.name}
+              key={`${item.name}-${item.version}-${i}`}
               className="deliverable-row"
               style={{
                 display: "grid",

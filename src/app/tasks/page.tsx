@@ -1,5 +1,6 @@
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_HOVER = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
@@ -19,10 +20,11 @@ function formatDate(date: Date): string {
 }
 
 export default async function TasksPage() {
+  const { orgId } = await getTenantContext();
   const rows = await sql`
     SELECT a.title, a.detail, a.agent_label, a.created_at
     FROM approvals a
-    WHERE a.status = 'en_attente'
+    WHERE a.org_id = ${orgId} AND a.status = 'en_attente'
     ORDER BY a.created_at DESC
   `;
 

@@ -1,27 +1,30 @@
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const ICON_BADGE_BG = "linear-gradient(135deg, var(--steel-tint), #cddce7)";
 
 export default async function AnalyticsPage() {
+  const { orgId } = await getTenantContext();
   const [activityByDay, approvalStats, deliverablesByKind] = await Promise.all([
     sql`
       SELECT to_char(created_at, 'DD/MM') AS day, COUNT(*) AS total
       FROM activity_log
-      WHERE created_at >= now() - interval '7 days'
+      WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days'
       GROUP BY to_char(created_at, 'DD/MM'), date_trunc('day', created_at)
       ORDER BY date_trunc('day', created_at)
     `,
     sql`
       SELECT status, COUNT(*) AS total
       FROM approvals
-      WHERE status IN ('approuve', 'rejete')
+      WHERE org_id = ${orgId} AND status IN ('approuve', 'rejete')
       GROUP BY status
     `,
     sql`
       SELECT kind, COUNT(*) AS total
       FROM deliverables
+      WHERE org_id = ${orgId}
       GROUP BY kind
     `,
   ]);
