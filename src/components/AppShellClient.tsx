@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { useUser, useClerk } from "@clerk/nextjs";
+import { useUser, useClerk, useOrganization } from "@clerk/nextjs";
+
 
 
 
@@ -191,20 +192,23 @@ export default function AppShellClient({
   children,
   searchPlaceholder = "Rechercher un agent, un workflow…",
   topbarAction,
-  topbar,
+    topbar,
   approvalsCount = 0,
+  orgName = null,
 }: {
   children: ReactNode;
   searchPlaceholder?: string;
   topbarAction?: ReactNode;
   topbar?: ReactNode;
   approvalsCount?: number;
+  orgName?: string | null;
 }) {
-
   const pathname = usePathname();
 
-   const { user } = useUser();
+  const { user } = useUser();
   const { signOut } = useClerk();
+  const { organization } = useOrganization();
+  const orgLabel = orgName ?? organization?.name ?? "Aucune organisation";
 
   const initials = (user?.fullName || user?.primaryEmailAddress?.emailAddress || "?")
     .trim()
@@ -359,7 +363,7 @@ export default function AppShellClient({
                 cursor: "pointer",
               }}
             >
-              SOCYTAY · Déconnexion
+              {orgLabel} · Déconnexion
             </button>
           </div>
         </div>

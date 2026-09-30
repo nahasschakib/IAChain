@@ -1,4 +1,4 @@
-import AppShell from "@/components/AppShellClient";
+
 import ApprovalsInbox, {
   type ApprovalPayload,
   type HistoryItem,
@@ -7,6 +7,7 @@ import ApprovalsInbox, {
   type Stats,
   type Expert,
 } from "@/components/approvals/ApprovalsInbox";
+import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
 import { getTenantContext } from "@/lib/tenant";
 
