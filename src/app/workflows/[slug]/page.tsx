@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 import WorkflowStudio, {
   type StudioNode,
   type PaletteAgent,
@@ -31,8 +32,10 @@ export default async function WorkflowStudioPage({
   const { slug } = await params;
   const { vue } = await searchParams;
 
+  const { orgId } = await getTenantContext();
+
   const wfRows = await sql`
-    SELECT slug, name, version, cost_estimate, cost_unit, run_label, run_banner, studio_ready
+    SELECT id, slug, name, version, cost_estimate, cost_unit, studio_ready
     FROM workflows
     WHERE slug = ${slug}
     LIMIT 1
@@ -40,13 +43,28 @@ export default async function WorkflowStudioPage({
   const wf = wfRows[0];
   if (!wf || !wf.studio_ready) notFound();
 
+  // Exécution de CETTE organisation : l'en cours la plus récente, sinon la dernière.
+  const execRows = await sql`
+    SELECT id, run_label, banner
+    FROM workflow_executions
+    WHERE workflow_id = ${wf.id} AND org_id = ${orgId}
+    ORDER BY (status = 'en_cours') DESC, started_at DESC
+    LIMIT 1
+  `;
+  const exec = execRows[0] ?? null;
+  const execId = exec ? (exec.id as number) : null;
+
   const nodes = (await sql`
     SELECT n.node_key, n.kind, n.label, n.agent_slug, n.version, n.tag, n.design_note, n.blurb,
            n.row_index, n.col_index, n.parents, n.mapping, n.outputs, n.details,
-           n.run_state, n.run_note,
+           COALESCE(r.state, 'pending') AS run_state,
+           COALESCE(r.note, 'à venir')  AS run_note,
            a.name AS agent_name, a.code AS agent_code, a.role AS agent_role
     FROM workflow_nodes n
     LEFT JOIN agents a ON a.slug = n.agent_slug
+    LEFT JOIN workflow_node_runs r
+           ON r.node_key = n.node_key
+          AND r.execution_id = ${execId}
     WHERE n.workflow_slug = ${slug}
     ORDER BY n.row_index, n.col_index
   `) as unknown as StudioNode[];
@@ -103,8 +121,8 @@ export default async function WorkflowStudioPage({
         versions={VERSIONS[slug] ?? []}
         costEstimate={Number(wf.cost_estimate ?? 0)}
         costUnit={(wf.cost_unit as string) ?? "run"}
-        runLabel={(wf.run_label as string | null) ?? null}
-        runBanner={(wf.run_banner as RunBanner | null) ?? null}
+        runLabel={(exec?.run_label as string | null) ?? null}
+        runBanner={(exec?.banner as RunBanner | null) ?? null}
         switcher={switcher}
         currentSlug={slug}
         initialMode={vue === "execution" ? "run" : "design"}

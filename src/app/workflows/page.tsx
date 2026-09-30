@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_HOVER = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
@@ -10,6 +11,7 @@ function plural(n: number, one: string, many: string) {
 }
 
 export default async function WorkflowsPage() {
+   const { orgId } = await getTenantContext();
     const rows = await sql`
     SELECT w.slug, w.name, w.version, w.status, w.code, w.description, w.chain,
       w.node_count, w.merge_count, w.approval_count, w.studio_ready, w.sort_order,
@@ -27,7 +29,7 @@ export default async function WorkflowsPage() {
          WHERE n.workflow_slug = w.slug AND n.kind = 'approval'
            AND n.label NOT ILIKE '%scalade%') AS n_approvals
     FROM workflows w
-    LEFT JOIN workflow_executions e ON e.workflow_id = w.id
+   LEFT JOIN workflow_executions e ON e.workflow_id = w.id AND e.org_id = ${orgId}
     GROUP BY w.id, w.slug, w.name, w.version, w.status, w.code, w.description, w.chain,
       w.node_count, w.merge_count, w.approval_count, w.studio_ready, w.sort_order
     ORDER BY w.sort_order NULLS LAST, w.id
