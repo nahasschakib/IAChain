@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -206,26 +207,28 @@ export default async function QualityManagementPage({
   const tab = TABS.some(([k]) => k === rawTab) ? (rawTab as string) : "overview";
   const method = QM_METHODS.some(([k]) => k === rawMethod) ? (rawMethod as string) : "5p";
 
-   const [procRows, wfRows, caseRows, kpiRows, sigRows, stepRows, teamRows, actionRows, symptomRows, whyRows, ishikawaRawRows, paretoRows, candidateRows, kpiDetailRows, lessonRows, reuseRows, knowledgeRows, agentRows] = await Promise.all([
+    const { orgId } = await getTenantContext();
+
+  const [procRows, wfRows, caseRows, kpiRows, sigRows, stepRows, teamRows, actionRows, symptomRows, whyRows, ishikawaRawRows, paretoRows, candidateRows, kpiDetailRows, lessonRows, reuseRows, knowledgeRows, agentRows] = await Promise.all([
     sql`SELECT name, version, description, subprocesses FROM processes WHERE slug = 'quality-management'`,
     sql`SELECT slug, code FROM workflows WHERE process_slug = 'quality-management' ORDER BY sort_order NULLS LAST, id LIMIT 1`,
-    sql`SELECT * FROM qm_cases ORDER BY sort_order, id`,
-    sql`SELECT label, value, note FROM qm_kpis ORDER BY sort_order, id`,
-    sql`SELECT n, label, tab FROM qm_signals ORDER BY sort_order, id`,
+    sql`SELECT * FROM qm_cases WHERE org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT label, value, note FROM qm_kpis WHERE org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT n, label, tab FROM qm_signals WHERE org_id = ${orgId} ORDER BY sort_order, id`,
     sql`SELECT s.*, a.name AS agent_name, a.role AS agent_role, a.icon AS agent_icon
         FROM qm_cycle_steps s LEFT JOIN agents a ON a.code = s.agent_code
-        WHERE s.case_id = 'NC-041' ORDER BY s.n`,
+        WHERE s.case_id = 'NC-041' AND s.org_id = ${orgId} ORDER BY s.n`,
     sql`SELECT COUNT(*) AS n FROM agents WHERE category = 'Qualité'`,
-    sql`SELECT * FROM qm_actions ORDER BY sort_order, id`,
-    sql`SELECT text, kind FROM qm_rca_symptoms WHERE case_id = 'NC-041' ORDER BY sort_order, id`,
-    sql`SELECT n, question, answer FROM qm_rca_whys WHERE case_id = 'NC-041' ORDER BY n`,
-    sql`SELECT category, item FROM qm_rca_ishikawa WHERE case_id = 'NC-041' ORDER BY sort_order, id`,
-    sql`SELECT label, pct FROM qm_rca_pareto WHERE case_id = 'NC-041' ORDER BY sort_order, id`,
-    sql`SELECT rank, cause, confidence, conf_label, evidence, retained, retained_text FROM qm_rca_candidates WHERE case_id = 'NC-041' ORDER BY rank`,
-    sql`SELECT name, base_value, target, current_value, delta, period, status_label, status_strong FROM qm_kpi_details ORDER BY sort_order, id`,
-    sql`SELECT * FROM qm_lessons WHERE case_id = 'NC-041' LIMIT 1`,
-    sql`SELECT text FROM qm_lesson_reuse WHERE lesson_id = 'LL-023' ORDER BY sort_order, id`,
-    sql`SELECT id, title, from_case, used_label FROM qm_knowledge_items ORDER BY sort_order, id`,
+    sql`SELECT * FROM qm_actions WHERE org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT text, kind FROM qm_rca_symptoms WHERE case_id = 'NC-041' AND org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT n, question, answer FROM qm_rca_whys WHERE case_id = 'NC-041' AND org_id = ${orgId} ORDER BY n`,
+    sql`SELECT category, item FROM qm_rca_ishikawa WHERE case_id = 'NC-041' AND org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT label, pct FROM qm_rca_pareto WHERE case_id = 'NC-041' AND org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT rank, cause, confidence, conf_label, evidence, retained, retained_text FROM qm_rca_candidates WHERE case_id = 'NC-041' AND org_id = ${orgId} ORDER BY rank`,
+    sql`SELECT name, base_value, target, current_value, delta, period, status_label, status_strong FROM qm_kpi_details WHERE org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT * FROM qm_lessons WHERE case_id = 'NC-041' AND org_id = ${orgId} LIMIT 1`,
+    sql`SELECT text FROM qm_lesson_reuse WHERE lesson_id = 'LL-023' AND org_id = ${orgId} ORDER BY sort_order, id`,
+    sql`SELECT id, title, from_case, used_label FROM qm_knowledge_items WHERE org_id = ${orgId} ORDER BY sort_order, id`,
     sql`SELECT slug, name, code, role, version, icon, input_label, output_label, description FROM agents WHERE category = 'Qualité' ORDER BY code`,
   ]);
 
