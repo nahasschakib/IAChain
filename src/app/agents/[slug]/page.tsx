@@ -31,7 +31,21 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     sql`SELECT * FROM agent_contract_workflow_usage WHERE agent_id = ${agent.id} ORDER BY sort_order`,
     sql`SELECT * FROM agent_permissions WHERE agent_id = ${agent.id} ORDER BY sort_order`,
     sql`SELECT * FROM agent_execution_history WHERE agent_id = ${agent.id} AND org_id = ${orgId} ORDER BY exec_date DESC, id DESC`,
-    sql`SELECT *, title AS name FROM deliverables WHERE agent_id = ${agent.id} AND org_id = ${orgId} ORDER BY id DESC`,
+    sql`
+      SELECT d.*, d.title AS name,
+        COALESCE(
+          CASE a.status
+            WHEN 'en_attente' THEN 'En attente'
+            WHEN 'approuve'   THEN 'Approuvé'
+            WHEN 'rejete'     THEN 'Rejeté'
+          END,
+          d.approval_status
+        ) AS approval_status
+      FROM deliverables d
+      LEFT JOIN approvals a ON a.deliverable_id = d.id
+      WHERE d.agent_id = ${agent.id} AND d.org_id = ${orgId}
+      ORDER BY d.id DESC
+    `,
   ]);
 
   return (

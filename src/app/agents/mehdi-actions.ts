@@ -59,7 +59,8 @@ export async function runMehdi(input: {
       await sql`
         INSERT INTO agent_execution_history (agent_id, exec_date, description, status, org_id)
         VALUES (${agentId}, CURRENT_DATE, ${description}, ${done ? "Terminé" : "En attente"}, ${orgId})
-      `;
+      `; 
+      let deliverableId: number | null = null;
       if (done) {
         const prev = await sql`
           SELECT COUNT(*) AS n FROM deliverables
@@ -69,12 +70,14 @@ export async function runMehdi(input: {
         const base = (agent.output_label as string) ?? "Fiche de qualification";
         const title = result.prospect ? `${base} — ${result.prospect}` : base;
         const version = `v${Number(prev[0].n) + 1}`;
-        await sql`
+        const inserted = await sql`
          INSERT INTO deliverables (title, agent_id, kind, version, agent_label, origin, currency, cost, org_id)
           VALUES (${title}, ${agentId}, 'doc', ${version},
          ${agent.name as string}, 'Agent Studio', 'MAD', ${cost ? cost.mad.toFixed(4) : null}, ${orgId})
+          RETURNING id
         `;
-            }
+        deliverableId = inserted[0].id as number;
+        }
       if (result.verdict === "Qualifié") {
         const who = result.prospect || "prospect";
         const payload = {
@@ -90,10 +93,10 @@ export async function runMehdi(input: {
           ],
           lineage: ["Fiche prospect", "Qualification IA", "Score calculé", "Décision go/no-go"],
         };
-        await sql`
-          INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+           await sql`
+          INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id, deliverable_id)
           VALUES (${`Go/no-go commercial · ${who}`}, 'Go/no-go', ${agentId}, ${agent.name as string},
-                  ${JSON.stringify(payload)}::jsonb, ${orgId})
+                  ${JSON.stringify(payload)}::jsonb, ${orgId}, ${deliverableId})
         `;
       }
       revalidatePath("/agents/mehdi");
