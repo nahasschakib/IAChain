@@ -124,7 +124,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
     return initial;
   });
 
-  const Preview = PREVIEWS[agent.slug];
+  const isMehdi = agent.slug === "mehdi";
+  const Preview = isMehdi ? undefined : PREVIEWS[agent.slug];
 
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
@@ -157,9 +158,11 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
             </div>
           )}
           {agent.slug === "mehdi" && <MehdiLiveRun values={values} />}
-          <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
-            {buttonLabel}
-          </Button>
+            {!isMehdi && (
+            <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
+              {buttonLabel}
+            </Button>
+          )}
           <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "10px" }}>
             L&apos;agent ne répond pas : il produit un livrable puis déclenche une action métier.
           </div>
@@ -194,7 +197,9 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           <Preview values={values} />
         ) : (
           <div style={{ padding: "40px", border: "1px dashed var(--border)", borderRadius: "12px", textAlign: "center", color: "var(--muted-foreground)" }}>
-            Aperçu à venir pour cet agent.
+            {isMehdi
+              ? "Le résultat de l'IA s'affiche dans la colonne de gauche, sous le bouton « Qualifier avec l'IA »."
+              : "Aperçu à venir pour cet agent."}
           </div>
         )}
 
