@@ -3,6 +3,7 @@
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
 import { runAiTool } from "@/lib/ai";
+import { revalidatePath } from "next/cache";
 import {
   MEHDI_SYSTEM,
   MEHDI_TOOL,
@@ -25,9 +26,10 @@ export async function runMehdi(input: {
   if (fiche.length < 20) return { ok: false, error: "Fiche prospect trop courte (20 caractères minimum)." };
   if (fiche.length > 8000) return { ok: false, error: "Fiche prospect trop longue (8000 caractères maximum)." };
 
-  const agents = await sql`SELECT id FROM agents WHERE slug = 'mehdi'`;
-  const agentId = agents[0]?.id as number | undefined;
-  if (!agentId) return { ok: false, error: "Agent introuvable." };
+  const agents = await sql`SELECT id, name, output_label FROM agents WHERE slug = 'mehdi'`;
+  const agent = agents[0];
+  const agentId = agent?.id as number | undefined;
+  if (!agent || !agentId) return { ok: false, error: "Agent introuvable." };
 
   const hints = { fit: input.fit, budget: input.budget, maturite: input.maturite };
   const prompt =
@@ -43,6 +45,36 @@ export async function runMehdi(input: {
       VALUES (${orgId}, ${agentId}, ${userId}, ${JSON.stringify({ fiche, hints })}::jsonb,
               ${JSON.stringify(result)}::jsonb, ${ai.model}, ${ai.inputTokens}, ${ai.outputTokens}, 'ok')
     `;
+        // Trace métier : historique (toujours) + livrable (sauf fiche à compléter).
+    try {
+      const done = result.verdict !== "À compléter";
+           const description = done
+        ? `Qualification — ${result.verdict} ${result.score}/100`
+        : "Qualification — fiche à compléter";
+      await sql`
+        INSERT INTO agent_execution_history (agent_id, exec_date, description, status, org_id)
+        VALUES (${agentId}, CURRENT_DATE, ${description}, ${done ? "Terminé" : "En attente"}, ${orgId})
+      `;
+      if (done) {
+        const prev = await sql`
+          SELECT COUNT(*) AS n FROM deliverables
+          WHERE agent_id = ${agentId} AND org_id = ${orgId}
+            AND COALESCE(origin, '') NOT LIKE 'Simulation%'
+        `;
+        const version = `v${Number(prev[0].n) + 1}`;
+        await sql`
+          INSERT INTO deliverables (title, agent_id, kind, version, agent_label, origin, currency, org_id)
+          VALUES (${(agent.output_label as string) ?? "Fiche de qualification"}, ${agentId}, 'doc', ${version},
+         ${agent.name as string}, 'Agent Studio', 'MAD', ${orgId})
+        `;
+      }
+      revalidatePath("/agents/mehdi");
+      revalidatePath("/agents");
+      revalidatePath("/deliverables");
+      revalidatePath("/dashboard");
+    } catch (e) {
+      console.error("runMehdi trace", e);
+    }
     return { ok: true, result };
   } catch (e) {
     console.error("runMehdi", e);
