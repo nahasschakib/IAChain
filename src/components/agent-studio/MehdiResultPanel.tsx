@@ -112,7 +112,10 @@ export default function MehdiResultPanel({ state }: { state: MehdiRunState }) {
 
       <div style={{ background: "var(--steel-tint)", borderRadius: "10px", padding: "12px 14px", fontSize: "12.5px", lineHeight: 1.5 }}>
         <strong>TRAÇABILITÉ</strong> — Évaluation générée par l&apos;IA à partir de la fiche prospect. Le score est calculé
-        par la grille IAChain ; la décision de transmission reste humaine.
+               par la grille IAChain ; la décision de transmission reste humaine.
+        {outcome.costMad !== undefined && (
+          <> Coût de cette exécution : {outcome.costMad.toFixed(3).replace(".", ",")} MAD.</>
+        )}
       </div>
     </div>
   );

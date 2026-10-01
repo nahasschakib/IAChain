@@ -20,7 +20,7 @@ export type MehdiResult = MehdiAssessment & {
   detail: { fit: number; budget: number; maturite: number };
 };
 
-export type MehdiOutcome = { ok: true; result: MehdiResult } | { ok: false; error: string };
+export type MehdiOutcome = { ok: true; result: MehdiResult; costMad?: number } | { ok: false; error: string };
 
 export const MEHDI_SYSTEM = `Tu es Mehdi, agent de qualification commerciale pour des PME marocaines.
 Tu évalues un prospect à partir de sa fiche, en français.

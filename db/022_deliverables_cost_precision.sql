@@ -1,0 +1,1 @@
+ALTER TABLE deliverables ALTER COLUMN cost TYPE numeric(12,4);

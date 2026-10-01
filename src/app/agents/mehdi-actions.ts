@@ -3,6 +3,7 @@
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
 import { runAiTool } from "@/lib/ai";
+import { computeCost } from "@/lib/cost";
 import { revalidatePath } from "next/cache";
 import {
   MEHDI_SYSTEM,
@@ -40,11 +41,13 @@ export async function runMehdi(input: {
 
   try {
     const ai = await runAiTool({ system: MEHDI_SYSTEM, prompt, tool: MEHDI_TOOL, tier: "fast" });
-    const result = scoreAssessment(parseAssessment(ai.data));
+      const result = scoreAssessment(parseAssessment(ai.data));
+    const cost = await computeCost(ai.model, ai.inputTokens, ai.outputTokens);
+    const stored = { ...result, cost_mad: cost?.mad ?? null, cost_usd: cost?.usd ?? null, usd_mad_rate: cost?.rate ?? null };
     await sql`
       INSERT INTO agent_runs (org_id, agent_id, user_id, input, result, model, input_tokens, output_tokens, status)
       VALUES (${orgId}, ${agentId}, ${userId}, ${JSON.stringify({ fiche, hints })}::jsonb,
-              ${JSON.stringify(result)}::jsonb, ${ai.model}, ${ai.inputTokens}, ${ai.outputTokens}, 'ok')
+              ${JSON.stringify(stored)}::jsonb, ${ai.model}, ${ai.inputTokens}, ${ai.outputTokens}, 'ok')
     `;
         // Trace métier : historique (toujours) + livrable (sauf fiche à compléter).
     try {
@@ -67,9 +70,9 @@ export async function runMehdi(input: {
         const title = result.prospect ? `${base} — ${result.prospect}` : base;
         const version = `v${Number(prev[0].n) + 1}`;
         await sql`
-          INSERT INTO deliverables (title, agent_id, kind, version, agent_label, origin, currency, org_id)
-                   VALUES (${title}, ${agentId}, 'doc', ${version},
-         ${agent.name as string}, 'Agent Studio', 'MAD', ${orgId})
+         INSERT INTO deliverables (title, agent_id, kind, version, agent_label, origin, currency, cost, org_id)
+          VALUES (${title}, ${agentId}, 'doc', ${version},
+         ${agent.name as string}, 'Agent Studio', 'MAD', ${cost ? cost.mad.toFixed(4) : null}, ${orgId})
         `;
             }
       if (result.verdict === "Qualifié") {
@@ -101,7 +104,7 @@ export async function runMehdi(input: {
     } catch (e) {
       console.error("runMehdi trace", e);
     }
-    return { ok: true, result };
+       return { ok: true, result, costMad: cost?.mad };
   } catch (e) {
     console.error("runMehdi", e);
     try {
