@@ -75,9 +75,10 @@ export default async function ApprovalsPage() {
     tag: row.tag as string,
     time: formatRelativeTime(new Date(row.created_at as string)),
     title: row.title as string,
-    subtitle: `Agent ${row.agent_label} · ${row.workflow_name}`,
+    subtitle: `Agent ${row.agent_label}${row.workflow_name ? ` · ${row.workflow_name}` : ""}`,
     agentLabel: row.agent_label as string,
-    workflowName: row.workflow_name as string,
+    workflowName: (row.workflow_name as string | null) ?? "Agent Studio",
+    
     workflowSlug: (row.workflow_slug as string | null) ?? null,
     domains: (row.domains as string[] | null) ?? [],
     delegation: row.delegate_name

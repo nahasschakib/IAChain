@@ -71,8 +71,30 @@ export async function runMehdi(input: {
                    VALUES (${title}, ${agentId}, 'doc', ${version},
          ${agent.name as string}, 'Agent Studio', 'MAD', ${orgId})
         `;
+            }
+      if (result.verdict === "Qualifié") {
+        const who = result.prospect || "prospect";
+        const payload = {
+          source: `Proposé par Agent ${agent.name as string} · Qualification commerciale`,
+          aiReco: "Transmettre à la vente (go)",
+          chips: [`Score ${result.score}/100`, `Fit ICP ${result.fit_icp}`, result.budget_estime],
+          extractTitle: "Justification de l'agent",
+          extract: result.justification,
+          props: [
+            { k: "Prospect", v: result.prospect || "non précisé" },
+            { k: "Budget", v: result.budget_estime },
+            { k: "Maturité", v: result.maturite_besoin },
+          ],
+          lineage: ["Fiche prospect", "Qualification IA", "Score calculé", "Décision go/no-go"],
+        };
+        await sql`
+          INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+          VALUES (${`Go/no-go commercial · ${who}`}, 'Go/no-go', ${agentId}, ${agent.name as string},
+                  ${JSON.stringify(payload)}::jsonb, ${orgId})
+        `;
       }
       revalidatePath("/agents/mehdi");
+      revalidatePath("/approvals");
       revalidatePath("/agents");
       revalidatePath("/deliverables");
       revalidatePath("/dashboard");
