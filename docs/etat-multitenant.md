@@ -13,13 +13,23 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 - Catalogue partagé en lecture seule (agents, contrats, workflows, nœuds, processes). État d'exécution par organisation : `workflow_executions` (+ `banner`, `run_label`) et `workflow_node_runs` (db/017) ; colonnes `run_*` retirées du catalogue (db/019). Sans exécution, les nœuds sont « à venir ».
 - Scripts SQL idempotents dans `db/` : 001–003, 005, 005b, 006–015, 017–019. Manquants : 004/004b, 000_baseline, 000b_seed. 016 (marché/devise) abandonné.
 
+## Agent Mehdi (qualification de prospects) — moteur IA réel
+
+- Branché sur Claude Haiku 4.5 via `@anthropic-ai/sdk` (clé `ANTHROPIC_API_KEY` dans `.env.local` et Vercel). L'IA ne fait que classer 3 critères (fit ICP, budget, maturité) et extraire le nom du prospect ; le score est calculé en code (`src/lib/mehdi.ts`).
+- Action serveur `runMehdi` (`src/app/agents/mehdi-actions.ts`) : trace chaque exécution dans `agent_runs` (tokens, modèle, résultat, erreur), puis historique (`agent_execution_history`) et livrable (`deliverables`, sauf fiche « À compléter »).
+- Écran « Nouvelle tâche » : résultat affiché dans le panneau de droite (`MehdiResultPanel.tsx`).
+- **Approbation go/no-go** : un verdict « Qualifié » crée une demande dans `approvals` (sans workflow ; page `/approvals` corrigée pour ce cas).
+- **Coût réel** (`src/lib/cost.ts`, db/022) : tokens × tarif du modèle × taux USD/MAD du jour (open.er-api.com, repli 10). Stocké dans `deliverables.cost` (numeric(12,4)) et `agent_runs.result`, affiché dans le panneau et dans l'onglet Livrables.
+- **Lien livrable ↔ approbation** (db/023) : `approvals.deliverable_id`. L'onglet Livrables de l'agent joint `approvals` et affiche le statut réel (En attente / Approuvé / Rejeté), avec repli sur `deliverables.approval_status` pour les anciens livrables. Les livrables antérieurs à db/023 ne sont pas rattachés.
+- À prévoir : autres agents sur le même modèle ; `BRAVE_SEARCH_API_KEY` et `src/lib/search.ts` pour les agents qui font de la recherche web (veille marché, prospection).
+
 ## Reste à faire
 
-1. **Déploiement Vercel** : instance Clerk de production (pk_live/sk_live, domaine, webhooks), variables d'environnement (`DATABASE_URL`, Clerk), organisation SOCYTAY en production puis mise à jour de `tenants.org_id`, purge des simulations (« Simulation · ») avant usage réel.
+1. **Déploiement Vercel** : instance Clerk de production (pk_live/sk_live, domaine, webhooks), Après : variables d'environnement (DATABASE_URL, Clerk, ANTHROPIC_API_KEY), passage à Vercel Pro avant les clients payants, base Neon séparée pour la production, organisation SOCYTAY en production puis mise à jour de `tenants.org_id`, purge des simulations (« Simulation · ») avant usage réel.
 2. **Dashboard `/admin`** (SOCYTAY, indicateurs agrégés, confidentialité loi 09-08) ; cycle de vie client (webhooks organization.created/deleted, essai 14 jours, validation manuelle du paiement, e-mails Resend).
 3. **Délégation** : avis du délégué, retour au donneur d'ordre, délégués agents IA, e-mails, lier les experts aux utilisateurs Clerk, contrôle du droit de décider.
 4. **Internationalisation** : marché/devise par tenant, catalogue de connecteurs, RGPD vs loi 09-08.
-5. **Backlog produit** : « + Ajouter une intégration », « Connecter → », OAuth, « + Nouvelle exécution » (création d'une exécution pour une organisation), « Éditer la fiche », « Voir l'usage en workflow », compteurs fixes de la bibliothèque de livrables, nombre d'agents actifs par organisation, limite de 5 membres Clerk, e-mail de contact réel, jeu de démonstration Quality Management pour un nouveau client (tables `qm_*` vides), anciens scripts 005/006 à adapter (écrivaient dans les colonnes `run_*` supprimées), `pg_dump` pour 000_baseline.
+5. **Backlog produit** : « + Ajouter une intégration », « Connecter → », OAuth, « + Nouvelle exécution » (création d'une exécution pour une organisation), « Éditer la fiche », « Voir l'usage en workflow », Après : compteurs encore statiques (« 31 scores calculés ce mois », bibliothèque de livrables, etc.), nombre d'agents actifs par organisation, limite de 5 membres Clerk, e-mail de contact réel, jeu de démonstration Quality Management pour un nouveau client (tables `qm_*` vides), anciens scripts 005/006 à adapter (écrivaient dans les colonnes `run_*` supprimées), `pg_dump` pour 000_baseline.
 
 ## Conventions de travail
 
