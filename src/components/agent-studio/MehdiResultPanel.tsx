@@ -48,7 +48,9 @@ export default function MehdiResultPanel({ state }: { state: MehdiRunState }) {
       <div style={{ fontSize: "11px", color: "var(--muted-foreground)", marginBottom: "4px" }}>
         AGENT STUDIO · MEHDI · RÉSULTAT RÉEL
       </div>
-      <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "2px" }}>Verdict — {r.verdict}</h2>
+           <h2 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "2px" }}>
+        {r.prospect ? `${r.prospect} · ` : ""}Verdict — {r.verdict}
+      </h2>
       <p style={{ fontSize: "13px", color: "var(--muted-foreground)", marginBottom: "20px" }}>
         Fit ICP {r.fit_icp} · Budget {r.budget_estime} · Maturité {r.maturite_besoin}
       </p>

@@ -12,6 +12,7 @@ import {
   type MehdiOutcome,
 } from "@/lib/mehdi";
 
+
 export async function runMehdi(input: {
   fiche: string;
   fit: string;
@@ -48,9 +49,10 @@ export async function runMehdi(input: {
         // Trace métier : historique (toujours) + livrable (sauf fiche à compléter).
     try {
       const done = result.verdict !== "À compléter";
-           const description = done
-        ? `Qualification — ${result.verdict} ${result.score}/100`
-        : "Qualification — fiche à compléter";
+              const who = result.prospect ? ` · ${result.prospect}` : "";
+      const description = done
+        ? `Qualification${who} — ${result.verdict} ${result.score}/100`
+        : `Qualification${who} — fiche à compléter`;
       await sql`
         INSERT INTO agent_execution_history (agent_id, exec_date, description, status, org_id)
         VALUES (${agentId}, CURRENT_DATE, ${description}, ${done ? "Terminé" : "En attente"}, ${orgId})
@@ -61,10 +63,12 @@ export async function runMehdi(input: {
           WHERE agent_id = ${agentId} AND org_id = ${orgId}
             AND COALESCE(origin, '') NOT LIKE 'Simulation%'
         `;
+        const base = (agent.output_label as string) ?? "Fiche de qualification";
+        const title = result.prospect ? `${base} — ${result.prospect}` : base;
         const version = `v${Number(prev[0].n) + 1}`;
         await sql`
           INSERT INTO deliverables (title, agent_id, kind, version, agent_label, origin, currency, org_id)
-          VALUES (${(agent.output_label as string) ?? "Fiche de qualification"}, ${agentId}, 'doc', ${version},
+                   VALUES (${title}, ${agentId}, 'doc', ${version},
          ${agent.name as string}, 'Agent Studio', 'MAD', ${orgId})
         `;
       }
