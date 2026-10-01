@@ -28,7 +28,8 @@ import ZinebPreview from "./previews/ZinebPreview";
 import { useAgentRun } from "./useAgentRun";
 import { getRunConfig, APPROVAL_ACTION } from "./runConfig";
 import { recordRun } from "@/app/agents/actions";
-import MehdiLiveRun from "./MehdiLiveRun";
+import MehdiLiveRun, { type MehdiRunState } from "./MehdiLiveRun";
+import MehdiResultPanel from "./MehdiResultPanel";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -124,14 +125,23 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
     return initial;
   });
 
+  const [mehdiState, setMehdiState] = useState<MehdiRunState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
   const Preview = isMehdi ? undefined : PREVIEWS[agent.slug];
 
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
-  const previewState =
-    status === "done" ? config.doneLabel : status === "running" ? "génération…" : "aperçu live des entrées";
-
+    const previewState = isMehdi
+    ? mehdiState.pending
+      ? "analyse en cours…"
+      : mehdiState.outcome
+      ? "résultat réel · IA"
+      : "en attente de la fiche"
+    : status === "done"
+    ? config.doneLabel
+    : status === "running"
+    ? "génération…"
+    : "aperçu live des entrées";
   return (
     <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: "32px" }}>
       <div>
@@ -151,21 +161,23 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
         ))}
 
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "8px" }}>
-          {cost && (
+            {cost && !isMehdi && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Coût estimé de l&apos;exécution</span>
               <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{cost}</span>
             </div>
           )}
-          {agent.slug === "mehdi" && <MehdiLiveRun values={values} />}
+                    {isMehdi && <MehdiLiveRun values={values} onState={setMehdiState} />}
             {!isMehdi && (
             <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
             </Button>
           )}
-          <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "10px" }}>
-            L&apos;agent ne répond pas : il produit un livrable puis déclenche une action métier.
-          </div>
+            {!isMehdi && (
+            <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "10px" }}>
+              L&apos;agent ne répond pas : il produit un livrable puis déclenche une action métier.
+            </div>
+          )}
           {status !== "idle" && (
             <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "8px" }}>
               Simulation : le moteur IA n&apos;est pas encore branché, aucun agent n&apos;a réellement travaillé.
@@ -177,7 +189,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-            APERÇU DU LIVRABLE
+           {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -193,7 +205,9 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           </span>
         </div>
 
-        {Preview ? (
+          {isMehdi ? (
+          <MehdiResultPanel state={mehdiState} />
+        ) : Preview ? (
           <Preview values={values} />
         ) : (
           <div style={{ padding: "40px", border: "1px dashed var(--border)", borderRadius: "12px", textAlign: "center", color: "var(--muted-foreground)" }}>
