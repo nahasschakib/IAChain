@@ -1,0 +1,26 @@
+# IAChain — état au 1er oct. 2026 (multi-tenant)
+
+## Stack
+
+Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib/db`), dépôt github.com/nahasschakib/IAChain, local ~/IAChain. Montants en MAD.
+
+## Fait (poussé sur main)
+
+- `tenants` (org_id = id d'organisation Clerk, statut en_attente/actif/suspendu, is_platform). SOCYTAY = opérateur ET premier tenant (actif, is_platform).
+- `src/lib/tenant.ts` : `resolveTenant()` (sans redirection, pour actions serveur/AppShell) et `getTenantContext()` (redirige vers `/en-attente?raison=…`).
+- `org_id NOT NULL` sur 25 tables clientes (db/018), `ON UPDATE CASCADE` vers `tenants.org_id`.
+- Pages cloisonnées par organisation : approbations (+ délégation, badge via `@/components/AppShell`), dashboard, livrables, tâches, analytics, intégrations, agents (historique, livrables, lancements), workflows, Quality Management (requêtes `qm_*`), menu latéral (badge, nom d'organisation).
+- Catalogue partagé en lecture seule (agents, contrats, workflows, nœuds, processes). État d'exécution par organisation : `workflow_executions` (+ `banner`, `run_label`) et `workflow_node_runs` (db/017) ; colonnes `run_*` retirées du catalogue (db/019). Sans exécution, les nœuds sont « à venir ».
+- Scripts SQL idempotents dans `db/` : 001–003, 005, 005b, 006–015, 017–019. Manquants : 004/004b, 000_baseline, 000b_seed. 016 (marché/devise) abandonné.
+
+## Reste à faire
+
+1. **Déploiement Vercel** : instance Clerk de production (pk_live/sk_live, domaine, webhooks), variables d'environnement (`DATABASE_URL`, Clerk), organisation SOCYTAY en production puis mise à jour de `tenants.org_id`, purge des simulations (« Simulation · ») avant usage réel.
+2. **Dashboard `/admin`** (SOCYTAY, indicateurs agrégés, confidentialité loi 09-08) ; cycle de vie client (webhooks organization.created/deleted, essai 14 jours, validation manuelle du paiement, e-mails Resend).
+3. **Délégation** : avis du délégué, retour au donneur d'ordre, délégués agents IA, e-mails, lier les experts aux utilisateurs Clerk, contrôle du droit de décider.
+4. **Internationalisation** : marché/devise par tenant, catalogue de connecteurs, RGPD vs loi 09-08.
+5. **Backlog produit** : « + Ajouter une intégration », « Connecter → », OAuth, « + Nouvelle exécution » (création d'une exécution pour une organisation), « Éditer la fiche », « Voir l'usage en workflow », compteurs fixes de la bibliothèque de livrables, nombre d'agents actifs par organisation, limite de 5 membres Clerk, e-mail de contact réel, jeu de démonstration Quality Management pour un nouveau client (tables `qm_*` vides), anciens scripts 005/006 à adapter (écrivaient dans les colonnes `run_*` supprimées), `pg_dump` pour 000_baseline.
+
+## Conventions de travail
+
+Un front à la fois ; code à coller directement (avant/après), SQL pour Neon, commandes git validées une à une ; commit après chaque groupe fonctionnel ; ne pas modifier le code adjacent qui fonctionne.
