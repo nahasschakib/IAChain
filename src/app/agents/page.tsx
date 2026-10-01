@@ -9,18 +9,20 @@ const CARD_SHADOW =
 export default async function AgentsPage() {
   const { orgId } = await getTenantContext();
 
-  const agents = (await sql`
-    SELECT name, slug, code, category, role, description, version,
-           icon, input_label, output_label, workflow_count, status
-    FROM agents
-    ORDER BY code ASC
+    const agents = (await sql`
+    SELECT a.name, a.slug, a.code, a.category, a.role, a.description, a.version,
+           a.icon, a.input_label, a.output_label, a.status,
+           (SELECT COUNT(DISTINCT n.workflow_slug) FROM workflow_nodes n
+             WHERE n.agent_slug = a.slug)::int AS workflow_count
+    FROM agents a
+    ORDER BY a.code ASC
   `) as Agent[];
 
   const statsRows = await sql`
     SELECT
       (SELECT COUNT(*) FROM agents) AS agent_count,
       (SELECT COUNT(DISTINCT category) FROM agents) AS category_count,
-      (SELECT COUNT(*) FROM workflows) AS workflow_count,
+      (SELECT COUNT(DISTINCT workflow_slug) FROM workflow_nodes WHERE agent_slug IS NOT NULL) AS workflow_count,
       (SELECT COUNT(*) FROM deliverables
          WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS deliverables_week
   `;
