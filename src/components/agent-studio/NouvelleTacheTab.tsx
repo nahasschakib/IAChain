@@ -28,6 +28,7 @@ import ZinebPreview from "./previews/ZinebPreview";
 import { useAgentRun } from "./useAgentRun";
 import { getRunConfig, APPROVAL_ACTION } from "./runConfig";
 import { recordRun } from "@/app/agents/actions";
+import MehdiLiveRun from "./MehdiLiveRun";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -155,6 +156,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
               <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{cost}</span>
             </div>
           )}
+          {agent.slug === "mehdi" && <MehdiLiveRun values={values} />}
           <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
             {buttonLabel}
           </Button>
