@@ -23,11 +23,19 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 - **Lien livrable ↔ approbation** (db/023) : `approvals.deliverable_id`. L'onglet Livrables de l'agent joint `approvals` et affiche le statut réel (En attente / Approuvé / Rejeté), avec repli sur `deliverables.approval_status` pour les anciens livrables. Les livrables antérieurs à db/023 ne sont pas rattachés.
 - **Bibliothèque de livrables** (`/deliverables`) : panneau de catégories généré depuis `deliverables.kind` (effectifs réels par organisation) ; les liens filtrent via `?kind=` (`searchParams` est une `Promise` à attendre avec `await`, cf. guide Next.js dans `node_modules/next/dist/docs/`).
 - **Nombre de workflows par agent** : calculé depuis `workflow_nodes.agent_slug` (workflows où l'agent est réellement placé), et plus depuis `agents.workflow_count` (colonne saisie à la main, désormais inutilisée). La liste d'usage de l'onglet Contrat (`agent_contract_workflow_usage`) reste une documentation en texte libre, sans lien avec les workflows.
-- À prévoir : autres agents sur le même modèle ; `BRAVE_SEARCH_API_KEY` et `src/lib/search.ts` pour les agents qui font de la recherche web (veille marché, prospection).
+- À prévoir : autres agents sur le même modèle (Yasmine est faite ; suite possible : Karim, qui devra lire le résultat de Mehdi dans agent_runs.result) ; `BRAVE_SEARCH_API_KEY` et `src/lib/search.ts` pour les agents qui font de la recherche web (veille marché, prospection).
+
+## Agent Yasmine (capture de leads) — moteur IA réel
+
+- Même principe que Mehdi : l'IA extrait, le code décide. Claude Haiku 4.5 via `runAiTool`, sortie par l'outil `rendre_fiche_prospect`.
+- Fichiers : `src/lib/yasmine.ts` (consigne, outil, validation, verdict), `src/app/agents/yasmine-actions.ts` (`runYasmine`), `YasmineLiveRun.tsx` et `YasmineResultPanel.tsx` (écran), branchement dans `NouvelleTacheTab.tsx` (indicateur `isLive`).
+- Garde-fous en code : e-mail et téléphone conservés seulement s'ils figurent dans le signal ; complétude sur 4 éléments (société, contact, moyen de contact, besoin) ; verdict « Fiche complète » / « Fiche partielle » / « Signal insuffisant » ; informations manquantes calculées en code ; dédoublonnage CRM « Non vérifiable » sans compte CRM.
+- Trace : `agent_runs`, historique, livrable de type `doc` (sauf signal insuffisant) et coût réel. Pas de demande d'approbation.
+- Chaînage : le « texte prêt pour Mehdi » est affiché ; le bouton « Envoyer à Mehdi » reste à construire.
 
 ## Reste à faire
 
-1. **Déploiement Vercel** : instance Clerk de production (pk_live/sk_live, domaine, webhooks), Après : variables d'environnement (DATABASE_URL, Clerk, ANTHROPIC_API_KEY), passage à Vercel Pro avant les clients payants, base Neon séparée pour la production, organisation SOCYTAY en production puis mise à jour de `tenants.org_id`, purge des simulations (« Simulation · ») avant usage réel.
+1. **Déploiement Vercel** : instance Clerk de production (pk_live/sk_live, domaine, webhooks), variables d'environnement (DATABASE_URL, Clerk, ANTHROPIC_API_KEY), passage à Vercel Pro avant les clients payants, base Neon séparée pour la production, organisation SOCYTAY en production puis mise à jour de `tenants.org_id`, purge des données de démonstration avant usage réel : dans deliverables, les origines « Simulation · … », « Génération automatique » et NULL (à vérifier aussi dans `activity_log` et `workflow_executions`).
 2. **Dashboard `/admin`** (SOCYTAY, indicateurs agrégés, confidentialité loi 09-08) ; cycle de vie client (webhooks organization.created/deleted, essai 14 jours, validation manuelle du paiement, e-mails Resend).
 3. **Délégation** : avis du délégué, retour au donneur d'ordre, délégués agents IA, e-mails, lier les experts aux utilisateurs Clerk, contrôle du droit de décider.
 4. **Internationalisation** : marché/devise par tenant, catalogue de connecteurs, RGPD vs loi 09-08.
