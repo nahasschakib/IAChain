@@ -275,6 +275,7 @@ export default function WorkflowStudio({
   costEstimate,
   costUnit,
   runLabel,
+  runStatus,
   runBanner,
   switcher,
   currentSlug,
@@ -286,6 +287,7 @@ export default function WorkflowStudio({
   costEstimate: number;
   costUnit: string;
   runLabel: string | null;
+  runStatus: string | null;
   runBanner: RunBanner | null;
   switcher: SwitchItem[];
   currentSlug: string;
@@ -486,8 +488,8 @@ export default function WorkflowStudio({
           >
             {mode === "design"
               ? "brouillon"
-              : runLabel
-                ? `run ${runLabel} · en cours`
+                  : runLabel
+                ? `run ${runLabel} · ${runStatus === "termine" ? "terminée" : runStatus === "echoue" ? "échouée" : "en cours"}`
                 : "aucune exécution"}
           </span>
         </div>

@@ -10,6 +10,7 @@ import WorkflowStudio, {
   type RunBanner,
   type SwitchItem,
 } from "@/components/workflow-studio/WorkflowStudio";
+  import NewExecutionButton from "@/components/workflow-studio/NewExecutionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,10 @@ export default async function WorkflowStudioPage({
 
   // Exécution de CETTE organisation : l'en cours la plus récente, sinon la dernière.
   const execRows = await sql`
-    SELECT id, run_label, banner
+    SELECT id, run_label, banner, status
     FROM workflow_executions
     WHERE workflow_id = ${wf.id} AND org_id = ${orgId}
-    ORDER BY (status = 'en_cours') DESC, started_at DESC
+    ORDER BY started_at DESC
     LIMIT 1
   `;
   const exec = execRows[0] ?? null;
@@ -112,16 +113,19 @@ export default async function WorkflowStudioPage({
           >
             {version}
           </span>
+          {slug === "prospect-to-cash" && <NewExecutionButton slug={slug} />}
         </div>
       }
     >
       <WorkflowStudio
+         key={vue === "execution" ? "run" : "design"}
         nodes={nodes}
         palette={palette}
         versions={VERSIONS[slug] ?? []}
         costEstimate={Number(wf.cost_estimate ?? 0)}
         costUnit={(wf.cost_unit as string) ?? "run"}
-        runLabel={(exec?.run_label as string | null) ?? null}
+         runLabel={(exec?.run_label as string | null) ?? null}
+        runStatus={(exec?.status as string | null) ?? null}
         runBanner={(exec?.banner as RunBanner | null) ?? null}
         switcher={switcher}
         currentSlug={slug}

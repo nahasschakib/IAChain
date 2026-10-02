@@ -59,6 +59,7 @@ export async function runProspectToCash(
     RETURNING id
   `;
   const executionId = exec[0].id as number;
+    await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId}`;
 
   await sql`
     INSERT INTO workflow_node_runs (execution_id, node_key, state, org_id)
@@ -83,7 +84,7 @@ export async function runProspectToCash(
       await finish(executionId, "echoue", 0, "yasmine");
       return { ok: true, executionId, status: "echoue", note: "Signal insuffisant : la chaîne s'arrête avant Mehdi." };
     }
-    await setNode(executionId, "yasmine", "done", `Fiche ${fiche.verdict}`, y.agentRunId);
+    await setNode(executionId, "yasmine", "done", fiche.verdict, y.agentRunId);
     await sql`UPDATE workflow_executions SET progress_done = 1, current_step = 'mehdi' WHERE id = ${executionId}`;
 
     // 2) Mehdi, alimenté par la fiche de Yasmine
