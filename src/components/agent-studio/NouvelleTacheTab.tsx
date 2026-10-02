@@ -30,6 +30,8 @@ import { getRunConfig, APPROVAL_ACTION } from "./runConfig";
 import { recordRun } from "@/app/agents/actions";
 import MehdiLiveRun, { type MehdiRunState } from "./MehdiLiveRun";
 import MehdiResultPanel from "./MehdiResultPanel";
+import YasmineLiveRun, { type YasmineRunState } from "./YasmineLiveRun";
+import YasmineResultPanel from "./YasmineResultPanel";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -95,7 +97,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const config = getRunConfig(agent.slug);
   const { status, step, run } = useAgentRun(config.steps.length);
   const cost = formatCost(agent.cost_estimate);
-    const [doneActions, setDoneActions] = useState<string[]>([]);
+  const [doneActions, setDoneActions] = useState<string[]>([]);
   const doneMap = config.actionDone ?? {};
   const handleRun = () => {
     setDoneActions([]);
@@ -126,9 +128,11 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   });
 
   const [mehdiState, setMehdiState] = useState<MehdiRunState>({ pending: false, outcome: null });
+  const [yasmineState, setYasmineState] = useState<YasmineRunState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
-  const Preview = isMehdi ? undefined : PREVIEWS[agent.slug];
-
+  const isYasmine = agent.slug === "yasmine";
+  const isLive = isMehdi || isYasmine;
+  const Preview = isLive ? undefined : PREVIEWS[agent.slug];
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
     const previewState = isMehdi
@@ -136,7 +140,13 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       ? "analyse en cours…"
       : mehdiState.outcome
       ? "résultat réel · IA"
-      : "en attente de la fiche"
+        : "en attente de la fiche"
+    : isYasmine
+    ? yasmineState.pending
+      ? "analyse en cours…"
+      : yasmineState.outcome
+      ? "résultat réel · IA"
+      : "en attente du signal"
     : status === "done"
     ? config.doneLabel
     : status === "running"
@@ -161,19 +171,20 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
         ))}
 
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "8px" }}>
-            {cost && !isMehdi && (
+            {cost && !isLive && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
               <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Coût estimé de l&apos;exécution</span>
               <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{cost}</span>
             </div>
           )}
-                    {isMehdi && <MehdiLiveRun values={values} onState={setMehdiState} />}
-            {!isMehdi && (
+            {isMehdi && <MehdiLiveRun values={values} onState={setMehdiState} />}
+            {isYasmine && <YasmineLiveRun values={values} onState={setYasmineState} />}
+            {!isLive &&  (
             <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
             </Button>
           )}
-            {!isMehdi && (
+            {!isLive &&  (
             <div style={{ fontSize: "11.5px", lineHeight: 1.5, color: "var(--muted-foreground)", marginTop: "10px" }}>
               L&apos;agent ne répond pas : il produit un livrable puis déclenche une action métier.
             </div>
@@ -189,7 +200,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-           {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : "APERÇU DU LIVRABLE"}
+           {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -205,8 +216,10 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           </span>
         </div>
 
-          {isMehdi ? (
+         {isMehdi ? (
           <MehdiResultPanel state={mehdiState} />
+        ) : isYasmine ? (
+          <YasmineResultPanel state={yasmineState} />
         ) : Preview ? (
           <Preview values={values} />
         ) : (
