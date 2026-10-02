@@ -407,12 +407,6 @@ export default async function DashboardPage() {
               <span style={{ fontWeight: 700, fontSize: 15 }}>
                 Activité récente
               </span>
-              <a
-                href="#"
-                style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)" }}
-              >
-                Journal complet →
-              </a>
             </div>
             <div
               style={{
