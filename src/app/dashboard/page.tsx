@@ -165,12 +165,20 @@ export default async function DashboardPage() {
          WHERE e.org_id = ${orgId} AND e.status = 'en_cours') AS workflow_names,
       (SELECT COUNT(*) FROM approvals
          WHERE org_id = ${orgId} AND status = 'en_attente') AS pending_approvals,
-      (SELECT COUNT(*) FROM activity_log
+           ((SELECT COUNT(*) FROM activity_log
          WHERE org_id = ${orgId} AND status = 'Échec'
-           AND created_at >= now() - interval '7 days') AS incidents_7d,
-      (SELECT agent_label FROM activity_log
-         WHERE org_id = ${orgId} AND status = 'Échec'
-         ORDER BY created_at DESC LIMIT 1) AS last_incident_agent,
+           AND created_at >= now() - interval '7 days')
+       + (SELECT COUNT(*) FROM agent_runs
+         WHERE org_id = ${orgId} AND status = 'erreur'
+           AND created_at >= now() - interval '7 days')) AS incidents_7d,
+      (SELECT x.agent_label FROM (
+         SELECT agent_label, created_at FROM activity_log
+           WHERE org_id = ${orgId} AND status = 'Échec'
+         UNION ALL
+         SELECT ag.name, r.created_at FROM agent_runs r
+           JOIN agents ag ON ag.id = r.agent_id
+           WHERE r.org_id = ${orgId} AND r.status = 'erreur'
+       ) x ORDER BY x.created_at DESC LIMIT 1) AS last_incident_agent,
       (SELECT COUNT(*) FROM deliverables
          WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS deliverables_7d,
       (SELECT COUNT(*) FROM deliverables
