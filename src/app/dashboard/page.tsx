@@ -100,13 +100,31 @@ export default async function DashboardPage() {
     };
   });
 
-  const activityRows = await sql`
-    SELECT to_char(a.created_at, 'HH24:MI') AS time, a.agent_label, w.name AS workflow_name, a.status, a.tone
-    FROM activity_log a
-    JOIN workflows w ON w.id = a.workflow_id
-    WHERE a.org_id = ${orgId}
-    ORDER BY a.created_at DESC
-    LIMIT 4
+    const activityRows = await sql`
+    SELECT to_char(t.at, 'HH24:MI') AS time, t.agent_label, t.workflow_name, t.status, t.tone
+    FROM (
+      SELECT r.created_at AS at,
+             ag.name AS agent_label,
+             COALESCE(w.name, 'Studio agent') AS workflow_name,
+             CASE WHEN r.status = 'ok' THEN COALESCE(r.result->>'verdict', 'Terminé') ELSE 'Échec' END AS status,
+             CASE WHEN r.status <> 'ok' THEN 'red'
+                  WHEN r.result->>'verdict' IS NULL
+                    OR r.result->>'verdict' IN ('Qualifié', 'Fiche complète') THEN 'signal'
+                  ELSE 'amber' END AS tone
+      FROM agent_runs r
+      JOIN agents ag ON ag.id = r.agent_id
+      LEFT JOIN workflow_node_runs nr ON nr.agent_run_id = r.id
+      LEFT JOIN workflow_executions e ON e.id = nr.execution_id
+      LEFT JOIN workflows w ON w.id = e.workflow_id
+      WHERE r.org_id = ${orgId}
+      UNION ALL
+      SELECT a.created_at, a.agent_label, w.name, a.status, a.tone
+      FROM activity_log a
+      JOIN workflows w ON w.id = a.workflow_id
+      WHERE a.org_id = ${orgId}
+    ) t
+    ORDER BY t.at DESC
+    LIMIT 6
   `;
   const activity = activityRows.map((row) => ({
     time: row.time as string,
@@ -331,6 +349,11 @@ export default async function DashboardPage() {
                 Voir tout →
               </Link>
             </div>
+              {activeWorkflows.length === 0 && (
+              <div style={{ fontSize: 12, color: "var(--graphite)", padding: "6px 0" }}>
+                Aucune exécution en cours. Lancez-en une depuis un workflow.
+              </div>
+            )}
             {activeWorkflows.map((wf, i) => (
               <Link
                 key={wf.name}
