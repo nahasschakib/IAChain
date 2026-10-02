@@ -16,7 +16,7 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 ## Agent Mehdi (qualification de prospects) — moteur IA réel
 
 - Branché sur Claude Haiku 4.5 via `@anthropic-ai/sdk` (clé `ANTHROPIC_API_KEY` dans `.env.local` et Vercel). L'IA ne fait que classer 3 critères (fit ICP, budget, maturité) et extraire le nom du prospect ; le score est calculé en code (`src/lib/mehdi.ts`).
-- Action serveur `runMehdi` (`src/app/agents/mehdi-actions.ts`) : trace chaque exécution dans `agent_runs` (db/020 : tokens, modèle, résultat, erreur), puis historique (`agent_execution_history`) et livrable (`deliverables`, sauf fiche « À compléter »). Libellés d'estimation du commercial : db/021.
+- Action serveur `runMehdi` (`src/app/agents/mehdi-actions.ts`, enveloppe de `executeMehdi` dans `src/lib/mehdi-core.ts`) : trace chaque exécution dans `agent_runs` (db/020 : tokens, modèle, résultat, erreur), puis historique (`agent_execution_history`) et livrable (`deliverables`, sauf fiche « À compléter »). Libellés d'estimation du commercial : db/021.
 - Écran « Nouvelle tâche » : résultat affiché dans le panneau de droite (`MehdiResultPanel.tsx`).
 - **Approbation go/no-go** : un verdict « Qualifié » crée une demande dans `approvals` (sans `workflow_id` ; page `/approvals` corrigée pour ce cas).
 - **Coût réel** (`src/lib/cost.ts`, db/022) : tokens × tarif du modèle × taux USD/MAD du jour (open.er-api.com, repli 10). Stocké dans `deliverables.cost` (numeric(12,4)) et `agent_runs.result`, affiché dans le panneau et dans l'onglet Livrables.
@@ -28,10 +28,19 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 ## Agent Yasmine (capture de leads) — moteur IA réel
 
 - Même principe que Mehdi : l'IA extrait, le code décide. Claude Haiku 4.5 via `runAiTool`, sortie par l'outil `rendre_fiche_prospect`.
-- Fichiers : `src/lib/yasmine.ts` (consigne, outil, validation, verdict), `src/app/agents/yasmine-actions.ts` (`runYasmine`), `YasmineLiveRun.tsx` et `YasmineResultPanel.tsx` (écran), branchement dans `NouvelleTacheTab.tsx` (indicateur `isLive`).
+- Fichiers : `src/lib/yasmine.ts` (consigne, outil, validation, verdict), `src/lib/yasmine-core.ts` (`executeYasmine`, cœur réutilisé par le workflow), `src/app/agents/yasmine-actions.ts` (`runYasmine`, enveloppe serveur), `YasmineLiveRun.tsx` et `YasmineResultPanel.tsx` (écran), branchement dans `NouvelleTacheTab.tsx` (indicateur `isLive`).
 - Garde-fous en code : e-mail et téléphone conservés seulement s'ils figurent dans le signal ; complétude sur 4 éléments (société, contact, moyen de contact, besoin) ; verdict « Fiche complète » / « Fiche partielle » / « Signal insuffisant » ; informations manquantes calculées en code ; dédoublonnage CRM « Non vérifiable » sans compte CRM.
 - Trace : `agent_runs`, historique, livrable de type `doc` (sauf signal insuffisant) et coût réel. Pas de demande d'approbation.
-- Chaînage : le « texte prêt pour Mehdi » est affiché ; le bouton « Envoyer à Mehdi » reste à construire.
+- Chaînage : le « texte prêt pour Mehdi » est affiché à titre d'information. Les agents restent indépendants dans le Studio ; l'enchaînement automatique Yasmine → Mehdi se fait dans le workflow Prospect to Cash (section suivante).
+
+## Workflow Prospect to Cash — chaîne Yasmine → Mehdi (moteur réel)
+
+- Bouton « + Nouvelle exécution » de la page `/workflows/prospect-to-cash` (`NewExecutionButton.tsx`, fenêtre rendue dans `document.body`) : canal, signal brut, compte CRM optionnel. Seul ce workflow a un lanceur ; le bouton générique de la barre du haut reste inactif.
+- Action serveur `launchProspectToCash` (`src/app/workflows/launch-actions.ts`) → `runProspectToCash` (`src/lib/workflow-engine.ts`, hors « use server ») : crée l'exécution (`workflow_executions`, 2 étapes) et les étapes (`workflow_node_runs`), appelle `executeYasmine`, puis `executeMehdi` avec la fiche (`ficheToText`) et fit/budget/maturité à « Non précisé ». Chaque étape est reliée à son run d'agent par `workflow_node_runs.agent_run_id` (db/024).
+- Statuts : étapes `pending/running/done/failed` (contrainte CHECK) ; exécutions `en_cours` (démo), `termine`, `echoue`. Signal insuffisant : Yasmine `failed`, la chaîne s'arrête avant Mehdi. `run_label` = `#<id>`.
+- Le `mapping` des nœuds n'est pas interprété : le passage de la fiche est fait en code. La décision go/no-go reste humaine (un verdict « Qualifié » crée une approbation).
+- Page du workflow : l'exécution affichée est la plus récente de l'organisation (tri par date) ; `WorkflowStudio` est remonté selon `?vue=` (clé) et affiche le statut réel dans le badge.
+- Limites actuelles : chaîne limitée à Yasmine → Mehdi (Karim et les étapes suivantes restent « à venir ») ; les exécutions de démonstration restent `en_cours` (à purger avant la production) ; les agents lancés seuls dans le Studio ne déclenchent pas le workflow.
 
 ## Reste à faire
 
@@ -39,7 +48,7 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 2. **Dashboard `/admin`** (SOCYTAY, indicateurs agrégés, confidentialité loi 09-08) ; cycle de vie client (webhooks organization.created/deleted, essai 14 jours, validation manuelle du paiement, e-mails Resend).
 3. **Délégation** : avis du délégué, retour au donneur d'ordre, délégués agents IA, e-mails, lier les experts aux utilisateurs Clerk, contrôle du droit de décider.
 4. **Internationalisation** : marché/devise par tenant, catalogue de connecteurs, RGPD vs loi 09-08.
-5. **Backlog produit** : « + Ajouter une intégration », « Connecter → », OAuth, « + Nouvelle exécution » (création d'une exécution pour une organisation), « Éditer la fiche », « Voir l'usage en workflow », compteurs encore statiques (dashboard, agents.cost_estimate de 4,50 MAD pour les agents non branchés, etc.), nombre d'agents actifs par organisation, limite de 5 membres Clerk, e-mail de contact réel, jeu de démonstration Quality Management pour un nouveau client (tables `qm_*` vides), anciens scripts 005/006 à adapter (écrivaient dans les colonnes `run_*` supprimées), `pg_dump` pour 000_baseline.
+5. **Backlog produit** : « + Ajouter une intégration », « Connecter → », OAuth, « + Nouvelle exécution » du bouton global de la barre du haut (seul le workflow Prospect to Cash a son lanceur), « Éditer la fiche », « Voir l'usage en workflow », compteurs encore statiques (dashboard, agents.cost_estimate de 4,50 MAD pour les agents non branchés, etc.), nombre d'agents actifs par organisation, limite de 5 membres Clerk, e-mail de contact réel, jeu de démonstration Quality Management pour un nouveau client (tables `qm_*` vides), anciens scripts 005/006 à adapter (écrivaient dans les colonnes `run_*` supprimées), `pg_dump` pour 000_baseline.
 
 ## Conventions de travail
 
