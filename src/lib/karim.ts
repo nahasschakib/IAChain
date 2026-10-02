@@ -118,7 +118,7 @@ export function buildPlan(
   const prêt = a.approach_angle.length > 0 && a.value_proposition.length >= 1;
   return {
     ...a,
-    budget_cadre: budgetCadre(budget),
+       budget_cadre: prêt ? budgetCadre(budget) : budgetCadre(""),
     registre: reg,
     statut: prêt ? "Plan prêt" : "Plan à compléter",
   };

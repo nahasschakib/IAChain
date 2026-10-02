@@ -32,6 +32,8 @@ import MehdiLiveRun, { type MehdiRunState } from "./MehdiLiveRun";
 import MehdiResultPanel from "./MehdiResultPanel";
 import YasmineLiveRun, { type YasmineRunState } from "./YasmineLiveRun";
 import YasmineResultPanel from "./YasmineResultPanel";
+import KarimLiveRun, { type KarimRunState } from "./KarimLiveRun";
+import KarimResultPanel from "./KarimResultPanel";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -129,9 +131,11 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
 
   const [mehdiState, setMehdiState] = useState<MehdiRunState>({ pending: false, outcome: null });
   const [yasmineState, setYasmineState] = useState<YasmineRunState>({ pending: false, outcome: null });
+  const [karimState, setKarimState] = useState<KarimRunState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
   const isYasmine = agent.slug === "yasmine";
-  const isLive = isMehdi || isYasmine;
+  const isKarim = agent.slug === "karim";
+  const isLive = isMehdi || isYasmine || isKarim;
   const Preview = isLive ? undefined : PREVIEWS[agent.slug];
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
@@ -146,7 +150,13 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       ? "analyse en cours…"
       : yasmineState.outcome
       ? "résultat réel · IA"
-      : "en attente du signal"
+            : "en attente du signal"
+    : isKarim
+    ? karimState.pending
+      ? "analyse en cours…"
+      : karimState.outcome
+      ? "résultat réel · IA"
+      : "en attente du profil"
     : status === "done"
     ? config.doneLabel
     : status === "running"
@@ -179,6 +189,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           )}
             {isMehdi && <MehdiLiveRun values={values} onState={setMehdiState} />}
             {isYasmine && <YasmineLiveRun values={values} onState={setYasmineState} />}
+            {isKarim && <KarimLiveRun values={values} onState={setKarimState} />}
             {!isLive &&  (
             <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
@@ -200,7 +211,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-           {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : "APERÇU DU LIVRABLE"}
+           {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -220,6 +231,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           <MehdiResultPanel state={mehdiState} />
         ) : isYasmine ? (
           <YasmineResultPanel state={yasmineState} />
+         ) : isKarim ? (
+          <KarimResultPanel state={karimState} />
         ) : Preview ? (
           <Preview values={values} />
         ) : (
