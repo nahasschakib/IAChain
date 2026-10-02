@@ -1,7 +1,9 @@
 import { sql } from "@/lib/db";
 import { executeYasmine } from "@/lib/yasmine-core";
 import { executeMehdi } from "@/lib/mehdi-core";
+import { executeKarim } from "@/lib/karim-core";
 import { ficheToText } from "@/lib/yasmine";
+import { profilFromMehdi } from "@/lib/karim";
 
 export type ChainInput = {
   signal: string;
@@ -13,10 +15,12 @@ export type ChainOutcome =
   | { ok: true; executionId: number; status: "termine" | "echoue"; note: string }
   | { ok: false; error: string };
 
+type NodeState = "pending" | "waiting" | "running" | "done" | "failed";
+
 async function setNode(
   executionId: number,
   nodeKey: string,
-  state: "pending" | "waiting" | "running" | "done" | "failed",
+  state: NodeState,
   note: string | null,
   agentRunId: number | null = null
 ) {
@@ -40,8 +44,9 @@ async function finish(
   `;
 }
 
-// Chaîne Prospect to Cash, périmètre actuel : Yasmine → Mehdi (la décision go/no-go reste humaine).
-// Le champ `mapping` des nœuds n'est pas interprété : le passage de la fiche est fait ici, en code.
+// Chaîne Prospect to Cash, périmètre actuel : Yasmine → Mehdi → Karim (si Mehdi qualifie).
+// Le champ `mapping` des nœuds n'est pas interprété : les passages sont faits ici, en code.
+// Les étapes suivantes (Salma, Anas, Nadia, approbation) ne sont pas encore branchées.
 export async function runProspectToCash(
   ctx: { orgId: string; userId: string },
   input: ChainInput
@@ -55,16 +60,17 @@ export async function runProspectToCash(
 
   const exec = await sql`
     INSERT INTO workflow_executions (workflow_id, status, progress_done, progress_total, current_step, client_label, run_label, org_id)
-    VALUES (${wf[0].id as number}, 'en_cours', 0, 2, 'yasmine', 'Capture en cours…', 'Exécution manuelle', ${ctx.orgId})
+    VALUES (${wf[0].id as number}, 'en_cours', 0, 3, 'yasmine', 'Capture en cours…', 'Exécution manuelle', ${ctx.orgId})
     RETURNING id
   `;
   const executionId = exec[0].id as number;
-    await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId}`;
+  await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId}`;
 
   await sql`
     INSERT INTO workflow_node_runs (execution_id, node_key, state, org_id)
     VALUES (${executionId}, 'yasmine', 'running', ${ctx.orgId}),
-           (${executionId}, 'mehdi', 'pending', ${ctx.orgId})
+           (${executionId}, 'mehdi', 'pending', ${ctx.orgId}),
+           (${executionId}, 'karim', 'pending', ${ctx.orgId})
   `;
 
   try {
@@ -89,8 +95,9 @@ export async function runProspectToCash(
 
     // 2) Mehdi, alimenté par la fiche de Yasmine
     await setNode(executionId, "mehdi", "running", null);
+    const ficheTexte = ficheToText(fiche);
     const m = await executeMehdi(ctx, {
-      fiche: ficheToText(fiche),
+      fiche: ficheTexte,
       fit: "Non précisé",
       budget: "Non précisé",
       maturite: "Non précisé",
@@ -101,10 +108,33 @@ export async function runProspectToCash(
       return { ok: true, executionId, status: "echoue", note: m.outcome.error };
     }
     const q = m.outcome.result;
-    const note = q.verdict === "À compléter" ? "Fiche à compléter" : `${q.verdict} ${q.score}/100`;
-    await setNode(executionId, "mehdi", "done", note, m.agentRunId);
-    await finish(executionId, "termine", 2, "mehdi");
-    return { ok: true, executionId, status: "termine", note: `${societe} · ${note}` };
+    const noteMehdi = q.verdict === "À compléter" ? "Fiche à compléter" : `${q.verdict} ${q.score}/100`;
+    await setNode(executionId, "mehdi", "done", noteMehdi, m.agentRunId);
+
+    // Seul un prospect « Qualifié » est transmis à Karim.
+    if (q.verdict !== "Qualifié") {
+      await setNode(executionId, "karim", "pending", `Non lancé : ${q.verdict}`);
+      await finish(executionId, "termine", 2, "mehdi");
+      return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · Karim non lancé` };
+    }
+    await sql`UPDATE workflow_executions SET progress_done = 2, current_step = 'karim' WHERE id = ${executionId}`;
+
+    // 3) Karim, alimenté par la fiche de Yasmine et l'évaluation de Mehdi
+    await setNode(executionId, "karim", "running", null);
+    const k = await executeKarim(ctx, {
+      profil: profilFromMehdi(ficheTexte, q),
+      budget: q.budget_estime,
+      registre: "Direct",
+    });
+    if (!k.outcome.ok) {
+      await setNode(executionId, "karim", "failed", k.outcome.error, k.agentRunId);
+      await finish(executionId, "echoue", 2, "karim");
+      return { ok: true, executionId, status: "echoue", note: k.outcome.error };
+    }
+    const statut = k.outcome.result.statut;
+    await setNode(executionId, "karim", "done", statut, k.agentRunId);
+    await finish(executionId, "termine", 3, "karim");
+    return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · ${statut}` };
   } catch (e) {
     console.error("runProspectToCash", e);
     try {
