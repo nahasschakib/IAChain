@@ -159,10 +159,12 @@ export default async function DashboardPage() {
          WHERE org_id = ${orgId}
            AND created_at >= now() - interval '14 days'
            AND created_at <  now() - interval '7 days') AS deliverables_prev,
-      (SELECT COALESCE(SUM(cost), 0) FROM deliverables
-         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS cost_7d,
+            (SELECT COALESCE(SUM(cost), 0) FROM deliverables
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days'
+           AND COALESCE(origin, '') NOT LIKE 'Simulation%') AS cost_7d,
       (SELECT COUNT(cost) FROM deliverables
-         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS costed_7d
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days'
+           AND COALESCE(origin, '') NOT LIKE 'Simulation%') AS costed_7d
   `;
   const k = kpiRows[0];
   const deliverables = Number(k.deliverables_7d);
@@ -213,10 +215,10 @@ export default async function DashboardPage() {
     },
     {
       label: "Coût / semaine",
-      value: formatMAD(cost),
+        value: formatMAD(cost, 3),
       note:
         costed > 0
-          ? `≈ ${formatMAD(cost / costed)} / livrable · ${costed} chiffrés`
+                   ? `≈ ${formatMAD(cost / costed, 3)} / livrable · ${costed} chiffré${costed > 1 ? "s" : ""}`
           : "aucun livrable chiffré",
       tone: undefined,
     },
