@@ -10,6 +10,9 @@ export type KarimRunState = { pending: boolean; outcome: KarimOutcome | null };
 const one = (v: Values[string] | undefined) =>
   Array.isArray(v) ? (v[0] ?? "") : typeof v === "string" ? v : "";
 
+const many = (v: Values[string] | undefined): string[] =>
+  Array.isArray(v) ? v : typeof v === "string" && v ? [v] : [];
+
 export default function KarimLiveRun({
   values,
   onState,
@@ -26,6 +29,9 @@ export default function KarimLiveRun({
         profil: String(values.profil_qualifie ?? ""),
         budget: one(values.budget_estime),
         registre: one(values.registre),
+        // Valeurs saisies par le commercial : prioritaires sur la déduction de l'IA.
+        segment: many(values.segment_marche)[0],
+        enjeux: many(values.enjeux_prioritaires),
       });
       onState({ pending: false, outcome });
     });

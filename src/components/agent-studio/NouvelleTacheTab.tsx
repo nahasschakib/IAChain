@@ -362,7 +362,13 @@ function FieldRenderer({
                 type="button"
                 size="sm"
                 variant={checked ? "default" : "outline"}
-                onClick={() => onChange(checked ? selected.filter((v) => v !== opt.label) : [...selected, opt.label])}
+                                onClick={() =>
+                  onChange(
+                    field.field_key === "segment_marche"
+                      ? checked ? [] : [opt.label]
+                      : checked ? selected.filter((v) => v !== opt.label) : [...selected, opt.label]
+                  )
+                }
                 style={{ borderRadius: "999px" }}
               >
                 {opt.label}

@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import AppShell from "@/components/AppShell";
 import AgentStudio from "@/components/agent-studio/AgentStudio";
 import { getTenantContext } from "@/lib/tenant";
+import { getOrgProfile } from "@/lib/org-profile";
 import type {
   Agent,
   TaskField,
@@ -48,11 +49,24 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     `,
   ]);
 
+  // Karim : segment et enjeux viennent du profil commercial de l'organisation, sans pré-sélection.
+  let fields = taskFields as unknown as TaskField[];
+  if (slug === "karim") {
+    const profile = await getOrgProfile(orgId);
+    fields = fields.map((f) => {
+      if (f.field_key === "segment_marche")
+        return { ...f, label: `${f.label} (facultatif)`, options: profile.segments.map((label) => ({ label })) };
+      if (f.field_key === "enjeux_prioritaires")
+        return { ...f, label: `${f.label} (facultatif)`, options: profile.enjeux.map((label) => ({ label })) };
+      return f;
+    });
+  }
+
   return (
     <AppShell>
       <AgentStudio
         agent={agent}
-        taskFields={taskFields as unknown as TaskField[]}
+        taskFields={fields}
         contract={{
           inputs: contractInputs as unknown as ContractInput[],
           outputs: contractOutputs as unknown as ContractOutput[],
