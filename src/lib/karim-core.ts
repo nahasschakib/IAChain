@@ -18,6 +18,7 @@ export type KarimCoreInput = {
   registre: string;
   segment?: string; // imposé par le commercial (facultatif)
   enjeux?: string[]; // imposés par le commercial (facultatif)
+  offer?: string; // offre pour cette exécution, remplace celle de l'organisation (facultatif)
 };
 
 // Cœur de l'agent Karim : appelé par l'écran Studio ET par le moteur de workflow.
@@ -44,7 +45,7 @@ export async function executeKarim(
   const org = await getOrgProfile(orgId);
   const lists = { segments: org.segments, enjeux: org.enjeux };
   const imposed = parseImposed(input.segment, input.enjeux, lists);
-  const offer = org.offer.slice(0, 2000);
+    const offer = (String(input.offer ?? "").trim() || org.offer).slice(0, 2000);
   const traceInput = JSON.stringify({
     profil,
     budget,
