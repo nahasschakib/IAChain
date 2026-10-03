@@ -1,4 +1,4 @@
-# IAChain — état au 1er oct. 2026 (multi-tenant)
+# IAChain — état au 3 oct. 2026 (multi-tenant)
 
 ## Stack
 
@@ -23,7 +23,7 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 - **Lien livrable ↔ approbation** (db/023) : `approvals.deliverable_id`. L'onglet Livrables de l'agent joint `approvals` et affiche le statut réel (En attente / Approuvé / Rejeté), avec repli sur `deliverables.approval_status` pour les anciens livrables. Les livrables antérieurs à db/023 ne sont pas rattachés.
 - **Bibliothèque de livrables** (`/deliverables`) : panneau de catégories généré depuis `deliverables.kind` (effectifs réels par organisation) ; les liens filtrent via `?kind=` (`searchParams` est une `Promise` à attendre avec `await`, cf. guide Next.js dans `node_modules/next/dist/docs/`).
 - **Nombre de workflows par agent** : calculé depuis `workflow_nodes.agent_slug` (workflows où l'agent est réellement placé), et plus depuis `agents.workflow_count` (colonne saisie à la main, désormais inutilisée). La liste d'usage de l'onglet Contrat (`agent_contract_workflow_usage`) reste une documentation en texte libre, sans lien avec les workflows.
-- À prévoir : autres agents sur le même modèle (Yasmine est faite ; suite possible : Karim, qui devra lire le résultat de Mehdi dans agent_runs.result) ; `BRAVE_SEARCH_API_KEY` et `src/lib/search.ts` pour les agents qui font de la recherche web (veille marché, prospection).
+- À prévoir : autres agents sur le même modèle (Yasmine et Karim sont faits; suite possible : Karim, qui devra lire le résultat de Mehdi dans agent_runs.result) ; `BRAVE_SEARCH_API_KEY` et `src/lib/search.ts` pour les agents qui font de la recherche web (veille marché, prospection).
 
 ## Agent Yasmine (capture de leads) — moteur IA réel
 
@@ -33,14 +33,24 @@ Next.js App Router, Clerk (auth + organisations), Neon Postgres (`sql` de `@/lib
 - Trace : `agent_runs`, historique, livrable de type `doc` (sauf signal insuffisant) et coût réel. Pas de demande d'approbation.
 - Chaînage : le « texte prêt pour Mehdi » est affiché à titre d'information. Les agents restent indépendants dans le Studio ; l'enchaînement automatique Yasmine → Mehdi se fait dans le workflow Prospect to Cash (section suivante).
 
+## Agent Karim (plan d'approche) — moteur IA réel
+
+- Même principe que Mehdi et Yasmine : l'IA rédige, le code décide. Consigne, outil et validation dans `src/lib/karim.ts` ; `budget_cadre` et le statut sont calculés en code.
+- Fichiers : `src/lib/karim.ts`, `src/lib/karim-core.ts` (`executeKarim`, cœur réutilisé par le workflow), `src/app/agents/karim-actions.ts` (action serveur), `KarimLiveRun.tsx` et `KarimResultPanel.tsx` (écran), branchement dans `NouvelleTacheTab.tsx`.
+- Garde-fous : cadre budgétaire « à définir » si le plan est incomplet ; bénéfices rédigés au conditionnel.
+- Trace : `agent_runs`, historique et livrable « Plan d'approche — <société> ».
+- Validé en production le 3 oct. : chaîne complète Yasmine → Mehdi → Karim sur Atlas Fiduciaire (3 livrables, demande go/no-go créée).
+
 ## Workflow Prospect to Cash — chaîne Yasmine → Mehdi (moteur réel)
 
 - Bouton « + Nouvelle exécution » de la page `/workflows/prospect-to-cash` (`NewExecutionButton.tsx`, fenêtre rendue dans `document.body`) : canal, signal brut, compte CRM optionnel. Seul ce workflow a un lanceur ; le bouton générique de la barre du haut reste inactif.
-- Action serveur `launchProspectToCash` (`src/app/workflows/launch-actions.ts`) → `runProspectToCash` (`src/lib/workflow-engine.ts`, hors « use server ») : crée l'exécution (`workflow_executions`, 2 étapes) et les étapes (`workflow_node_runs`), appelle `executeYasmine`, puis `executeMehdi` avec la fiche (`ficheToText`) et fit/budget/maturité à « Non précisé ». Chaque étape est reliée à son run d'agent par `workflow_node_runs.agent_run_id` (db/024).
+- Karim s'exécute à la suite de Mehdi, uniquement si Mehdi qualifie.
+- Fenêtre « Nouvelle exécution » : estimation optionnelle du commercial (`launch-actions.ts`, `NewExecutionButton.tsx`).
+- Action serveur `launchProspectToCash` (`src/app/workflows/launch-actions.ts`) → `runProspectToCash` (`src/lib/workflow-engine.ts`, hors « use server ») : crée l'exécution (`workflow_executions`, 3 étapes) et les étapes (`workflow_node_runs`), appelle `executeYasmine`, puis `executeMehdi` avec la fiche (`ficheToText`) et fit/budget/maturité à « Non précisé ». Chaque étape est reliée à son run d'agent par `workflow_node_runs.agent_run_id` (db/024).
 - Statuts : étapes `pending/running/done/failed` (contrainte CHECK) ; exécutions `en_cours` (démo), `termine`, `echoue`. Signal insuffisant : Yasmine `failed`, la chaîne s'arrête avant Mehdi. `run_label` = `#<id>`.
 - Le `mapping` des nœuds n'est pas interprété : le passage de la fiche est fait en code. La décision go/no-go reste humaine (un verdict « Qualifié » crée une approbation).
 - Page du workflow : l'exécution affichée est la plus récente de l'organisation (tri par date) ; `WorkflowStudio` est remonté selon `?vue=` (clé) et affiche le statut réel dans le badge.
-- Limites actuelles : chaîne limitée à Yasmine → Mehdi (Karim et les étapes suivantes restent « à venir ») ; les exécutions de démonstration restent `en_cours` (à purger avant la production) ; les agents lancés seuls dans le Studio ne déclenchent pas le workflow.
+- Limites actuelles : chaîne limitée à Yasmine → Mehdi → Karim (Karim ne s'exécute que si Mehdi qualifie ; les étapes suivantes restent « à venir ») ; les livrables issus de la chaîne ne sont pas rattachés au workflow (colonne « Workflow » vide dans `/deliverables`) ; les exécutions de démonstration restent `en_cours` (à purger avant la production) ; les agents lancés seuls dans le Studio ne déclenchent pas le workflow.
 
 ## Reste à faire
 
