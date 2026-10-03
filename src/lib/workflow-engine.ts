@@ -9,6 +9,9 @@ export type ChainInput = {
   signal: string;
   canaux: string[];
   compteCrm: string;
+  fit?: string;
+  budget?: string;
+  maturite?: string;
 };
 
 export type ChainOutcome =
@@ -96,11 +99,11 @@ export async function runProspectToCash(
     // 2) Mehdi, alimenté par la fiche de Yasmine
     await setNode(executionId, "mehdi", "running", null);
     const ficheTexte = ficheToText(fiche);
-    const m = await executeMehdi(ctx, {
+        const m = await executeMehdi(ctx, {
       fiche: ficheTexte,
-      fit: "Non précisé",
-      budget: "Non précisé",
-      maturite: "Non précisé",
+      fit: input.fit || "Non précisé",
+      budget: input.budget || "Non précisé",
+      maturite: input.maturite || "Non précisé",
     });
     if (!m.outcome.ok) {
       await setNode(executionId, "mehdi", "failed", m.outcome.error, m.agentRunId);
