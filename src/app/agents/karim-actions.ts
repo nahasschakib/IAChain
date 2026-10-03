@@ -9,6 +9,8 @@ export async function runKarim(input: {
   profil: string;
   budget: string;
   registre: string;
+  segment?: string;
+  enjeux?: string[];
 }): Promise<KarimOutcome> {
   const t = await resolveTenant();
   if (!t.ok) return { ok: false, error: "Accès refusé." };

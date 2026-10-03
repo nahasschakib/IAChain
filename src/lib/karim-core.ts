@@ -1,10 +1,13 @@
 import { sql } from "@/lib/db";
 import { runAiTool } from "@/lib/ai";
 import { computeCost } from "@/lib/cost";
+import { getOrgProfile } from "@/lib/org-profile";
 import {
   KARIM_SYSTEM,
-  KARIM_TOOL,
+  karimTool,
   parseAnalysis,
+  parseImposed,
+  applyImposed,
   buildPlan,
   type KarimOutcome,
 } from "@/lib/karim";
@@ -13,6 +16,8 @@ export type KarimCoreInput = {
   profil: string;
   budget: string;
   registre: string;
+  segment?: string; // imposé par le commercial (facultatif)
+  enjeux?: string[]; // imposés par le commercial (facultatif)
 };
 
 // Cœur de l'agent Karim : appelé par l'écran Studio ET par le moteur de workflow.
@@ -35,20 +40,37 @@ export async function executeKarim(
   const agentId = agent?.id as number | undefined;
   if (!agent || !agentId) return { outcome: { ok: false, error: "Agent introuvable." }, agentRunId: null };
 
+  // Profil commercial de l'organisation : listes autorisées et offre du vendeur.
+  const org = await getOrgProfile(orgId);
+  const lists = { segments: org.segments, enjeux: org.enjeux };
+  const imposed = parseImposed(input.segment, input.enjeux, lists);
+  const offer = org.offer.slice(0, 2000);
+  const traceInput = JSON.stringify({
+    profil,
+    budget,
+    registre,
+    segment: imposed.segment,
+    enjeux: imposed.enjeux,
+    offre: offer || null,
+  });
+
   const prompt =
     `<profil_qualifie>\n${profil}\n</profil_qualifie>\n\n` +
+    (offer ? `<offre_vendeur>\n${offer}\n</offre_vendeur>\n\n` : "") +
     `Registre de rédaction demandé : ${registre || "Direct"}.\n` +
-    `Offre du vendeur : non fournie.`;
+    `Segment imposé par le commercial : ${imposed.segment ?? "non imposé"}.\n` +
+    `Enjeux imposés par le commercial : ${imposed.enjeux.length > 0 ? imposed.enjeux.join(", ") : "non imposés"}.` +
+    (offer ? "" : `\nOffre du vendeur : non fournie.`);
 
   try {
-    const ai = await runAiTool({ system: KARIM_SYSTEM, prompt, tool: KARIM_TOOL, tier: "fast" });
-    const result = buildPlan(parseAnalysis(ai.data), budget, registre);
+    const ai = await runAiTool({ system: KARIM_SYSTEM, prompt, tool: karimTool(lists), tier: "fast" });
+    const result = buildPlan(applyImposed(parseAnalysis(ai.data, lists), imposed), budget, registre);
     const cost = await computeCost(ai.model, ai.inputTokens, ai.outputTokens);
     const stored = { ...result, cost_mad: cost?.mad ?? null, cost_usd: cost?.usd ?? null, usd_mad_rate: cost?.rate ?? null };
 
     const run = await sql`
       INSERT INTO agent_runs (org_id, agent_id, user_id, input, result, model, input_tokens, output_tokens, status)
-      VALUES (${orgId}, ${agentId}, ${userId}, ${JSON.stringify({ profil, budget, registre })}::jsonb,
+      VALUES (${orgId}, ${agentId}, ${userId}, ${traceInput}::jsonb,
               ${JSON.stringify(stored)}::jsonb, ${ai.model}, ${ai.inputTokens}, ${ai.outputTokens}, 'ok')
       RETURNING id
     `;
@@ -88,7 +110,7 @@ export async function executeKarim(
     try {
       await sql`
         INSERT INTO agent_runs (org_id, agent_id, user_id, input, status, error)
-        VALUES (${orgId}, ${agentId}, ${userId}, ${JSON.stringify({ profil, budget, registre })}::jsonb,
+        VALUES (${orgId}, ${agentId}, ${userId}, ${traceInput}::jsonb,
                 'erreur', ${e instanceof Error ? e.message.slice(0, 500) : "inconnue"})
       `;
     } catch {}
