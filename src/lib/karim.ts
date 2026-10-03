@@ -34,6 +34,7 @@ Règles :
 - Angle d'approche : 2 phrases maximum, fondées sur le profil. Chaîne vide si le profil est trop pauvre.
 - Proposition de valeur : 1 à 3 éléments, chacun lié à un enjeu présent dans le profil. Liste vide si impossible.
 - Informations manquantes : ce qu'il faudrait savoir pour affiner le plan.
+- Les bénéfices restent au conditionnel et ne sont jamais quantifiés ni garantis : n'écris ni « drastiquement », ni « garanti », ni pourcentage ou gain chiffré.
 - Adapte le ton au registre demandé.`;
 
 export const KARIM_TOOL: Anthropic.Tool = {
