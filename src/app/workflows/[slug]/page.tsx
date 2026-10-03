@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
 import { getTenantContext } from "@/lib/tenant";
+import { getOrgProfile } from "@/lib/org-profile";
 import WorkflowStudio, {
   type StudioNode,
   type PaletteAgent,
@@ -34,6 +35,7 @@ export default async function WorkflowStudioPage({
   const { vue } = await searchParams;
 
   const { orgId } = await getTenantContext();
+  const orgProfile = await getOrgProfile(orgId);
 
   const wfRows = await sql`
     SELECT id, slug, name, version, cost_estimate, cost_unit, studio_ready
@@ -113,7 +115,9 @@ export default async function WorkflowStudioPage({
           >
             {version}
           </span>
-          {slug === "prospect-to-cash" && <NewExecutionButton slug={slug} />}
+                   {slug === "prospect-to-cash" && (
+            <NewExecutionButton slug={slug} segments={orgProfile.segments} enjeux={orgProfile.enjeux} />
+          )}
         </div>
       }
     >

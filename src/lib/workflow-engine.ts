@@ -12,6 +12,9 @@ export type ChainInput = {
   fit?: string;
   budget?: string;
   maturite?: string;
+  segment?: string;
+  enjeux?: string[];
+  offer?: string;
 };
 
 export type ChainOutcome =
@@ -128,6 +131,9 @@ export async function runProspectToCash(
       profil: profilFromMehdi(ficheTexte, q),
       budget: q.budget_estime,
       registre: "Direct",
+      segment: input.segment,
+      enjeux: input.enjeux,
+      offer: input.offer,
     });
     if (!k.outcome.ok) {
       await setNode(executionId, "karim", "failed", k.outcome.error, k.agentRunId);

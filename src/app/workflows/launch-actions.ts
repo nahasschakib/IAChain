@@ -11,6 +11,9 @@ export async function launchProspectToCash(input: {
   fit?: string;
   budget?: string;
   maturite?: string;
+  segment?: string;
+  enjeux?: string[];
+  offer?: string;
 }): Promise<ChainOutcome> {
   const t = await resolveTenant();
   if (!t.ok) return { ok: false, error: "Accès refusé." };
