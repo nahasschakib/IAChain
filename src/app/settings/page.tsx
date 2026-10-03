@@ -2,6 +2,9 @@ import AppShell from "@/components/AppShell";
 import { currentUser } from "@clerk/nextjs/server";
 import { auth } from "@clerk/nextjs/server";
 import { clerkClient } from "@clerk/nextjs/server";
+import { resolveTenant } from "@/lib/tenant";
+import { getOrgProfile, listOrgOptions } from "@/lib/org-profile";
+import ProfilCommercial from "@/components/settings/ProfilCommercial";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
@@ -9,6 +12,11 @@ export default async function SettingsPage() {
   const user = await currentUser();
   const { orgId } = await auth();
   const organization = orgId ? await (await clerkClient()).organizations.getOrganization({ organizationId: orgId }) : null;
+
+  const tenant = await resolveTenant();
+  const [profile, options] = tenant.ok
+    ? await Promise.all([getOrgProfile(tenant.ctx.orgId), listOrgOptions(tenant.ctx.orgId)])
+    : [null, null];
 
   return (
     <AppShell
@@ -18,7 +26,7 @@ export default async function SettingsPage() {
         </span>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 480 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
         <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
             <div
@@ -78,6 +86,31 @@ export default async function SettingsPage() {
             <span>{organization?.name ?? "Personnel"}</span>
           </div>
         </div>
+
+        {tenant.ok && profile && options && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, var(--steel-tint), #cddce7)",
+                  color: "var(--steel)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 18V6m0 12h16M8 14l3-4 3 3 5-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>Profil commercial</span>
+            </div>
+            <ProfilCommercial offer={profile.offer} options={options} canEdit={tenant.ctx.isOrgAdmin} />
+          </div>
+        )}
       </div>
     </AppShell>
   );
