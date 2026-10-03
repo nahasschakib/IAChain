@@ -6,6 +6,50 @@ import { createPortal } from "react-dom";
 import { launchProspectToCash } from "@/app/workflows/launch-actions";
 
 const CANAUX = ["Formulaire web", "Salon professionnel", "Import CSV"];
+const FITS = ["Fort", "Moyen", "Faible"];
+const BUDGETS = ["< 50k MAD", "50-200k MAD", "200k+ MAD"];
+const MATURITES = ["Exploration", "Comparaison active", "Prêt à acheter"];
+
+function Chips({
+  label,
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 12, color: "var(--graphite)", marginBottom: 4 }}>{label}</div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(value === o ? "" : o)}
+            style={{
+              padding: "4px 10px",
+              borderRadius: 999,
+              fontSize: 12,
+              cursor: "pointer",
+              border: "1px solid var(--line)",
+              background: value === o ? "var(--steel-deep)" : "var(--surface)",
+              color: value === o ? "#f5f6f8" : "inherit",
+            }}
+          >
+            {o}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function NewExecutionButton({ slug }: { slug: string }) {
   const router = useRouter();
@@ -13,6 +57,9 @@ export default function NewExecutionButton({ slug }: { slug: string }) {
   const [signal, setSignal] = useState("");
   const [canal, setCanal] = useState(CANAUX[0]);
   const [crm, setCrm] = useState("");
+  const [fit, setFit] = useState("");
+  const [budget, setBudget] = useState("");
+  const [maturite, setMaturite] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ status: string; note: string } | null>(null);
   const [pending, start] = useTransition();
@@ -21,15 +68,18 @@ export default function NewExecutionButton({ slug }: { slug: string }) {
     if (pending) return;
     setOpen(false);
     setError(null);
-    setDone(null);
+        setDone(null);
     setSignal("");
     setCrm("");
+    setFit("");
+    setBudget("");
+    setMaturite("");
   }
 
-  function launch() {
+   function launch() {
     setError(null);
     start(async () => {
-      const out = await launchProspectToCash({ signal, canaux: [canal], compteCrm: crm });
+      const out = await launchProspectToCash({ signal, canaux: [canal], compteCrm: crm, fit, budget, maturite });
       if (!out.ok) {
         setError(out.error);
         return;
@@ -157,6 +207,14 @@ export default function NewExecutionButton({ slug }: { slug: string }) {
                   rows={2}
                   style={{ ...field, marginBottom: 16, resize: "vertical" }}
                 />
+
+                                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>Estimation du commercial (optionnelle)</div>
+                <p style={{ fontSize: 12, color: "var(--graphite)", margin: "0 0 8px" }}>
+                  Indicative et non prouvée : Mehdi ne la retient que si la fiche la soutient.
+                </p>
+                <Chips label="Fit ICP" options={FITS} value={fit} onChange={setFit} disabled={pending} />
+                <Chips label="Budget" options={BUDGETS} value={budget} onChange={setBudget} disabled={pending} />
+                <Chips label="Maturité du besoin" options={MATURITES} value={maturite} onChange={setMaturite} disabled={pending} />
 
                 {error && <p style={{ fontSize: 13, color: "var(--red, #b3261e)", margin: "0 0 12px" }}>{error}</p>}
 

@@ -8,6 +8,9 @@ export async function launchProspectToCash(input: {
   signal: string;
   canaux: string[];
   compteCrm: string;
+  fit?: string;
+  budget?: string;
+  maturite?: string;
 }): Promise<ChainOutcome> {
   const t = await resolveTenant();
   if (!t.ok) return { ok: false, error: "Accès refusé." };
