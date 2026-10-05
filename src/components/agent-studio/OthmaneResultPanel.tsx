@@ -54,7 +54,7 @@ function CanalChip({ canal }: { canal: string }) {
   );
 }
 
-const fmtK = (n: number) => `${n.toFixed(1).replace(".", ",")} k€`;
+const fmtK = (n: number) => `${(Math.round(n * 10) / 10).toString().replace(".", ",")} k MAD`;
 
 export default function OthmaneResultPanel({ state }: { state: OthmaneRunState }) {
   const { pending, outcome } = state;

@@ -22,7 +22,7 @@ export default function OthmaneLiveRun({
       const outcome = await runOthmane({
         objectif: String(values.objectif ?? ""),
         canaux: Array.isArray(values.canaux) ? values.canaux : [],
-        budgetK: Number(values.budget) || 38,
+           budgetK: Number(values.budget) || 100,
       });
       onState({ pending: false, outcome });
     });

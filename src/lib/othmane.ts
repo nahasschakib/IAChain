@@ -35,7 +35,8 @@ Règles :
 - Appuie le plan sur l'opportunité et les signaux de la veille quand ils sont fournis, sans en citer de nouveaux.
 - Calendrier : des étapes concrètes, une semaine entre 1 et ${HORIZON_SEMAINES}, avec le livrable attendu (post, email, événement, campagne). Pas plus de 3 étapes par semaine.
 - Chaque phrase est complète, en français professionnel, sans phrase inachevée.
-- synthese : 3 à 4 phrases complètes, 600 caractères maximum.`;
+- synthese : 3 à 4 phrases complètes, 600 caractères maximum.
+- Le budget est exprimé en milliers de dirhams marocains (k MAD).`;
 
 export function othmaneTool(canaux: string[]): Anthropic.Tool {
   return {

@@ -109,7 +109,7 @@ export async function executeOthmane(
 
   const prompt =
     `<objectif>\n${objectif}\n</objectif>\n\n` +
-    `<budget>${budgetK} k€ sur ${HORIZON_SEMAINES} semaines</budget>\n\n` +
+    `<budget>${budgetK} k MAD sur ${HORIZON_SEMAINES} semaines</budget>\n\n` +
     `<canaux_autorises>${canaux.join(", ")}</canaux_autorises>\n\n` +
     (offre ? `<offre_entreprise>\n${offre}\n</offre_entreprise>\n\n` : "") +
     veilleTxt;
