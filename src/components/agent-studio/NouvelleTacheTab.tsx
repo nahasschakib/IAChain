@@ -34,6 +34,10 @@ import YasmineLiveRun, { type YasmineRunState } from "./YasmineLiveRun";
 import YasmineResultPanel from "./YasmineResultPanel";
 import KarimLiveRun, { type KarimRunState } from "./KarimLiveRun";
 import KarimResultPanel from "./KarimResultPanel";
+import IlyasLiveRun, { type IlyasRunState } from "./IlyasLiveRun";
+import IlyasResultPanel from "./IlyasResultPanel";
+import SofiaLiveRun, { type SofiaRunState } from "./SofiaLiveRun";
+import SofiaResultPanel from "./SofiaResultPanel";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -132,10 +136,14 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const [mehdiState, setMehdiState] = useState<MehdiRunState>({ pending: false, outcome: null });
   const [yasmineState, setYasmineState] = useState<YasmineRunState>({ pending: false, outcome: null });
   const [karimState, setKarimState] = useState<KarimRunState>({ pending: false, outcome: null });
+  const [ilyasState, setIlyasState] = useState<IlyasRunState>({ pending: false, outcome: null });
+  const [sofiaState, setSofiaState] = useState<SofiaRunState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
   const isYasmine = agent.slug === "yasmine";
   const isKarim = agent.slug === "karim";
-  const isLive = isMehdi || isYasmine || isKarim;
+  const isIlyas = agent.slug === "ilyas";
+  const isSofia = agent.slug === "sofia";
+  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia;
   const Preview = isLive ? undefined : PREVIEWS[agent.slug];
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
@@ -157,8 +165,20 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       : karimState.outcome
       ? "résultat réel · IA"
       : "en attente du profil"
+      : isIlyas
+    ? ilyasState.pending
+      ? "recherche en cours…"
+      : ilyasState.outcome
+      ? "résultat réel · IA"
+      : "en attente de la requête"
+          : isSofia
+    ? sofiaState.pending
+      ? "veille en cours…"
+      : sofiaState.outcome
+      ? "résultat réel · IA"
+      : "en attente de la thématique"
     : status === "done"
-    ? config.doneLabel
+       ? config.doneLabel
     : status === "running"
     ? "génération…"
     : "aperçu live des entrées";
@@ -190,6 +210,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
             {isMehdi && <MehdiLiveRun values={values} onState={setMehdiState} />}
             {isYasmine && <YasmineLiveRun values={values} onState={setYasmineState} />}
             {isKarim && <KarimLiveRun values={values} onState={setKarimState} />}
+            {isIlyas && <IlyasLiveRun values={values} onState={setIlyasState} />}
+            {isSofia && <SofiaLiveRun values={values} onState={setSofiaState} />}
             {!isLive &&  (
             <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
@@ -211,7 +233,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-           {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : "APERÇU DU LIVRABLE"}
+          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -233,6 +255,10 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           <YasmineResultPanel state={yasmineState} />
          ) : isKarim ? (
           <KarimResultPanel state={karimState} />
+        ) : isIlyas ? (
+          <IlyasResultPanel state={ilyasState} />
+        ) : isSofia ? (
+          <SofiaResultPanel state={sofiaState} />
         ) : Preview ? (
           <Preview values={values} />
         ) : (
