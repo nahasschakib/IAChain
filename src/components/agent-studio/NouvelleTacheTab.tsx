@@ -40,6 +40,8 @@ import SofiaLiveRun, { type SofiaRunState } from "./SofiaLiveRun";
 import SofiaResultPanel from "./SofiaResultPanel";
 import OthmaneLiveRun, { type OthmaneRunState } from "./OthmaneLiveRun";
 import OthmaneResultPanel from "./OthmaneResultPanel";
+import LinaLiveRun, { type LinaRunState } from "./LinaLiveRun";
+import LinaResultPanel from "./LinaResultPanel";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -141,13 +143,15 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const [ilyasState, setIlyasState] = useState<IlyasRunState>({ pending: false, outcome: null });
   const [sofiaState, setSofiaState] = useState<SofiaRunState>({ pending: false, outcome: null });
   const [othmaneState, setOthmaneState] = useState<OthmaneRunState>({ pending: false, outcome: null });
+  const [linaState, setLinaState] = useState<LinaRunState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
   const isYasmine = agent.slug === "yasmine";
   const isKarim = agent.slug === "karim";
   const isIlyas = agent.slug === "ilyas";
   const isSofia = agent.slug === "sofia";
   const isOthmane = agent.slug === "othmane";
-  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia || isOthmane;
+  const isLina = agent.slug === "lina";
+  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia || isOthmane || isLina;
   const Preview = isLive ? undefined : PREVIEWS[agent.slug];
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
@@ -187,7 +191,13 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       : othmaneState.outcome
       ? "résultat réel · IA"
       : "en attente de l'objectif"
-    : status === "done"
+      : isLina
+    ? linaState.pending
+      ? "rédaction en cours…"
+      : linaState.outcome
+      ? "résultat réel · IA"
+      : "en attente du brief"
+      : status === "done"
        ? config.doneLabel
     : status === "running"
     ? "génération…"
@@ -223,6 +233,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
             {isIlyas && <IlyasLiveRun values={values} onState={setIlyasState} />}
             {isSofia && <SofiaLiveRun values={values} onState={setSofiaState} />}
             {isOthmane && <OthmaneLiveRun values={values} onState={setOthmaneState} />}
+           {isLina && <LinaLiveRun values={values} onState={setLinaState} />}
             {!isLive &&  (
             <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
@@ -244,7 +255,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : isOthmane ? "PLAN MARKETING" : "APERÇU DU LIVRABLE"}
+          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : isOthmane ? "PLAN MARKETING" : isLina ? "CONTENUS RÉDIGÉS" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -272,6 +283,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           <SofiaResultPanel state={sofiaState} />
         ) : isOthmane ? (
           <OthmaneResultPanel state={othmaneState} />
+        ) : isLina ? (
+          <LinaResultPanel state={linaState} />
         ) : Preview ? (
           <Preview values={values} />
         ) : (
