@@ -7,8 +7,10 @@ Exécuter, dans cet ordre, sur une base Neon vide :
 1. `000_baseline.sql` : schéma complet (41 tables, clés, index, valeurs par défaut).
 2. `000b_seed_agents.sql` : catalogue partagé (agents, contrats, permissions, champs de tâche, workflows, nœuds, processus).
 
-Les deux fichiers sont idempotents : les rejouer ne provoque aucune erreur ni doublon.
-Ils ne contiennent aucune donnée propre à une organisation (ni exécutions, ni livrables, ni comptes CRM).
+Puis, dans l'ordre des numéros, les migrations `026` et suivantes (voir ci-dessous).
+
+Chaque fichier est idempotent : le rejouer ne provoque aucune erreur ni doublon.
+La baseline et le seed ne contiennent aucune donnée propre à une organisation (ni exécutions, ni livrables, ni comptes CRM).
 
 ## Nouvelles migrations
 
