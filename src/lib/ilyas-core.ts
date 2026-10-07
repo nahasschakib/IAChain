@@ -154,7 +154,7 @@ export async function executeIlyas(
     // Dédoublonnage CRM (optionnel) : comparaison de noms normalisés, en code — jamais par l'IA.
     let crmNames = new Set<string>();
     if (input.dedoublonner) {
-      const rows = await sql`SELECT name FROM crm_accounts`;
+      const rows = await sql`SELECT name FROM crm_accounts WHERE org_id = ${orgId}`;
       crmNames = new Set(rows.map((r) => normalizeName(r.name as string)));
     }
 
