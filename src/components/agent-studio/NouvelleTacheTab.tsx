@@ -227,6 +227,19 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
               <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{cost}</span>
             </div>
           )}
+          {agent.temps_gagne_min != null && (
+              <div style={{ marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Temps gagné estimé par exécution</span>
+                  <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>≈ {agent.temps_gagne_min} min</span>
+                </div>
+                {agent.temps_gagne_hypothese && (
+                  <div style={{ fontSize: "11px", color: "var(--muted-foreground)", marginTop: "2px" }}>
+                    Hypothèse : {agent.temps_gagne_hypothese}
+                  </div>
+                )}
+              </div>
+            )}
             {isMehdi && <MehdiLiveRun values={values} onState={setMehdiState} />}
             {isYasmine && <YasmineLiveRun values={values} onState={setYasmineState} />}
             {isKarim && <KarimLiveRun values={values} onState={setKarimState} />}

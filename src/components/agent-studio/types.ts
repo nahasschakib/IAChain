@@ -13,6 +13,8 @@ export interface Agent {
   workflow_count: number;
   status: string;
   cost_estimate?: number | string | null;
+  temps_gagne_min?: number | null;
+  temps_gagne_hypothese?: string | null;
 }
 
 export type CheckboxGroupOption = { label: string; checked?: boolean };
