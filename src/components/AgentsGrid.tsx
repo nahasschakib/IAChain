@@ -79,7 +79,7 @@ const ICONS: Record<string, LucideIcon> = {
   
 };
 
-const CATEGORIES = ["TOUS", "SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH", "QUALITÉ"];
+const CATEGORY_ORDER = ["SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH", "QUALITÉ"];
 
 function useColumns() {
   const [columns, setColumns] = useState(4);
@@ -111,6 +111,12 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const columns = useColumns();
   const [view, setView] = useState<"carte" | "contrat" | "liste">("carte");
+    const present = Array.from(new Set(agents.map((a) => a.category.toUpperCase())));
+  const CATEGORIES = [
+    "TOUS",
+    ...CATEGORY_ORDER.filter((c) => present.includes(c)),
+    ...present.filter((c) => !CATEGORY_ORDER.includes(c)),
+  ];
 
   const filtered = active === "TOUS" ? agents : agents.filter((a) => a.category.toUpperCase() === active);
 
