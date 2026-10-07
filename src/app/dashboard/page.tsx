@@ -156,7 +156,8 @@ export default async function DashboardPage() {
 
   const kpiRows = await sql`
     SELECT
-      (SELECT COUNT(*) FROM agents WHERE status = 'actif') AS active_agents,
+      (SELECT COUNT(*) FROM org_agents oa JOIN agents a ON a.id = oa.agent_id
+         WHERE oa.org_id = ${orgId} AND a.status = 'actif') AS active_agents,
       (SELECT COUNT(*) FROM agents) AS total_agents,
       (SELECT COUNT(*) FROM workflow_executions
          WHERE org_id = ${orgId} AND status = 'en_cours') AS active_workflows,
