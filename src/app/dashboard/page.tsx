@@ -186,12 +186,12 @@ export default async function DashboardPage() {
          WHERE org_id = ${orgId}
            AND created_at >= now() - interval '14 days'
            AND created_at <  now() - interval '7 days') AS deliverables_prev,
-            (SELECT COALESCE(SUM(cost), 0) FROM deliverables
-         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days'
-           AND COALESCE(origin, '') NOT LIKE 'Simulation%') AS cost_7d,
-      (SELECT COUNT(cost) FROM deliverables
-         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days'
-           AND COALESCE(origin, '') NOT LIKE 'Simulation%') AS costed_7d
+      (SELECT COALESCE(SUM(cost_mad), 0) FROM agent_runs
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS cost_7d,
+      (SELECT COUNT(cost_mad) FROM agent_runs
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS costed_7d,
+      (SELECT COUNT(*) FROM agent_runs
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS runs_7d
   `;
   const k = kpiRows[0];
   const deliverables = Number(k.deliverables_7d);
@@ -200,6 +200,7 @@ export default async function DashboardPage() {
   const incidents = Number(k.incidents_7d);
   const cost = Number(k.cost_7d);
   const costed = Number(k.costed_7d);
+  const runs = Number(k.runs_7d);
 
   type Tone = "amber" | "red" | undefined;
 
@@ -243,10 +244,10 @@ export default async function DashboardPage() {
     {
       label: "Coût / semaine",
         value: formatMAD(cost, 3),
-      note:
+            note:
         costed > 0
-                   ? `≈ ${formatMAD(cost / costed, 3)} / livrable · ${costed} chiffré${costed > 1 ? "s" : ""}`
-          : "aucun livrable chiffré",
+          ? `${runs} exécution${runs > 1 ? "s" : ""} dont ${costed} chiffrée${costed > 1 ? "s" : ""} · ≈ ${formatMAD(cost / costed, 3)} / exécution chiffrée`
+          : "aucune exécution chiffrée",
       tone: undefined,
     },
   ];
