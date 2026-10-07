@@ -190,9 +190,17 @@ export default async function DashboardPage() {
          WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS cost_7d,
       (SELECT COUNT(cost_mad) FROM agent_runs
          WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS costed_7d,
-      (SELECT COUNT(*) FROM agent_runs
-         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS runs_7d
-  `;
+          (SELECT COUNT(*) FROM agent_runs
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS runs_7d,
+      (SELECT COALESCE(SUM(a.temps_gagne_min), 0) FROM agent_runs r
+         JOIN agents a ON a.id = r.agent_id
+         WHERE r.org_id = ${orgId} AND r.status = 'ok'
+           AND r.created_at >= now() - interval '7 days') AS saved_min_7d,
+      (SELECT COUNT(*) FROM agent_runs r
+         JOIN agents a ON a.id = r.agent_id
+         WHERE r.org_id = ${orgId} AND r.status = 'ok' AND a.temps_gagne_min IS NULL
+           AND r.created_at >= now() - interval '7 days') AS unestimated_7d
+    `;
   const k = kpiRows[0];
   const deliverables = Number(k.deliverables_7d);
   const delta = deliverables - Number(k.deliverables_prev);
@@ -201,6 +209,12 @@ export default async function DashboardPage() {
   const cost = Number(k.cost_7d);
   const costed = Number(k.costed_7d);
   const runs = Number(k.runs_7d);
+  const savedMin = Number(k.saved_min_7d);
+  const unestimated = Number(k.unestimated_7d);
+  const savedLabel =
+    savedMin < 60
+      ? `${savedMin} min`
+      : `${Math.floor(savedMin / 60)} h ${String(savedMin % 60).padStart(2, "0")}`;
 
   type Tone = "amber" | "red" | undefined;
 
@@ -248,6 +262,15 @@ export default async function DashboardPage() {
         costed > 0
           ? `${runs} exécution${runs > 1 ? "s" : ""} dont ${costed} chiffrée${costed > 1 ? "s" : ""} · ≈ ${formatMAD(cost / costed, 3)} / exécution chiffrée`
           : "aucune exécution chiffrée",
+      tone: undefined,
+    },
+     {
+      label: "Temps gagné / semaine",
+      value: `≈ ${savedLabel}`,
+      note:
+        unestimated > 0
+          ? `estimation · ${unestimated} exécution${unestimated > 1 ? "s" : ""} sans valeur`
+          : "estimation d'après les hypothèses des agents",
       tone: undefined,
     },
   ];
