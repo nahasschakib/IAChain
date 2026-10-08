@@ -24,7 +24,7 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
   const agent = agentRows[0] as Agent | undefined;
   if (!agent) notFound();
 
-  const [taskFields, contractInputs, contractOutputs, contractMeta, workflowUsage, permissions, executionHistory, deliverables] = await Promise.all([
+   const [taskFields, contractInputs, contractOutputs, contractMeta, workflowUsage, permissions, executionHistory, deliverables, realStats] = await Promise.all([
     sql`SELECT * FROM agent_task_fields WHERE agent_id = ${agent.id} ORDER BY sort_order`,
     sql`SELECT * FROM agent_contract_inputs WHERE agent_id = ${agent.id} ORDER BY sort_order`,
     sql`SELECT * FROM agent_contract_outputs WHERE agent_id = ${agent.id} ORDER BY sort_order`,
@@ -47,7 +47,42 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
       WHERE d.agent_id = ${agent.id} AND d.org_id = ${orgId}
       ORDER BY d.id DESC
     `,
+    sql`
+      SELECT
+        (SELECT COUNT(*) FROM agent_runs
+           WHERE agent_id = ${agent.id} AND org_id = ${orgId}) AS runs,
+        (SELECT COUNT(*) FROM agent_runs
+           WHERE agent_id = ${agent.id} AND org_id = ${orgId} AND status = 'erreur') AS errors,
+        (SELECT COUNT(*) FROM approvals
+           WHERE agent_id = ${agent.id} AND org_id = ${orgId} AND status = 'en_attente') AS pending
+    `,
   ]);
+
+  // Compteurs de permissions : calculés depuis l'historique réel de l'organisation.
+  const runs = Number(realStats[0].runs);
+  const errors = Number(realStats[0].errors);
+  const pending = Number(realStats[0].pending);
+  const permissionsView = (permissions as unknown as Permission[]).map((p) => {
+    if (p.stats_text) return p;
+    if (p.mode === "AUTO") {
+      return {
+        ...p,
+        stats_text:
+          runs === 0
+            ? "Aucune exécution réelle"
+            : `${runs} exécution${runs > 1 ? "s" : ""} réelle${runs > 1 ? "s" : ""} · ${errors} incident${errors > 1 ? "s" : ""}`,
+      };
+    }
+    if (p.mode === "APPROBATION_REQUISE") {
+      return {
+        ...p,
+        stats_text:
+          pending === 0 ? "Aucune demande en attente" : `${pending} en attente de décision`,
+      };
+    }
+    return p;
+  });
+  
 
   // Karim : segment et enjeux viennent du profil commercial de l'organisation, sans pré-sélection.
   let fields = taskFields as unknown as TaskField[];
@@ -73,7 +108,7 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
           meta: (contractMeta[0] as ContractMeta) ?? null,
           workflowUsage: workflowUsage as unknown as ContractWorkflowUsage[],
         }}
-        permissions={permissions as unknown as Permission[]}
+        permissions={permissionsView}
         executionHistory={executionHistory as unknown as ExecutionHistoryEntry[]}
         deliverables={deliverables as unknown as Deliverable[]}
       />
