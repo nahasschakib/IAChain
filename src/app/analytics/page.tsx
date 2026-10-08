@@ -5,9 +5,21 @@ import { getTenantContext } from "@/lib/tenant";
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const ICON_BADGE_BG = "linear-gradient(135deg, var(--steel-tint), #cddce7)";
 
+function formatMAD(n: number, digits = 3): string {
+  return `${new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(n)} MAD`;
+}
+
+function formatMinutes(min: number): string {
+  if (min < 60) return `${min} min`;
+  return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
+}
+
 export default async function AnalyticsPage() {
   const { orgId } = await getTenantContext();
-  const [activityByDay, approvalStats, deliverablesByKind] = await Promise.all([
+    const [activityByDay, approvalStats, deliverablesByKind, valueByAgent] = await Promise.all([
     sql`
       SELECT to_char(created_at, 'DD/MM') AS day, COUNT(*) AS total
       FROM activity_log
@@ -27,6 +39,19 @@ export default async function AnalyticsPage() {
       WHERE org_id = ${orgId}
       GROUP BY kind
     `,
+     sql`
+      SELECT ag.name AS agent,
+        COUNT(*) AS runs,
+        COUNT(r.cost_mad) AS costed,
+        COALESCE(SUM(r.cost_mad), 0) AS cost,
+        COALESCE(SUM(CASE WHEN r.status = 'ok' THEN ag.temps_gagne_min END), 0) AS saved_min,
+        COUNT(*) FILTER (WHERE r.status = 'ok' AND ag.temps_gagne_min IS NULL) AS unestimated
+      FROM agent_runs r
+      JOIN agents ag ON ag.id = r.agent_id
+      WHERE r.org_id = ${orgId} AND r.created_at >= now() - interval '7 days'
+      GROUP BY ag.id, ag.name
+      ORDER BY saved_min DESC, runs DESC
+    `,
   ]);
 
   const activity = activityByDay.map((r) => ({
@@ -44,7 +69,19 @@ export default async function AnalyticsPage() {
     total: Number(r.total),
   }));
   const maxActivity = Math.max(1, ...activity.map((a) => a.total));
-
+   const valueRows = valueByAgent.map((r) => ({
+    agent: r.agent as string,
+    runs: Number(r.runs),
+    costed: Number(r.costed),
+    cost: Number(r.cost),
+    savedMin: Number(r.saved_min),
+    unestimated: Number(r.unestimated),
+  }));
+  const totalRuns = valueRows.reduce((s, r) => s + r.runs, 0);
+  const totalCosted = valueRows.reduce((s, r) => s + r.costed, 0);
+  const totalCost = valueRows.reduce((s, r) => s + r.cost, 0);
+  const totalSavedMin = valueRows.reduce((s, r) => s + r.savedMin, 0);
+  const totalUnestimated = valueRows.reduce((s, r) => s + r.unestimated, 0);
   return (
     <AppShell
       topbar={
@@ -158,6 +195,138 @@ export default async function AnalyticsPage() {
               </div>
             ))}
           </div>
+        </div>
+                {/* COÛT ET TEMPS GAGNÉ (7 JOURS) */}
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: 14,
+            padding: 22,
+            boxShadow: CARD_SHADOW,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 18,
+            }}
+          >
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 8,
+                background: ICON_BADGE_BG,
+                color: "var(--steel)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                  d="M12 8v4l3 2"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontWeight: 700,
+                fontSize: 15,
+              }}
+            >
+              Coût et temps gagné (7 derniers jours)
+            </span>
+          </div>
+
+          <div style={{ display: "flex", gap: 32, flexWrap: "wrap", marginBottom: 18 }}>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700 }}>{totalRuns}</div>
+              <div style={{ fontSize: 12, color: "var(--graphite)" }}>
+                Exécutions dont {totalCosted} chiffrée{totalCosted > 1 ? "s" : ""}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700 }}>{formatMAD(totalCost)}</div>
+              <div style={{ fontSize: 12, color: "var(--graphite)" }}>
+                {totalCosted > 0
+                  ? `≈ ${formatMAD(totalCost / totalCosted)} / exécution chiffrée`
+                  : "Coût mesuré"}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700 }}>
+                ≈ {formatMinutes(totalSavedMin)}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--graphite)" }}>
+                Temps gagné (estimation)
+                {totalUnestimated > 0
+                  ? ` · ${totalUnestimated} exécution${totalUnestimated > 1 ? "s" : ""} sans valeur`
+                  : ""}
+              </div>
+            </div>
+          </div>
+
+          {valueRows.length === 0 ? (
+            <div style={{ fontSize: 12, color: "var(--graphite)" }}>
+              Aucune exécution sur les 7 derniers jours.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.6fr 90px 130px 110px",
+                  gap: 8,
+                  fontSize: 11,
+                  color: "var(--graphite)",
+                  fontWeight: 600,
+                  paddingBottom: 8,
+                  borderBottom: "1px solid var(--line)",
+                }}
+              >
+                <span>Agent</span>
+                <span style={{ textAlign: "right" }}>Exécutions</span>
+                <span style={{ textAlign: "right" }}>Coût</span>
+                <span style={{ textAlign: "right" }}>Temps gagné</span>
+              </div>
+              {valueRows.map((r, i) => (
+                <div
+                  key={r.agent}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1.6fr 90px 130px 110px",
+                    gap: 8,
+                    fontSize: 12,
+                    padding: "10px 0",
+                    borderBottom:
+                      i < valueRows.length - 1 ? "1px solid var(--line)" : "none",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>{r.agent}</span>
+                  <span style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                    {r.runs}
+                  </span>
+                  <span style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                    {r.costed > 0 ? formatMAD(r.cost) : "—"}
+                  </span>
+                  <span style={{ textAlign: "right", fontFamily: "var(--font-mono)" }}>
+                    {r.savedMin > 0 ? formatMinutes(r.savedMin) : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 20 }}>
