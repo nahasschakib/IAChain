@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { runAiTool } from "@/lib/ai";
 import { computeCost } from "@/lib/cost";
+import { getPermissionMode } from "@/lib/permissions";
 import {
   MEHDI_SYSTEM,
   MEHDI_TOOL,
@@ -83,7 +84,11 @@ export async function executeMehdi(
         `;
         deliverableId = inserted[0].id as number;
       }
-      if (result.verdict === "Qualifié") {
+      const goMode =
+        result.verdict === "Qualifié"
+          ? await getPermissionMode(agentId, "transmission_vente")
+          : null;
+      if (result.verdict === "Qualifié" && goMode === "APPROBATION_REQUISE") {
         const who2 = result.prospect || "prospect";
         const payload = {
           source: `Proposé par Agent ${agent.name as string} · Qualification commerciale`,
@@ -103,8 +108,19 @@ export async function executeMehdi(
           VALUES (${`Go/no-go commercial · ${who2}`}, 'Go/no-go', ${agentId}, ${agent.name as string},
                   ${JSON.stringify(payload)}::jsonb, ${orgId}, ${deliverableId})
         `;
+        } else if (result.verdict === "Qualifié") {
+        const blocked = goMode === "BLOQUE";
+        await sql`
+          INSERT INTO agent_execution_history (agent_id, exec_date, description, status, org_id)
+          VALUES (${agentId}, CURRENT_DATE,
+                  ${blocked
+                    ? `Transmission à la vente bloquée par la permission${who}`
+                    : `Go/no-go transmis automatiquement à la vente${who}`},
+                  ${blocked ? "Bloqué" : "Terminé"}, ${orgId})
+        `;
       }
-    } catch (e) {
+
+      } catch (e) {
       console.error("executeMehdi trace", e);
     }
     return { outcome: { ok: true, result, costMad: cost?.mad }, agentRunId };
