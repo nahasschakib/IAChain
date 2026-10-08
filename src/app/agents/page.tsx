@@ -12,8 +12,14 @@ export default async function AgentsPage() {
     const agents = (await sql`
     SELECT a.name, a.slug, a.code, a.category, a.role, a.description, a.version,
            a.icon, a.input_label, a.output_label, a.status,
-           (SELECT COUNT(DISTINCT n.workflow_slug) FROM workflow_nodes n
-             WHERE n.agent_slug = a.slug)::int AS workflow_count
+            (SELECT COUNT(DISTINCT n.workflow_slug) FROM workflow_nodes n
+             WHERE n.agent_slug = a.slug)::int AS workflow_count,
+           (SELECT COUNT(*) FROM agent_permissions p
+             WHERE p.agent_id = a.id AND p.mode = 'AUTO')::int AS perm_auto,
+           (SELECT COUNT(*) FROM agent_permissions p
+             WHERE p.agent_id = a.id AND p.mode = 'APPROBATION_REQUISE')::int AS perm_approval,
+           (SELECT COUNT(*) FROM agent_permissions p
+             WHERE p.agent_id = a.id AND p.mode = 'BLOQUE')::int AS perm_blocked
     FROM agents a
     ORDER BY a.code ASC
   `) as Agent[];

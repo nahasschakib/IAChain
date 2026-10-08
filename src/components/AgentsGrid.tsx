@@ -45,6 +45,9 @@ export type Agent = {
   input_label: string;
   output_label: string;
   workflow_count: number;
+  perm_auto: number;
+  perm_approval: number;
+  perm_blocked: number;
   status: string;
 };
 
@@ -104,6 +107,15 @@ function useColumns() {
   }, []);
 
   return columns;
+}
+
+function autonomyLabel(a: Agent): string {
+  const parts: string[] = [];
+  if (a.perm_auto) parts.push(`${a.perm_auto} auto`);
+  if (a.perm_approval) parts.push(`${a.perm_approval} avec validation`);
+  if (a.perm_blocked)
+    parts.push(`${a.perm_blocked} bloquée${a.perm_blocked > 1 ? "s" : ""}`);
+  return parts.length ? parts.join(" · ") : "non définie";
 }
 
 export default function AgentsGrid({ agents }: { agents: Agent[] }) {
@@ -292,8 +304,10 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
                   paddingTop: "14px",
                 }}
               >
-                <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>
+                                <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>
                   Utilisé dans {agent.workflow_count} workflow{agent.workflow_count > 1 ? "s" : ""}
+                  <br />
+                  Autonomie : {autonomyLabel(agent)}
                 </span>
                 <Link
                   href={`/agents/${agent.slug}`}
