@@ -223,7 +223,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
         <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", marginTop: "8px" }}>
             {cost && !isLive && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Coût estimé de l&apos;exécution</span>
+            <span style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Coût estimé de l&apos;exécution (provisoire)</span>
               <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "12px" }}>{cost}</span>
             </div>
           )}
