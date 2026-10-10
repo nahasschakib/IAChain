@@ -21,7 +21,7 @@ export async function resolveApproval(
     UPDATE approvals
     SET status = ${decision}, resolved_at = now(), decision_reason = ${why}
     WHERE id = ${id} AND org_id = ${orgId} AND status = 'en_attente'
-    RETURNING id
+        RETURNING id, tag, payload
   `;
   if (updated.length === 0) return { ok: false, error: "Demande introuvable ou déjà traitée." };
 
@@ -30,8 +30,34 @@ export async function resolveApproval(
     VALUES (${id}, ${decision === "approuve" ? "approved" : "rejected"}, ${userId}, ${why}, ${orgId})
   `;
 
+  // Escalade support : boucler l'exécution du workflow et l'e-mail d'origine.
+  try {
+    const p = updated[0].payload as { execution_id?: number; email_id?: string } | null;
+    if (updated[0].tag === "Escalade" && p?.execution_id) {
+      const note = decision === "approuve" ? "Approuvée" : "Rejetée";
+      await sql`
+        UPDATE workflow_node_runs SET state = 'done', note = ${note}
+        WHERE execution_id = ${p.execution_id} AND node_key = 'escalade' AND org_id = ${orgId}
+      `;
+      await sql`
+        UPDATE workflow_executions
+        SET status = 'termine', progress_done = progress_total, current_step = 'escalade', finished_at = now()
+        WHERE id = ${p.execution_id} AND org_id = ${orgId}
+      `;
+      if (p.email_id) {
+        await sql`
+          UPDATE emails_entrants SET statut_traitement = 'resolu'
+          WHERE id = ${p.email_id} AND org_id = ${orgId}
+        `;
+      }
+    }
+  } catch (e) {
+    console.error("resolveApproval escalade", e);
+  }
+
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
+  revalidatePath("/workflows");
   return { ok: true };
 }
 

@@ -84,7 +84,10 @@ export async function POST() {
             { k: "Catégorie", v: m.tri_categorie },
             { k: "Objet", v: (m.objet ?? "").slice(0, 120) },
           ],
-          lineage: ["E-mail entrant", "Tri Imane", "Escalade humaine"],
+         lineage: ["E-mail entrant", "Tri Imane", "Escalade humaine"],
+          execution_id: executionId,
+          email_id: m.id,
+        
         };
         await sql`
           INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
