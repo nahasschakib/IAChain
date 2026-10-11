@@ -389,7 +389,7 @@ export default async function DashboardPage() {
             )}
             {activeWorkflows.map((wf, i) => (
               <Link
-                key={wf.name}
+                key={`${wf.name}-${i}`}
                 href="/workflows"
                 style={{
                   display: "grid",
@@ -548,7 +548,7 @@ export default async function DashboardPage() {
             </div>
             {approvalQueue.map((item, i) => (
               <div
-                key={item.title}
+                 key={`${item.title}-${i}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
