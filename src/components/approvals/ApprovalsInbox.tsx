@@ -434,7 +434,7 @@ export default function ApprovalsInbox({
                 {payload.extractTitle && (
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{payload.extractTitle}</div>
                 )}
-                <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "var(--ink)" }}>{payload.extract}</p>
+                   <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "var(--ink)", whiteSpace: "pre-line" }}>{payload.extract}</p>
               </div>
             )}
 
