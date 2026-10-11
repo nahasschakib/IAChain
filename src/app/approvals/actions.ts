@@ -31,22 +31,28 @@ export async function resolveApproval(
   `;
 
   // Escalade support : boucler l'exécution du workflow et l'e-mail d'origine.
+   // Support : boucler l'exécution du workflow et l'e-mail d'origine
+  // (escalade humaine ou validation d'un brouillon de réponse d'Imane).
   try {
     const p = updated[0].payload as { execution_id?: number; email_id?: string } | null;
-    if (updated[0].tag === "Escalade" && p?.execution_id) {
+    const tag = updated[0].tag as string;
+    const noeud = tag === "Escalade" ? "escalade" : tag === "Réponse support" ? "imane_reply" : null;
+    if (noeud && p?.execution_id) {
       const note = decision === "approuve" ? "Approuvée" : "Rejetée";
       await sql`
         UPDATE workflow_node_runs SET state = 'done', note = ${note}
-        WHERE execution_id = ${p.execution_id} AND node_key = 'escalade' AND org_id = ${orgId}
+        WHERE execution_id = ${p.execution_id} AND node_key = ${noeud} AND org_id = ${orgId}
       `;
       await sql`
         UPDATE workflow_executions
-        SET status = 'termine', progress_done = progress_total, current_step = 'escalade', finished_at = now()
+        SET status = 'termine', progress_done = progress_total, current_step = ${noeud}, finished_at = now()
         WHERE id = ${p.execution_id} AND org_id = ${orgId}
       `;
       if (p.email_id) {
+        // Brouillon rejeté : l'e-mail reste à traiter par un humain.
+        const statut = tag === "Réponse support" && decision === "rejete" ? "attente_interne" : "resolu";
         await sql`
-          UPDATE emails_entrants SET statut_traitement = 'resolu'
+          UPDATE emails_entrants SET statut_traitement = ${statut}
           WHERE id = ${p.email_id} AND org_id = ${orgId}
         `;
       }

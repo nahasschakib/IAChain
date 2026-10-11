@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { sql } from "@/lib/db";
+import { getPermissionMode } from "@/lib/permissions";
+import { redigerReponse } from "@/lib/imane-reply";
+
+export const maxDuration = 60;
 
 const LIMITE = 20;
 
@@ -8,6 +12,7 @@ type EmailTrie = {
   id: string;
   expediteur: string | null;
   objet: string | null;
+  extrait: string | null;
   tri_categorie: string;
   tri_priorite: string | null;
   tri_traitement: string | null;
@@ -18,6 +23,21 @@ function nomExpediteur(exp: string | null): string {
   if (!exp) return "Client";
   const m = exp.match(/^\s*"?([^"<]+?)"?\s*</);
   return (m?.[1] ?? exp).trim().slice(0, 80) || "Client";
+}
+
+async function clore(executionId: number, orgId: string, etape: string, status: "termine" | "echoue") {
+  await sql`
+    UPDATE workflow_executions
+    SET status = ${status}, progress_done = progress_total, current_step = ${etape}, finished_at = now()
+    WHERE id = ${executionId} AND org_id = ${orgId}
+  `;
+}
+
+async function noeud(executionId: number, orgId: string, cle: string, state: string, note: string) {
+  await sql`
+    UPDATE workflow_node_runs SET state = ${state}, note = ${note}
+    WHERE execution_id = ${executionId} AND node_key = ${cle} AND org_id = ${orgId}
+  `;
 }
 
 export async function POST() {
@@ -34,7 +54,7 @@ export async function POST() {
   const agentId = ag[0].id as number;
 
   const emails = (await sql`
-    SELECT id, expediteur, objet, tri_categorie, tri_priorite, tri_traitement, tri_justification
+    SELECT id, expediteur, objet, extrait, tri_categorie, tri_priorite, tri_traitement, tri_justification
     FROM emails_entrants
     WHERE org_id = ${orgId} AND execution_id IS NULL
       AND tri_categorie IS NOT NULL AND tri_categorie <> 'ignorer'
@@ -42,7 +62,9 @@ export async function POST() {
     LIMIT ${LIMITE}
   `) as EmailTrie[];
 
-  let automatiques = 0;
+  let brouillonsAValider = 0;
+  let brouillonsPrets = 0;
+  let bloques = 0;
   let enAttente = 0;
   let echecs = 0;
 
@@ -68,9 +90,11 @@ export async function POST() {
                (${executionId}, 'condition', 'done',
                 ${humain ? "Décision humaine requise" : "Traitement automatique"}, ${orgId}),
                (${executionId}, ${humain ? "escalade" : "imane_reply"},
-                ${humain ? "waiting" : "pending"},
-                ${humain ? "En attente de décision" : "Réponse non branchée"}, ${orgId})
+                ${humain ? "waiting" : "running"},
+                ${humain ? "En attente de décision" : "Rédaction du brouillon"}, ${orgId})
       `;
+
+      let statut = "en_cours";
 
       if (humain) {
         const payload = {
@@ -84,10 +108,9 @@ export async function POST() {
             { k: "Catégorie", v: m.tri_categorie },
             { k: "Objet", v: (m.objet ?? "").slice(0, 120) },
           ],
-         lineage: ["E-mail entrant", "Tri Imane", "Escalade humaine"],
+          lineage: ["E-mail entrant", "Tri Imane", "Escalade humaine"],
           execution_id: executionId,
           email_id: m.id,
-        
         };
         await sql`
           INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
@@ -95,14 +118,57 @@ export async function POST() {
                   ${JSON.stringify(payload)}::jsonb, ${orgId})
         `;
         enAttente += 1;
+        statut = "attente_interne";
       } else {
-        automatiques += 1;
+        const mode = await getPermissionMode(agentId, "reponse_email");
+        if (mode === "BLOQUE") {
+          await noeud(executionId, orgId, "imane_reply", "done", "Réponse bloquée par la permission");
+          await clore(executionId, orgId, "imane_reply", "termine");
+          bloques += 1;
+          statut = "attente_interne";
+        } else {
+          const r = await redigerReponse({ orgId, userId, agentId }, m);
+          if (!r.ok) {
+            await noeud(executionId, orgId, "imane_reply", "failed", r.error);
+            await clore(executionId, orgId, "imane_reply", "echoue");
+            echecs += 1;
+            statut = "attente_interne";
+          } else if (mode === "AUTO") {
+            await noeud(executionId, orgId, "imane_reply", "done", "Brouillon prêt (envoi non branché)");
+            await clore(executionId, orgId, "imane_reply", "termine");
+            brouillonsPrets += 1;
+            statut = "attente_interne";
+          } else {
+            await noeud(executionId, orgId, "imane_reply", "waiting", "Brouillon à valider");
+            const payload = {
+              source: "Proposé par Agent Imane · Réponse au client",
+              aiReco: "Valider le brouillon de réponse",
+              chips: [m.tri_categorie, `Priorité ${m.tri_priorite ?? "?"}`, r.infosManquantes ? "Informations manquantes" : "Brouillon complet"],
+              extractTitle: "Brouillon de réponse",
+              extract: r.texte,
+              props: [
+                { k: "Destinataire", v: client },
+                { k: "Catégorie", v: m.tri_categorie },
+                { k: "Objet", v: (m.objet ?? "").slice(0, 120) },
+              ],
+              lineage: ["E-mail entrant", "Tri Imane", "Brouillon Imane", "Validation humaine"],
+              execution_id: executionId,
+              email_id: m.id,
+            };
+            await sql`
+              INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+              VALUES (${`Réponse support · ${client}`}, 'Réponse support', ${agentId}, 'Imane',
+                      ${JSON.stringify(payload)}::jsonb, ${orgId})
+            `;
+            brouillonsAValider += 1;
+            statut = "attente_interne";
+          }
+        }
       }
 
       await sql`
         UPDATE emails_entrants
-        SET execution_id = ${executionId},
-            statut_traitement = ${humain ? "attente_interne" : "en_cours"}
+        SET execution_id = ${executionId}, statut_traitement = ${statut}
         WHERE id = ${m.id} AND org_id = ${orgId}
       `;
     } catch (e) {
@@ -113,7 +179,9 @@ export async function POST() {
 
   return NextResponse.json({
     ok: true,
-    automatiques,
+    brouillons_a_valider: brouillonsAValider,
+    brouillons_prets: brouillonsPrets,
+    bloques,
     en_attente_humaine: enAttente,
     echecs,
     restants_possibles: emails.length === LIMITE,
