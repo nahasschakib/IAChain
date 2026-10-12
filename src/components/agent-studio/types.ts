@@ -74,16 +74,29 @@ export interface Contract {
   workflowUsage: ContractWorkflowUsage[];
 }
 
+export interface SerieCategorie {
+  categorie: string;
+  serie: number;
+  total: number;
+  corriges: number;
+}
+
+export interface Autonomie {
+  seuil: number;
+  categories: SerieCategorie[];
+}
+
 export interface Permission {
   id: number;
   agent_id: number;
   action_label: string;
+  action_key?: string | null;
   mode: "AUTO" | "APPROBATION_REQUISE" | "BLOQUE";
   stats_text: string | null;
   promotion_suggestion: string | null;
   sort_order: number;
+  autonomie?: Autonomie;
 }
-
 export interface ExecutionHistoryEntry {
   id: number;
   agent_id: number;

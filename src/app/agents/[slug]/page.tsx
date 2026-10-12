@@ -4,6 +4,7 @@ import AppShell from "@/components/AppShell";
 import AgentStudio from "@/components/agent-studio/AgentStudio";
 import { getTenantContext } from "@/lib/tenant";
 import { getOrgProfile } from "@/lib/org-profile";
+import { getSeriesReponses, SEUIL_PROMOTION } from "@/lib/autonomie";
 import type {
   Agent,
   TaskField,
@@ -82,6 +83,14 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     }
     return p;
   });
+    // Imane : brouillons acceptés d'affilée sans correction, par catégorie (P4-06b).
+  const porteReponses = permissionsView.some((p) => p.action_key === "reponse_email");
+  const serieReponses = porteReponses ? await getSeriesReponses(orgId, agent.id) : [];
+  const permissionsAvecSerie = permissionsView.map((p) =>
+    p.action_key === "reponse_email"
+      ? { ...p, autonomie: { seuil: SEUIL_PROMOTION, categories: serieReponses } }
+      : p
+  );
   
 
   // Karim : segment et enjeux viennent du profil commercial de l'organisation, sans pré-sélection.
@@ -108,7 +117,7 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
           meta: (contractMeta[0] as ContractMeta) ?? null,
           workflowUsage: workflowUsage as unknown as ContractWorkflowUsage[],
         }}
-        permissions={permissionsView}
+        permissions={permissionsAvecSerie}
         executionHistory={executionHistory as unknown as ExecutionHistoryEntry[]}
         deliverables={deliverables as unknown as Deliverable[]}
       />
