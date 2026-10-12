@@ -7,7 +7,8 @@ import { resolveTenant } from "@/lib/tenant";
 export async function resolveApproval(
   id: number,
   decision: "approuve" | "rejete",
-  reason?: string
+  reason?: string,
+  texteFinal?: string
 ): Promise<{ ok: boolean; error?: string }> {
   const t = await resolveTenant();
   if (!t.ok) return { ok: false, error: "Accès refusé." };
@@ -21,7 +22,7 @@ export async function resolveApproval(
     UPDATE approvals
     SET status = ${decision}, resolved_at = now(), decision_reason = ${why}
     WHERE id = ${id} AND org_id = ${orgId} AND status = 'en_attente'
-        RETURNING id, tag, payload
+       RETURNING id, tag, payload, agent_id
   `;
   if (updated.length === 0) return { ok: false, error: "Demande introuvable ou déjà traitée." };
 
@@ -29,6 +30,37 @@ export async function resolveApproval(
     INSERT INTO approval_events (approval_id, event_type, actor_user_id, reason, org_id)
     VALUES (${id}, ${decision === "approuve" ? "approved" : "rejected"}, ${userId}, ${why}, ${orgId})
   `;
+    // Suivi des corrections d'Imane (P4-06b) : une ligne par brouillon traité.
+  try {
+    const rev = updated[0];
+    if (rev.tag === "Réponse support" && rev.agent_id) {
+      const p = rev.payload as { extract?: string; email_id?: string } | null;
+      const original = (p?.extract ?? "").trim();
+      const proposee = typeof texteFinal === "string" ? texteFinal.trim().slice(0, 5000) : "";
+      const retenu = decision === "approuve" ? proposee || original : null;
+      const modifie = decision === "approuve" && retenu !== original;
+      const mail = p?.email_id
+        ? await sql`
+            SELECT tri_categorie, tri_priorite, canal
+            FROM emails_entrants
+            WHERE id = ${p.email_id} AND org_id = ${orgId}
+          `
+        : [];
+      if (original && mail[0]?.tri_categorie) {
+        await sql`
+          INSERT INTO reponse_revisions
+            (org_id, approval_id, email_id, agent_id, categorie, priorite, canal,
+             decision, brouillon_original, texte_final, modifie, decided_by)
+          VALUES (${orgId}, ${id}, ${p?.email_id ?? null}, ${rev.agent_id},
+                  ${mail[0].tri_categorie}, ${mail[0].tri_priorite ?? null}, ${mail[0].canal ?? "email"},
+                  ${decision}, ${original}, ${retenu}, ${modifie}, ${userId})
+          ON CONFLICT (approval_id) DO NOTHING
+        `;
+      }
+    }
+  } catch (e) {
+    console.error("resolveApproval revision", e);
+  }
 
   // Escalade support : boucler l'exécution du workflow et l'e-mail d'origine.
    // Support : boucler l'exécution du workflow et l'e-mail d'origine

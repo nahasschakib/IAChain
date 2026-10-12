@@ -89,7 +89,9 @@ export default function ApprovalsInbox({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-    const [delegating, setDelegating] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [delegating, setDelegating] = useState(false);
   const [expertId, setExpertId] = useState<number | "">("");
   const [delegReason, setDelegReason] = useState("");
 
@@ -114,17 +116,19 @@ export default function ApprovalsInbox({
   const [processedId, setProcessedId] = useState<number | null>(null);
   const selectedProcessed = processed.find((p) => p.id === processedId) ?? processed[0];
 
-  function decide(decision: "approuve" | "rejete", why?: string) {
+    function decide(decision: "approuve" | "rejete", why?: string, texte?: string) {
     if (!selected) return;
     setError(null);
     startTransition(async () => {
-      const res = await resolveApproval(selected.id, decision, why);
+      const res = await resolveApproval(selected.id, decision, why, texte);
       if (!res.ok) {
         setError(res.error ?? "Erreur");
         return;
       }
       setRejecting(false);
       setReason("");
+      setEditing(false);
+      setDraft("");
     });
   }
 
@@ -181,6 +185,8 @@ export default function ApprovalsInbox({
                 setDelegating(false);
                 setExpertId("");
                 setDelegReason("");
+                setEditing(false);
+                setDraft("");
               }}
               style={{
                 textAlign: "left",
@@ -434,7 +440,27 @@ export default function ApprovalsInbox({
                 {payload.extractTitle && (
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{payload.extractTitle}</div>
                 )}
-                   <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "var(--ink)", whiteSpace: "pre-line" }}>{payload.extract}</p>
+                   {editing ? (
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    rows={10}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      font: "inherit",
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      padding: 10,
+                      border: "1px solid var(--line)",
+                      borderRadius: 8,
+                      background: "var(--surface)",
+                      resize: "vertical",
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: 13, lineHeight: 1.6, margin: 0, color: "var(--ink)", whiteSpace: "pre-line" }}>{payload.extract}</p>
+                )}
               </div>
             )}
 
@@ -658,7 +684,16 @@ export default function ApprovalsInbox({
                       key={label}
                       type="button"
                       disabled={isPending}
-                      onClick={label === "Rejeter" ? () => setRejecting(true) : undefined}
+                       onClick={
+                        label === "Rejeter"
+                          ? () => setRejecting(true)
+                          : label === "Modifier" && selected.tag === "Réponse support"
+                          ? () => {
+                              setEditing(!editing);
+                              setDraft(payload?.extract ?? "");
+                            }
+                          : undefined
+                      }
                       style={{
                         font: "inherit",
                         fontSize: 13,
@@ -671,7 +706,7 @@ export default function ApprovalsInbox({
                         cursor: "pointer",
                       }}
                     >
-                      {label}
+                      {label === "Modifier" && editing ? "Annuler la modification" : label}
                     </button>
                   ))}
                                     <button
@@ -694,7 +729,7 @@ export default function ApprovalsInbox({
                   <button
                     type="button"
                     disabled={isPending}
-                    onClick={() => decide("approuve")}
+                     onClick={() => decide("approuve", undefined, editing ? draft : undefined)}
                     style={{
                       font: "inherit",
                       fontSize: 13,
@@ -710,7 +745,7 @@ export default function ApprovalsInbox({
                       boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
                     }}
                   >
-                    {isPending ? "Enregistrement…" : primaryAction}
+                  {isPending ? "Enregistrement…" : editing ? "Approuver la version modifiée" : primaryAction}
                   </button>
                 </>
               )}
