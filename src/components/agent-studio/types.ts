@@ -79,11 +79,16 @@ export interface SerieCategorie {
   serie: number;
   total: number;
   corriges: number;
+  promue: boolean;
 }
 
 export interface Autonomie {
   seuil: number;
   categories: SerieCategorie[];
+  agentId: number;
+  actionKey: string;
+  canal: string;
+  peutAppliquer: boolean;
 }
 
 export interface Permission {

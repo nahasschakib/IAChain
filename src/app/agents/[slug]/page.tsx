@@ -18,7 +18,7 @@ import type {
 } from "@/components/agent-studio/types";
 
 export default async function AgentStudioPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { orgId } = await getTenantContext();
+  const { orgId, isPlatformAdmin } = await getTenantContext();
   const { slug } = await params;
 
   const agentRows = await sql`SELECT * FROM agents WHERE slug = ${slug}`;
@@ -88,7 +88,17 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
   const serieReponses = porteReponses ? await getSeriesReponses(orgId, agent.id) : [];
   const permissionsAvecSerie = permissionsView.map((p) =>
     p.action_key === "reponse_email"
-      ? { ...p, autonomie: { seuil: SEUIL_PROMOTION, categories: serieReponses } }
+       ? {
+          ...p,
+          autonomie: {
+            seuil: SEUIL_PROMOTION,
+            categories: serieReponses,
+            agentId: agent.id,
+            actionKey: "reponse_email",
+            canal: "email",
+            peutAppliquer: isPlatformAdmin,
+          },
+        }
       : p
   );
   

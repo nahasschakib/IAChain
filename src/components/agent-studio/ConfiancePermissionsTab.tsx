@@ -1,4 +1,5 @@
-import type { Permission, ExecutionHistoryEntry, Autonomie } from "./types";
+import type { Permission, ExecutionHistoryEntry } from "./types";
+import SerieAcceptes from "./SerieAcceptes";
 
 export default function ConfiancePermissionsTab({ permissions, executionHistory }: { permissions: Permission[]; executionHistory: ExecutionHistoryEntry[] }) {
   return (
@@ -19,7 +20,7 @@ export default function ConfiancePermissionsTab({ permissions, executionHistory 
             </div>
                        <div style={{ fontSize: "12px", color: "var(--muted-foreground)", marginTop: "6px" }}>{p.stats_text}</div>
             {p.autonomie && <SerieAcceptes autonomie={p.autonomie} />}
-            {p.promotion_suggestion && (
+            {p.promotion_suggestion && !p.autonomie &&  (
               <div
                 style={{
                   marginTop: "10px",
@@ -171,27 +172,3 @@ function StatusBadge({ status }: { status: ExecutionHistoryEntry["status"] }) {
   );
 }
 
-function SerieAcceptes({ autonomie }: { autonomie: Autonomie }) {
-  return (
-    <div style={{ marginTop: "10px" }}>
-      <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)", marginBottom: "6px" }}>
-        BROUILLONS ACCEPTÉS SANS CORRECTION
-      </div>
-      {autonomie.categories.length === 0 ? (
-        <div style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Aucune décision enregistrée</div>
-      ) : (
-        autonomie.categories.map((c) => (
-          <div
-            key={c.categorie}
-            style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", padding: "3px 0" }}
-          >
-            <span>{c.categorie}</span>
-            <span style={{ fontFamily: "monospace", color: c.serie >= autonomie.seuil ? "#166534" : "inherit" }}>
-              {`${c.serie} / ${autonomie.seuil}${c.serie >= autonomie.seuil ? " · seuil atteint" : ""}`}
-            </span>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
