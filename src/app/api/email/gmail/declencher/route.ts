@@ -120,7 +120,12 @@ export async function POST() {
         enAttente += 1;
         statut = "attente_interne";
       } else {
-        const mode = await getPermissionMode(agentId, "reponse_email");
+               const mode = await getPermissionMode(agentId, "reponse_email", {
+          orgId,
+          categorie: m.tri_categorie,
+          canal: "email",
+          priorite: m.tri_priorite,
+        });
         if (mode === "BLOQUE") {
           await noeud(executionId, orgId, "imane_reply", "done", "Réponse bloquée par la permission");
           await clore(executionId, orgId, "imane_reply", "termine");
