@@ -82,6 +82,20 @@ export interface SerieCategorie {
   promue: boolean;
 }
 
+export interface JournalEntree {
+  id: number;
+  categorie: string;
+  priorite: string | null;
+  date: string;
+  apercu: string;
+  corrigee: boolean;
+}
+
+export interface JournalAuto {
+  recents7j: number;
+  entrees: JournalEntree[];
+}
+
 export interface Autonomie {
   seuil: number;
   categories: SerieCategorie[];
@@ -89,6 +103,7 @@ export interface Autonomie {
   actionKey: string;
   canal: string;
   peutAppliquer: boolean;
+  journal: JournalAuto;
 }
 
 export interface Permission {

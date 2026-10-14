@@ -139,6 +139,12 @@ export async function POST() {
             echecs += 1;
             statut = "attente_interne";
           } else if (mode === "AUTO") {
+            await sql`
+              INSERT INTO reponse_auto_journal
+                (org_id, agent_id, action_key, email_id, execution_id, categorie, priorite, canal, brouillon, agent_run_id)
+              VALUES (${orgId}, ${agentId}, 'reponse_email', ${m.id}, ${executionId},
+                      ${m.tri_categorie}, ${m.tri_priorite}, 'email', ${r.texte}, ${r.agentRunId})
+            `;
             await noeud(executionId, orgId, "imane_reply", "done", "Brouillon prêt (envoi non branché)");
             await clore(executionId, orgId, "imane_reply", "termine");
             brouillonsPrets += 1;

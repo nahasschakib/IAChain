@@ -1,5 +1,5 @@
 import { sql } from "@/lib/db";
-import type { SerieCategorie } from "@/components/agent-studio/types";
+import type { SerieCategorie, JournalAuto  } from "@/components/agent-studio/types";
 
 // Nombre de brouillons acceptés d'affilée (sans correction ni rejet) avant de
 // pouvoir promouvoir en automatique. 30 par défaut ; AUTONOMIE_SEUIL permet de
@@ -49,5 +49,48 @@ export async function getSeriesReponses(
   } catch (e) {
     console.error("getSeriesReponses", e);
     return [];
+  }
+}
+const FORMAT_DATE = new Intl.DateTimeFormat("fr-FR", {
+  day: "2-digit",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Africa/Casablanca",
+});
+
+// Dernières entrées du journal des brouillons traités en automatique, et nombre
+// d'entrées des 7 derniers jours. La date est formatée ici (côté serveur) pour
+// éviter tout écart d'affichage entre serveur et navigateur.
+export async function getJournalAuto(
+  orgId: string,
+  agentId: number,
+  actionKey: string
+): Promise<JournalAuto> {
+  try {
+    const rows = await sql`
+      SELECT id, categorie, priorite, cree_le,
+             LEFT(brouillon, 160) AS apercu,
+             correction_signalee_le IS NOT NULL AS corrigee,
+             COUNT(*) FILTER (WHERE cree_le > now() - interval '7 days') OVER () AS recents7j
+      FROM reponse_auto_journal
+      WHERE org_id = ${orgId} AND agent_id = ${agentId} AND action_key = ${actionKey}
+      ORDER BY cree_le DESC
+      LIMIT 10
+    `;
+    return {
+      recents7j: rows.length > 0 ? Number(rows[0].recents7j) : 0,
+      entrees: rows.map((r) => ({
+        id: Number(r.id),
+        categorie: r.categorie as string,
+        priorite: (r.priorite as string | null) ?? null,
+        date: FORMAT_DATE.format(new Date(r.cree_le as string | Date)),
+        apercu: (r.apercu as string).replace(/\s+/g, " ").trim(),
+        corrigee: Boolean(r.corrigee),
+      })),
+    };
+  } catch (e) {
+    console.error("getJournalAuto", e);
+    return { recents7j: 0, entrees: [] };
   }
 }

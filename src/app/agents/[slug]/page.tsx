@@ -4,7 +4,7 @@ import AppShell from "@/components/AppShell";
 import AgentStudio from "@/components/agent-studio/AgentStudio";
 import { getTenantContext } from "@/lib/tenant";
 import { getOrgProfile } from "@/lib/org-profile";
-import { getSeriesReponses, SEUIL_PROMOTION } from "@/lib/autonomie";
+import { getSeriesReponses, getJournalAuto, SEUIL_PROMOTION } from "@/lib/autonomie";
 import type {
   Agent,
   TaskField,
@@ -84,11 +84,15 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     return p;
   });
     // Imane : brouillons acceptés d'affilée sans correction, par catégorie (P4-06b).
+    // Imane : brouillons acceptés d'affilée sans correction, par catégorie (P4-06b).
   const porteReponses = permissionsView.some((p) => p.action_key === "reponse_email");
   const serieReponses = porteReponses ? await getSeriesReponses(orgId, agent.id) : [];
+  const journalReponses = porteReponses
+    ? await getJournalAuto(orgId, agent.id, "reponse_email")
+    : { recents7j: 0, entrees: [] };
   const permissionsAvecSerie = permissionsView.map((p) =>
     p.action_key === "reponse_email"
-       ? {
+      ? {
           ...p,
           autonomie: {
             seuil: SEUIL_PROMOTION,
@@ -97,11 +101,12 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
             actionKey: "reponse_email",
             canal: "email",
             peutAppliquer: isPlatformAdmin,
+            journal: journalReponses,
           },
         }
       : p
   );
-  
+    
 
   // Karim : segment et enjeux viennent du profil commercial de l'organisation, sans pré-sélection.
   let fields = taskFields as unknown as TaskField[];

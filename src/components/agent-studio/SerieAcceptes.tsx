@@ -100,6 +100,22 @@ export default function SerieAcceptes({ autonomie }: { autonomie: Autonomie }) {
           );
         })
       )}
+            <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)", margin: "14px 0 6px" }}>
+        {`TRAITÉS EN AUTOMATIQUE (7 J) · ${autonomie.journal.recents7j}`}
+      </div>
+      {autonomie.journal.entrees.length === 0 ? (
+        <div style={{ fontSize: "12px", color: "var(--muted-foreground)" }}>Aucun brouillon traité en automatique</div>
+      ) : (
+        autonomie.journal.entrees.map((e) => (
+          <div key={e.id} style={{ padding: "6px 0", borderTop: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+              <span>{e.categorie}</span>
+              <span style={{ fontFamily: "monospace", color: "var(--muted-foreground)" }}>{e.date}</span>
+            </div>
+            <div style={{ fontSize: "12px", color: "var(--muted-foreground)", marginTop: "2px" }}>{e.apercu}</div>
+          </div>
+        ))
+      )}
       <div style={{ fontSize: "11px", color: "var(--muted-foreground)", marginTop: "6px" }}>
         Priorité haute ou critique : toujours validée par un humain.
       </div>
