@@ -1,5 +1,5 @@
 "use server";
-
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
@@ -68,6 +68,47 @@ export async function revoquerPromotion(
     RETURNING id
   `;
   if (res.length === 0) return { ok: false, error: "Aucune promotion active pour cette catégorie." };
+
+  revalidatePath("/agents/[slug]", "page");
+  return { ok: true };
+}
+export async function signalerCorrection(journalId: number, motif?: string) {
+  // GARDE : identique à revoquerPromotion (réservé à l'Admin SOCYTAY)
+  // ... copier ici les lignes de garde existantes ...
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "Non authentifié." };
+  const [entree] = await sql`
+    SELECT id, org_id, agent_id, action_key, categorie, canal, correction_signalee_le
+    FROM reponse_auto_journal
+    WHERE id = ${journalId}
+  `;
+  if (!entree) return { ok: false, error: "Entrée introuvable." };
+  if (entree.correction_signalee_le) return { ok: false, error: "Correction déjà signalée." };
+
+  const motifPropre = motif?.trim() ? motif.trim().slice(0, 500) : null;
+
+  // 1. Marquer l'entrée du journal
+  await sql`
+    UPDATE reponse_auto_journal
+    SET correction_signalee_le = now(),
+        correction_signalee_par = ${userId},
+        correction_motif = ${motifPropre}
+    WHERE id = ${journalId}
+  `;
+
+  // 2. Rétrograder : révoquer la promotion active de cette catégorie
+  await sql`
+    UPDATE org_autonomie
+    SET revoked_at = now(),
+        revoked_by = ${userId},
+        revoked_reason = ${"Correction signalée" + (motifPropre ? " : " + motifPropre : "")}
+    WHERE org_id = ${entree.org_id}
+      AND agent_id = ${entree.agent_id}
+      AND action_key = ${entree.action_key}
+      AND categorie = ${entree.categorie}
+      AND canal = ${entree.canal}
+      AND revoked_at IS NULL
+  `;
 
   revalidatePath("/agents/[slug]", "page");
   return { ok: true };

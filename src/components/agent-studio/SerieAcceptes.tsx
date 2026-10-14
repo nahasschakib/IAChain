@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import { accorderPromotion, revoquerPromotion } from "@/lib/autonomie-actions";
 import type { Autonomie } from "./types";
+   import SignalerCorrection from "./SignalerCorrection";
 
 const BTN: CSSProperties = {
   fontSize: "11px",
@@ -113,6 +114,13 @@ export default function SerieAcceptes({ autonomie }: { autonomie: Autonomie }) {
               <span style={{ fontFamily: "monospace", color: "var(--muted-foreground)" }}>{e.date}</span>
             </div>
             <div style={{ fontSize: "12px", color: "var(--muted-foreground)", marginTop: "2px" }}>{e.apercu}</div>
+             {e.corrigee ? (
+              <div style={{ fontSize: "11px", color: "#b45309", marginTop: "4px" }}>Correction signalée</div>
+            ) : autonomie.peutAppliquer ? (
+              <div style={{ marginTop: "4px" }}>
+                <SignalerCorrection journalId={e.id} />
+              </div>
+            ) : null}
           </div>
         ))
       )}
