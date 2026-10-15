@@ -114,3 +114,27 @@ export async function signalerCorrection(journalId: number, motif?: string) {
   revalidatePath("/agents/[slug]", "page");
   return { ok: true };
 }
+export async function definirSeuil(
+  agentId: number,
+  actionKey: string,
+  seuil: number
+): Promise<Resultat> {
+  const t = await resolveTenant();
+  if (!t.ok) return { ok: false, error: "Accès refusé." };
+  const { userId, orgId, isPlatformAdmin } = t.ctx;
+  if (!isPlatformAdmin) return { ok: false, error: "Seul l'Admin SOCYTAY peut régler le seuil." };
+  if (!ACTIONS_PROMOUVABLES.includes(actionKey)) return { ok: false, error: "Action non concernée." };
+  if (!Number.isInteger(seuil) || seuil < 5 || seuil > 200) {
+    return { ok: false, error: "Le seuil doit être un entier entre 5 et 200." };
+  }
+
+  await sql`
+    INSERT INTO org_autonomie_seuil (org_id, agent_id, action_key, seuil, modifie_par)
+    VALUES (${orgId}, ${agentId}, ${actionKey}, ${seuil}, ${userId})
+    ON CONFLICT (org_id, agent_id, action_key)
+    DO UPDATE SET seuil = EXCLUDED.seuil, modifie_par = EXCLUDED.modifie_par, modifie_le = now()
+  `;
+
+  revalidatePath("/agents/[slug]", "page");
+  return { ok: true };
+}

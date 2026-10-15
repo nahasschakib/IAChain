@@ -1,5 +1,6 @@
 import type { Permission, ExecutionHistoryEntry } from "./types";
 import SerieAcceptes from "./SerieAcceptes";
+import ReglageSeuil from "./ReglageSeuil";
 
 export default function ConfiancePermissionsTab({ permissions, executionHistory }: { permissions: Permission[]; executionHistory: ExecutionHistoryEntry[] }) {
   return (
@@ -20,6 +21,13 @@ export default function ConfiancePermissionsTab({ permissions, executionHistory 
             </div>
                        <div style={{ fontSize: "12px", color: "var(--muted-foreground)", marginTop: "6px" }}>{p.stats_text}</div>
             {p.autonomie && <SerieAcceptes autonomie={p.autonomie} />}
+            {p.autonomie?.peutAppliquer && (
+                  <ReglageSeuil
+                    agentId={p.autonomie.agentId}
+                    actionKey={p.autonomie.actionKey}
+                    seuil={p.autonomie.seuil}
+                  />
+                )}
             {p.promotion_suggestion && !p.autonomie &&  (
               <div
                 style={{
