@@ -53,3 +53,56 @@ export async function demanderChangementPermission(
   revalidatePath("/agents/[slug]", "page");
   return { ok: true };
 }
+// Décision de l'Admin SOCYTAY sur une demande d'organisation (règle de gouvernance du 06/10).
+export async function decideDemandePermission(
+  demandeId: number,
+  decision: "accepte" | "refuse",
+  note?: string
+): Promise<Resultat> {
+  const t = await resolveTenant();
+  if (!t.ok) return { ok: false, error: "Accès refusé." };
+  const { userId, isPlatformAdmin } = t.ctx;
+  if (!isPlatformAdmin) return { ok: false, error: "Seul l'Admin SOCYTAY peut décider." };
+  if (decision !== "accepte" && decision !== "refuse") return { ok: false, error: "Décision non valide." };
+
+  const notePropre = note?.trim() ? note.trim().slice(0, 500) : null;
+
+  // On « prend » la demande en une seule instruction : une double décision est impossible.
+  const prise = await sql`
+    UPDATE org_permission_requests
+    SET status = ${decision}, decided_by = ${userId}, decided_at = now(), decision_note = ${notePropre}
+    WHERE id = ${demandeId} AND status = 'en_attente'
+    RETURNING org_id, permission_id, requested_mode
+  `;
+  if (prise.length === 0) return { ok: false, error: "Demande introuvable ou déjà traitée." };
+
+  if (decision === "accepte") {
+    const { org_id, permission_id, requested_mode } = prise[0];
+    try {
+      const perm = await sql`SELECT mode FROM agent_permissions WHERE id = ${permission_id}`;
+      if (!perm[0] || perm[0].mode === "BLOQUE") {
+        throw new Error("Action bloquée au catalogue : aucune organisation ne peut la débloquer.");
+      }
+      await sql`
+        INSERT INTO org_agent_permissions (org_id, permission_id, mode, granted_by, note)
+        VALUES (${org_id}, ${permission_id}, ${requested_mode}, ${userId}, ${"Demande n°" + demandeId})
+        ON CONFLICT (org_id, permission_id)
+        DO UPDATE SET mode = EXCLUDED.mode, granted_by = EXCLUDED.granted_by,
+                      granted_at = now(), note = EXCLUDED.note
+      `;
+    } catch (e) {
+      // Le réglage n'a pas pu être appliqué : la demande redevient en attente.
+      await sql`
+        UPDATE org_permission_requests
+        SET status = 'en_attente', decided_by = NULL, decided_at = NULL, decision_note = NULL
+        WHERE id = ${demandeId}
+      `;
+      console.error("decideDemandePermission", e);
+      return { ok: false, error: e instanceof Error ? e.message : "Erreur lors de l'application du réglage." };
+    }
+  }
+
+  revalidatePath("/admin/permissions");
+  revalidatePath("/agents/[slug]", "page");
+  return { ok: true };
+}
