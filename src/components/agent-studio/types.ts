@@ -116,6 +116,7 @@ export interface Permission {
   promotion_suggestion: string | null;
   sort_order: number;
   autonomie?: Autonomie;
+   demande?: DemandePermission;
 }
 export interface ExecutionHistoryEntry {
   id: number;
@@ -136,3 +137,8 @@ export interface Deliverable {
   approval_status: string | null;
   cost: number | string | null;
 }
+export type DemandePermission = {
+  permissionId: number;
+  peutDemander: boolean;
+  enAttente: { mode: string; motif: string | null; date: string } | null;
+};

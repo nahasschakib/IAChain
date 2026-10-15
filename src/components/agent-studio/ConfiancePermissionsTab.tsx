@@ -1,6 +1,7 @@
 import type { Permission, ExecutionHistoryEntry } from "./types";
 import SerieAcceptes from "./SerieAcceptes";
 import ReglageSeuil from "./ReglageSeuil";
+import DemandePermission from "./DemandePermission";
 
 export default function ConfiancePermissionsTab({ permissions, executionHistory }: { permissions: Permission[]; executionHistory: ExecutionHistoryEntry[] }) {
   return (
@@ -28,6 +29,7 @@ export default function ConfiancePermissionsTab({ permissions, executionHistory 
                     seuil={p.autonomie.seuil}
                   />
                 )}
+            {p.demande && <DemandePermission demande={p.demande} modeActuel={p.mode} />}
             {p.promotion_suggestion && !p.autonomie &&  (
               <div
                 style={{

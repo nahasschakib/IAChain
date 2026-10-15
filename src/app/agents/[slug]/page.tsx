@@ -18,7 +18,7 @@ import type {
 } from "@/components/agent-studio/types";
 
 export default async function AgentStudioPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { orgId, isPlatformAdmin } = await getTenantContext();
+    const { orgId, isOrgAdmin, isPlatformAdmin } = await getTenantContext();
   const { slug } = await params;
 
   const agentRows = await sql`SELECT * FROM agents WHERE slug = ${slug}`;
@@ -98,6 +98,39 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     }
     return p;
   });
+    // Demandes de changement de mode en attente pour cette organisation (décidées par l'Admin SOCYTAY).
+  const demandesEnAttente = await sql`
+    SELECT r.permission_id, r.requested_mode, r.reason, r.requested_at
+    FROM org_permission_requests r
+    JOIN agent_permissions p ON p.id = r.permission_id
+    WHERE r.org_id = ${orgId} AND p.agent_id = ${agent.id} AND r.status = 'en_attente'
+  `;
+  const demandeParPermission = new Map(
+    demandesEnAttente.map((r) => [Number(r.permission_id), r])
+  );
+  const formatDemande = new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "Africa/Casablanca",
+  });
+  const permissionsAvecDemande = permissionsView.map((p) => {
+    const permissionId = (p as unknown as { id: number }).id;
+    const attente = demandeParPermission.get(permissionId);
+    return {
+      ...p,
+      demande: {
+        permissionId,
+        peutDemander: isOrgAdmin && Boolean(p.action_key),
+        enAttente: attente
+          ? {
+              mode: attente.requested_mode as string,
+              motif: (attente.reason as string | null) ?? null,
+              date: formatDemande.format(new Date(attente.requested_at as string)),
+            }
+          : null,
+      },
+    };
+  });
     // Imane : brouillons acceptés d'affilée sans correction, par catégorie (P4-06b).
     // Imane : brouillons acceptés d'affilée sans correction, par catégorie (P4-06b).
   const porteReponses = permissionsView.some((p) => p.action_key === "reponse_email");
@@ -108,7 +141,7 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
   const journalReponses = porteReponses
     ? await getJournalAuto(orgId, agent.id, "reponse_email")
     : { recents7j: 0, entrees: [] };
-  const permissionsAvecSerie = permissionsView.map((p) =>
+   const permissionsAvecSerie = permissionsAvecDemande.map((p) =>
     p.action_key === "reponse_email"
       ? {
           ...p,
