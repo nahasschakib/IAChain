@@ -39,6 +39,29 @@ export async function getPermissionMode(
     return "APPROBATION_REQUISE";
   }
 
+    // Réglage propre à l'organisation (accordé par l'Admin SOCYTAY) : remplace le mode du catalogue.
+  // Un BLOQUE au catalogue reste prioritaire.
+  if (scope && mode !== "BLOQUE") {
+    try {
+      const reglage = await sql`
+        SELECT o.mode
+        FROM org_agent_permissions o
+        JOIN agent_permissions p ON p.id = o.permission_id
+        WHERE o.org_id = ${scope.orgId}
+          AND p.agent_id = ${agentId}
+          AND p.action_key = ${actionKey}
+        LIMIT 1
+      `;
+      const lu = reglage[0]?.mode as string | undefined;
+      if (lu === "AUTO" || lu === "APPROBATION_REQUISE" || lu === "BLOQUE") {
+        mode = lu;
+      }
+    } catch (e) {
+      console.error("getPermissionMode reglage organisation", e);
+      return "APPROBATION_REQUISE";
+    }
+  }
+
   if (!scope || mode === "BLOQUE") return mode;
 
   if (scope.priorite && PRIORITES_SENSIBLES.includes(scope.priorite.toLowerCase())) {
