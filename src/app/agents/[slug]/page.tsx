@@ -63,7 +63,22 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
   const runs = Number(realStats[0].runs);
   const errors = Number(realStats[0].errors);
   const pending = Number(realStats[0].pending);
-  const permissionsView = (permissions as unknown as Permission[]).map((p) => {
+    // Réglages propres à l'organisation (accordés par l'Admin SOCYTAY) : remplacent le mode du catalogue.
+  // Un BLOQUE au catalogue reste prioritaire (même règle que getPermissionMode).
+  const reglagesOrg = await sql`
+    SELECT p.action_key, o.mode
+    FROM org_agent_permissions o
+    JOIN agent_permissions p ON p.id = o.permission_id
+    WHERE o.org_id = ${orgId} AND p.agent_id = ${agent.id}
+  `;
+  const modeOrg = new Map(reglagesOrg.map((r) => [r.action_key as string, r.mode as string]));
+  const permissionsView = (permissions as unknown as Permission[]).map((brut) => {
+    const reglage = brut.action_key ? modeOrg.get(brut.action_key) : undefined;
+    // Le texte de statistiques du catalogue est global : on l'ignore quand le mode vient de l'organisation.
+    const p: Permission =
+      reglage && brut.mode !== "BLOQUE"
+        ? { ...brut, mode: reglage as Permission["mode"], stats_text: "" }
+        : brut;
     if (p.stats_text) return p;
     if (p.mode === "AUTO") {
       return {
