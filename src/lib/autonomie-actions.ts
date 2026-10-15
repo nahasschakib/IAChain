@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
-import { getSeriesReponses, SEUIL_PROMOTION } from "@/lib/autonomie";
+import { getSeriesReponses, getSeuilPromotion } from "@/lib/autonomie";
 
 const ACTIONS_PROMOUVABLES = ["reponse_email"];
 
@@ -30,14 +30,15 @@ export async function accorderPromotion(
   // Le seuil est revérifié côté serveur, jamais d'après le client.
   const series = await getSeriesReponses(orgId, agentId, canal);
   const s = series.find((x) => x.categorie === categorie);
-  if (!s || s.serie < SEUIL_PROMOTION) {
-    return { ok: false, error: `Seuil non atteint (${s?.serie ?? 0} / ${SEUIL_PROMOTION}).` };
+    const seuil = await getSeuilPromotion(orgId, agentId, actionKey);
+  if (!s || s.serie < seuil) {
+    return { ok: false, error: `Seuil non atteint (${s?.serie ?? 0}/ ${seuil}).` };
   }
 
   const res = await sql`
     INSERT INTO org_autonomie
       (org_id, agent_id, action_key, categorie, canal, serie_atteinte, seuil_applique, granted_by)
-    VALUES (${orgId}, ${agentId}, ${actionKey}, ${categorie}, ${canal}, ${s.serie}, ${SEUIL_PROMOTION}, ${userId})
+       VALUES (${orgId}, ${agentId}, ${actionKey}, ${categorie}, ${canal}, ${s.serie}, ${seuil}, ${userId})
     ON CONFLICT (org_id, agent_id, action_key, categorie, canal) WHERE revoked_at IS NULL DO NOTHING
     RETURNING id
   `;

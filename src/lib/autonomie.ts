@@ -103,3 +103,20 @@ export async function getJournalAuto(
     return { recents7j: 0, entrees: [] };
   }
 }
+export async function getSeuilPromotion(
+  orgId: string,
+  agentId: number,
+  actionKey: string
+): Promise<number> {
+  try {
+    const rows = await sql`
+      SELECT seuil FROM org_autonomie_seuil
+      WHERE org_id = ${orgId} AND agent_id = ${agentId} AND action_key = ${actionKey}
+    `;
+    const v = Number(rows[0]?.seuil);
+    return Number.isInteger(v) && v > 0 ? v : SEUIL_PROMOTION;
+  } catch (e) {
+    console.error("getSeuilPromotion", e);
+    return SEUIL_PROMOTION;
+  }
+}

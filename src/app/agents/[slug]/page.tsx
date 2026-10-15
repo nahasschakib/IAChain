@@ -4,7 +4,7 @@ import AppShell from "@/components/AppShell";
 import AgentStudio from "@/components/agent-studio/AgentStudio";
 import { getTenantContext } from "@/lib/tenant";
 import { getOrgProfile } from "@/lib/org-profile";
-import { getSeriesReponses, getJournalAuto, SEUIL_PROMOTION } from "@/lib/autonomie";
+import { getSeriesReponses, getJournalAuto, getSeuilPromotion } from "@/lib/autonomie";
 import type {
   Agent,
   TaskField,
@@ -87,6 +87,9 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
     // Imane : brouillons acceptés d'affilée sans correction, par catégorie (P4-06b).
   const porteReponses = permissionsView.some((p) => p.action_key === "reponse_email");
   const serieReponses = porteReponses ? await getSeriesReponses(orgId, agent.id) : [];
+   const seuilReponses = porteReponses
+    ? await getSeuilPromotion(orgId, agent.id, "reponse_email")
+    : 0;
   const journalReponses = porteReponses
     ? await getJournalAuto(orgId, agent.id, "reponse_email")
     : { recents7j: 0, entrees: [] };
@@ -95,7 +98,7 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
       ? {
           ...p,
           autonomie: {
-            seuil: SEUIL_PROMOTION,
+            seuil: seuilReponses,
             categories: serieReponses,
             agentId: agent.id,
             actionKey: "reponse_email",
