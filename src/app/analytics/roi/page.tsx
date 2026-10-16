@@ -29,7 +29,7 @@ const SOURCE_LIBELLE: Record<string, string> = {
 };
 
 export default async function RoiPage() {
-    const { orgId, isOrgAdmin } = await getTenantContext();
+  const { orgId, isOrgAdmin } = await getTenantContext();
   const roi = await getRoiOrganisation(orgId, 30);
 
   let profilsSaisis: { profil: string; coutMensuel: number; heures: number; source: string }[] = [];
@@ -97,7 +97,7 @@ export default async function RoiPage() {
           Chaque ligne indique la source de ses chiffres.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 28 }}>
+        <div style={{ display: "grid",gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 14, marginBottom: 28 }}>
           <div style={carte}>
             <div style={etiquette}>Temps évité</div>
             <div style={{ fontSize: 26, fontWeight: 700, marginTop: 6 }}>{formatTemps(roi.totalTempsEviteMin)}</div>
