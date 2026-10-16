@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
 import { getTenantContext } from "@/lib/tenant";
@@ -96,7 +97,25 @@ export default async function AnalyticsPage() {
         </span>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Link
+            href="/analytics/roi"
+            style={{
+              padding: "8px 14px",
+              border: "1px solid var(--line)",
+              borderRadius: 10,
+              background: "var(--surface)",
+              boxShadow: CARD_SHADOW,
+              color: "var(--steel)",
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            ROI des agents →
+          </Link>
+        </div>
         {/* ACTIVITÉ 7 JOURS */}
         <div
           style={{
