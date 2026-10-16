@@ -16,6 +16,7 @@ export default async function AppShell(props: {
 
   let approvalsCount = 0;
   let orgName: string | null = null;
+  let permissionsCount: number | null = null; // null = lien masqué (réservé à l'Admin SOCYTAY)
 
   try {
     const t = await resolveTenant();
@@ -25,11 +26,28 @@ export default async function AppShell(props: {
         SELECT COUNT(*)::int AS n FROM approvals
         WHERE org_id = ${t.ctx.orgId} AND status = 'en_attente'
       `;
-      approvalsCount = Number(rows[0]?.n ?? 0);
+           approvalsCount = Number(rows[0]?.n ?? 0);
+      if (t.ctx.isPlatformAdmin) {
+        try {
+          const demandes = await sql`
+            SELECT COUNT(*)::int AS n FROM org_permission_requests WHERE status = 'en_attente'
+          `;
+          permissionsCount = Number(demandes[0]?.n ?? 0);
+        } catch {
+          permissionsCount = 0;
+        }
+      }
     }
   } catch {
     approvalsCount = 0;
   }
 
-  return <AppShellClient {...props} approvalsCount={approvalsCount} orgName={orgName} />;
+    return (
+    <AppShellClient
+      {...props}
+      approvalsCount={approvalsCount}
+      orgName={orgName}
+      permissionsCount={permissionsCount}
+    />
+  );
 }

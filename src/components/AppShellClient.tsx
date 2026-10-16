@@ -142,6 +142,22 @@ const SYSTEM_ITEMS: NavItem[] = [
   },
 ];
 
+const PERMISSIONS_ITEM: NavItem = {
+  href: "/admin/permissions",
+  label: "Permissions",
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3L5 6V11.5C5 15.6 7.9 19.2 12 20.5C16.1 19.2 19 15.6 19 11.5V6L12 3Z"
+        stroke="#f5f6f8"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M9 12L11.2 14.2L15 10" stroke="#f5f6f8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+};
+
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
@@ -195,6 +211,7 @@ export default function AppShellClient({
     topbar,
   approvalsCount = 0,
   orgName = null,
+  permissionsCount = null,
 }: {
   children: ReactNode;
   searchPlaceholder?: string;
@@ -202,6 +219,7 @@ export default function AppShellClient({
   topbar?: ReactNode;
   approvalsCount?: number;
   orgName?: string | null;
+   permissionsCount?: number | null;
 }) {
   const pathname = usePathname();
 
@@ -314,9 +332,15 @@ export default function AppShellClient({
           >
             SYSTÈME
           </span>
-          {SYSTEM_ITEMS.map((item) => (
+                    {SYSTEM_ITEMS.map((item) => (
             <NavLink key={item.href} item={item}active={pathname === item.href || pathname.startsWith(item.href + "/")} />
           ))}
+          {permissionsCount !== null && (
+            <NavLink
+              item={permissionsCount > 0 ? { ...PERMISSIONS_ITEM, badge: String(permissionsCount) } : PERMISSIONS_ITEM}
+              active={pathname === PERMISSIONS_ITEM.href || pathname.startsWith(PERMISSIONS_ITEM.href + "/")}
+            />
+          )}
         </div>
 
         <div

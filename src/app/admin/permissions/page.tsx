@@ -19,9 +19,9 @@ export default async function AdminPermissionsPage() {
   if (!isPlatformAdmin) notFound();
 
   const enAttente = await sql`
-    SELECT r.id, COALESCE(t.name, r.org_id) AS org_name, a.slug AS agent_slug,
-           p.action_label, p.mode AS catalogue_mode, o.mode AS org_mode,
-           r.requested_mode, r.reason, r.requested_at
+    SELECT r.id, COALESCE(t.name, r.org_id) AS org_name, a.name AS agent_name,
+        p.action_label, p.mode AS catalogue_mode, o.mode AS org_mode,
+        r.requested_mode, r.reason, r.requested_at
     FROM org_permission_requests r
     JOIN agent_permissions p ON p.id = r.permission_id
     JOIN agents a ON a.id = p.agent_id
@@ -33,7 +33,7 @@ export default async function AdminPermissionsPage() {
   const demandes: DemandeItem[] = enAttente.map((r) => ({
     id: Number(r.id),
     orgName: r.org_name as string,
-    agent: r.agent_slug as string,
+    agent: r.agent_name as string,
     action: r.action_label as string,
     modeActuel: ((r.org_mode ?? r.catalogue_mode) as string),
     modeDemande: r.requested_mode as string,
@@ -42,8 +42,8 @@ export default async function AdminPermissionsPage() {
   }));
 
   const traitees = await sql`
-    SELECT r.id, COALESCE(t.name, r.org_id) AS org_name, a.slug AS agent_slug,
-           p.action_label, r.requested_mode, r.status, r.decision_note, r.decided_at
+    SELECT r.id, COALESCE(t.name, r.org_id) AS org_name, a.name AS agent_name,
+      p.action_label, r.requested_mode, r.status, r.decision_note, r.decided_at
     FROM org_permission_requests r
     JOIN agent_permissions p ON p.id = r.permission_id
     JOIN agents a ON a.id = p.agent_id
@@ -55,7 +55,7 @@ export default async function AdminPermissionsPage() {
   const decisions: DecisionItem[] = traitees.map((r) => ({
     id: Number(r.id),
     orgName: r.org_name as string,
-    agent: r.agent_slug as string,
+    agent: r.agent_name as string,
     action: r.action_label as string,
     modeDemande: r.requested_mode as string,
     statut: r.status as string,
