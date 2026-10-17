@@ -93,10 +93,36 @@ export async function resolveApproval(
     console.error("resolveApproval escalade", e);
   }
 
+  // Suivi d'avancement (P4-07) : événement « étape validée », une ligne par approbation validée.
+  try {
+    if (decision === "approuve") {
+      const rev = updated[0];
+      const p = rev.payload as { execution_id?: number; email_id?: string; node_key?: string } | null;
+      const noeud =
+        rev.tag === "Escalade"
+          ? "escalade"
+          : rev.tag === "Réponse support"
+            ? "imane_reply"
+            : p?.node_key ?? null;
+      if (noeud && p?.execution_id) {
+        await sql`
+          INSERT INTO etapes_validees
+            (org_id, execution_id, node_key, approval_id, agent_id, tag, decided_by, payload)
+          VALUES (${orgId}, ${p.execution_id}, ${noeud}, ${id}, ${rev.agent_id ?? null},
+                  ${rev.tag}, ${userId}, ${JSON.stringify({ email_id: p.email_id ?? null })}::jsonb)
+          ON CONFLICT (approval_id) DO NOTHING
+        `;
+      }
+    }
+  } catch (e) {
+    console.error("resolveApproval etape validee", e);
+  }
+
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
   revalidatePath("/workflows");
   return { ok: true };
+
 }
 
 export async function delegateApproval(
