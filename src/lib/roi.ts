@@ -32,6 +32,7 @@ function moinsFiable(a: SourceRoi, b: SourceRoi): SourceRoi {
 
 // ROI d'une organisation sur les `jours` derniers jours, calculé à la lecture depuis agent_runs.
 // Temps évité = exécutions réussies × max(0, temps humain − temps de contrôle).
+// Le temps de contrôle n'est déduit que si l'agent est soumis à approbation (mode réel de l'organisation).
 // Valeur estimée = temps évité (heures) × coût horaire du profil (coût mensuel ÷ heures mensuelles).
 // Les deux chiffres restent séparés ; la valeur est un gain de capacité, pas une économie de trésorerie.
 export async function getRoiOrganisation(orgId: string, jours = 30): Promise<RoiResume> {
@@ -41,7 +42,20 @@ export async function getRoiOrganisation(orgId: string, jours = 30): Promise<Roi
            t.temps_humain_min, t.temps_controle_min,
            p.cout_mensuel_mad, p.heures_mensuelles,
            COUNT(r.id)::int AS executions,
-           COALESCE(SUM(r.cost_mad), 0) AS cout_ia
+           COALESCE(SUM(r.cost_mad), 0) AS cout_ia,
+           (
+             EXISTS (
+               SELECT 1
+               FROM agent_permissions ap
+               LEFT JOIN org_agent_permissions oap
+                 ON oap.permission_id = ap.id AND oap.org_id = ${orgId}
+               WHERE ap.agent_id = t.agent_id
+                 AND COALESCE(oap.mode, ap.mode) = 'APPROBATION_REQUISE'
+             )
+             OR NOT EXISTS (
+               SELECT 1 FROM agent_permissions ap2 WHERE ap2.agent_id = t.agent_id
+             )
+           ) AS controle_requis
     FROM roi_taches t
     JOIN roi_profils p ON p.org_id = t.org_id AND p.profil = t.profil
     JOIN agents a ON a.id = t.agent_id
@@ -56,7 +70,10 @@ export async function getRoiOrganisation(orgId: string, jours = 30): Promise<Roi
 
   const lignes: RoiLigne[] = rows.map((r) => {
     const executions = Number(r.executions);
-    const gainParRun = Math.max(0, Number(r.temps_humain_min) - Number(r.temps_controle_min));
+        // Contrôle déduit seulement si un humain valide (au moins une action en APPROBATION_REQUISE,
+    // ou agent sans permission au catalogue : prudence). Sinon tout agent en AUTO : contrôle nul.
+    const controleMin = r.controle_requis ? Number(r.temps_controle_min) : 0;
+    const gainParRun = Math.max(0, Number(r.temps_humain_min) - controleMin);
     const tempsEviteMin = executions * gainParRun;
     const coutHoraire = Number(r.cout_mensuel_mad) / Number(r.heures_mensuelles);
     return {
