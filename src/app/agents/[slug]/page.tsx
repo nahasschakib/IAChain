@@ -4,7 +4,7 @@ import AppShell from "@/components/AppShell";
 import AgentStudio from "@/components/agent-studio/AgentStudio";
 import { getTenantContext } from "@/lib/tenant";
 import { getOrgProfile } from "@/lib/org-profile";
-import { getSeriesReponses, getJournalAuto, getSeuilPromotion } from "@/lib/autonomie";
+import { getSeriesReponses, getSeriesSuivi, getJournalAuto, getSeuilPromotion } from "@/lib/autonomie";
 import type {
   Agent,
   TaskField,
@@ -141,7 +141,12 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
   const journalReponses = porteReponses
     ? await getJournalAuto(orgId, agent.id, "reponse_email")
     : { recents7j: 0, entrees: [] };
-   const permissionsAvecSerie = permissionsAvecDemande.map((p) =>
+    // Soumaya : messages de suivi acceptés d'affilée sans correction, par étape (P4-07).
+  const porteSuivi = permissionsView.some((p) => p.action_key === "envoi_suivi");
+  const serieSuivi = porteSuivi ? await getSeriesSuivi(orgId, agent.id) : [];
+  const seuilSuivi = porteSuivi ? await getSeuilPromotion(orgId, agent.id, "envoi_suivi") : 0;
+
+  const permissionsAvecSerie = permissionsAvecDemande.map((p) =>
     p.action_key === "reponse_email"
       ? {
           ...p,
@@ -155,9 +160,21 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
             journal: journalReponses,
           },
         }
+      : p.action_key === "envoi_suivi"
+      ? {
+          ...p,
+          autonomie: {
+            seuil: seuilSuivi,
+            categories: serieSuivi,
+            agentId: agent.id,
+            actionKey: "envoi_suivi",
+            canal: "email",
+            peutAppliquer: isPlatformAdmin,
+            journal: { recents7j: 0, entrees: [] },
+          },
+        }
       : p
   );
-    
 
   // Karim : segment et enjeux viennent du profil commercial de l'organisation, sans pré-sélection.
   let fields = taskFields as unknown as TaskField[];

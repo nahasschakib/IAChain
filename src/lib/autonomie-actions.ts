@@ -3,9 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
-import { getSeriesReponses, getSeuilPromotion } from "@/lib/autonomie";
+import { getSeriesReponses,  getSeriesSuivi, getSeuilPromotion } from "@/lib/autonomie";
 
-const ACTIONS_PROMOUVABLES = ["reponse_email"];
+const ACTIONS_PROMOUVABLES = ["reponse_email",  "envoi_suivi"];
 
 type Resultat = { ok: boolean; error?: string };
 
@@ -28,7 +28,10 @@ export async function accorderPromotion(
   if (perm.length === 0) return { ok: false, error: "Permission introuvable." };
 
   // Le seuil est revérifié côté serveur, jamais d'après le client.
-  const series = await getSeriesReponses(orgId, agentId, canal);
+   const series =
+    actionKey === "envoi_suivi"
+      ? await getSeriesSuivi(orgId, agentId, canal)
+      : await getSeriesReponses(orgId, agentId, canal);
   const s = series.find((x) => x.categorie === categorie);
     const seuil = await getSeuilPromotion(orgId, agentId, actionKey);
   if (!s || s.serie < seuil) {
