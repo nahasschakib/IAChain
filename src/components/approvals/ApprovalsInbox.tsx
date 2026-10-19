@@ -687,7 +687,7 @@ export default function ApprovalsInbox({
                        onClick={
                         label === "Rejeter"
                           ? () => setRejecting(true)
-                          : label === "Modifier" && selected.tag === "Réponse support"
+                          : label === "Modifier" && (selected.tag === "Réponse support" || selected.tag === "Suivi d'avancement")
                           ? () => {
                               setEditing(!editing);
                               setDraft(payload?.extract ?? "");

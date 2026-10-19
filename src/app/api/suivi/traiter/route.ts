@@ -69,13 +69,49 @@ export async function POST() {
         bloques += 1;
         continue;
       }
-      const r = await redigerSuivi({ orgId, userId, agentId }, e);
+           const r = await redigerSuivi({ orgId, userId, agentId }, e);
       if (!r.ok) {
         // Échec : l'événement redevient « nouveau » pour un prochain passage.
         await sql`UPDATE etapes_validees SET statut = 'nouveau' WHERE id = ${e.id} AND org_id = ${orgId}`;
         echecs += 1;
       } else {
         brouillons += 1;
+        if (mode !== "AUTO") {
+          // Approbation « Suivi d'avancement » portant le brouillon (sans node_key :
+          // sa validation ne doit pas produire un nouvel événement « étape validée »).
+          try {
+            const dossier = e.client_label ?? "Dossier";
+            const payload = {
+              source: "Proposé par Agent Soumaya · Suivi d'avancement",
+              aiReco: "Valider le message de suivi",
+              chips: [e.workflow_nom ?? "Workflow", e.etape_label ?? e.node_key],
+              extractTitle: "Brouillon du message de suivi",
+              extract: r.texte,
+              props: [
+                { k: "Dossier", v: dossier },
+                { k: "Étape validée", v: e.etape_label ?? e.node_key },
+                { k: "Destinataire", v: e.expediteur ?? "À renseigner" },
+              ],
+              lineage: ["Étape validée", "Brouillon Soumaya", "Validation humaine"],
+              execution_id: e.execution_id,
+              suivi_id: r.suiviId,
+            };
+            await sql`
+              INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+              VALUES (${`Suivi d'avancement · ${dossier}`}, 'Suivi d''avancement', ${agentId}, 'Soumaya',
+                      ${JSON.stringify(payload)}::jsonb, ${orgId})
+            `;
+            await sql`
+              UPDATE suivi_brouillons SET statut = 'a_valider'
+              WHERE id = ${r.suiviId} AND org_id = ${orgId}
+            `;
+          } catch (err) {
+            // Le brouillon est conservé en statut « brouillon » ; l'événement reste « traite ».
+            console.error("suivi approbation", err);
+            brouillons -= 1;
+            echecs += 1;
+          }
+        }
       }
     } catch (err) {
       console.error("traiter suivi", err);

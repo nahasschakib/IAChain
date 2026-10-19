@@ -93,29 +93,28 @@ export async function resolveApproval(
     console.error("resolveApproval escalade", e);
   }
 
-  // Suivi d'avancement (P4-07) : événement « étape validée », une ligne par approbation validée.
+  // Suivi d'avancement (P4-07) : le brouillon de Soumaya suit la décision.
+  // Aucun envoi réel : « envoye » signifie « validé, envoi non branché ».
   try {
-    if (decision === "approuve") {
-      const rev = updated[0];
-      const p = rev.payload as { execution_id?: number; email_id?: string; node_key?: string } | null;
-      const noeud =
-        rev.tag === "Escalade"
-          ? "escalade"
-          : rev.tag === "Réponse support"
-            ? "imane_reply"
-            : p?.node_key ?? null;
-      if (noeud && p?.execution_id) {
+    const rev = updated[0];
+    const p = rev.payload as { suivi_id?: number } | null;
+    if (rev.tag === "Suivi d'avancement" && p?.suivi_id) {
+      const proposee = typeof texteFinal === "string" ? texteFinal.trim().slice(0, 5000) : "";
+      if (decision === "approuve") {
         await sql`
-          INSERT INTO etapes_validees
-            (org_id, execution_id, node_key, approval_id, agent_id, tag, decided_by, payload)
-          VALUES (${orgId}, ${p.execution_id}, ${noeud}, ${id}, ${rev.agent_id ?? null},
-                  ${rev.tag}, ${userId}, ${JSON.stringify({ email_id: p.email_id ?? null })}::jsonb)
-          ON CONFLICT (approval_id) DO NOTHING
+          UPDATE suivi_brouillons
+          SET statut = 'envoye', texte = COALESCE(NULLIF(${proposee}, ''), texte)
+          WHERE id = ${p.suivi_id} AND org_id = ${orgId}
+        `;
+      } else {
+        await sql`
+          UPDATE suivi_brouillons SET statut = 'rejete'
+          WHERE id = ${p.suivi_id} AND org_id = ${orgId}
         `;
       }
     }
   } catch (e) {
-    console.error("resolveApproval etape validee", e);
+    console.error("resolveApproval suivi", e);
   }
 
   revalidatePath("/approvals");
