@@ -105,11 +105,25 @@ export async function POST() {
               UPDATE suivi_brouillons SET statut = 'a_valider'
               WHERE id = ${r.suiviId} AND org_id = ${orgId}
             `;
-          } catch (err) {
+                  } catch (err) {
             // Le brouillon est conservé en statut « brouillon » ; l'événement reste « traite ».
             console.error("suivi approbation", err);
             brouillons -= 1;
             echecs += 1;
+          }
+        } else {
+          // Mode automatique : le brouillon est journalisé (envoi non branché).
+          try {
+            await sql`
+              INSERT INTO suivi_auto_journal
+                (org_id, agent_id, action_key, suivi_id, etape_validee_id, execution_id,
+                 categorie, canal, brouillon, agent_run_id)
+              VALUES (${orgId}, ${agentId}, 'envoi_suivi', ${r.suiviId}, ${e.id}, ${e.execution_id},
+                      ${e.node_key}, 'email', ${r.texte}, ${r.agentRunId})
+              ON CONFLICT (suivi_id) DO NOTHING
+            `;
+          } catch (err) {
+            console.error("suivi journal auto", err);
           }
         }
       }

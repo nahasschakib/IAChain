@@ -145,6 +145,9 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
   const porteSuivi = permissionsView.some((p) => p.action_key === "envoi_suivi");
   const serieSuivi = porteSuivi ? await getSeriesSuivi(orgId, agent.id) : [];
   const seuilSuivi = porteSuivi ? await getSeuilPromotion(orgId, agent.id, "envoi_suivi") : 0;
+  const journalSuivi = porteSuivi
+    ? await getJournalAuto(orgId, agent.id, "envoi_suivi")
+    : { recents7j: 0, entrees: [] };
 
   const permissionsAvecSerie = permissionsAvecDemande.map((p) =>
     p.action_key === "reponse_email"
@@ -170,7 +173,7 @@ export default async function AgentStudioPage({ params }: { params: Promise<{ sl
             actionKey: "envoi_suivi",
             canal: "email",
             peutAppliquer: isPlatformAdmin,
-            journal: { recents7j: 0, entrees: [] },
+            journal: journalSuivi,
           },
         }
       : p

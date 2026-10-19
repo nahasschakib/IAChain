@@ -77,16 +77,28 @@ export async function getJournalAuto(
   actionKey: string
 ): Promise<JournalAuto> {
   try {
-    const rows = await sql`
-      SELECT id, categorie, priorite, cree_le,
-             LEFT(brouillon, 160) AS apercu,
-             correction_signalee_le IS NOT NULL AS corrigee,
-             COUNT(*) FILTER (WHERE cree_le > now() - interval '7 days') OVER () AS recents7j
-      FROM reponse_auto_journal
-      WHERE org_id = ${orgId} AND agent_id = ${agentId} AND action_key = ${actionKey}
-      ORDER BY cree_le DESC
-      LIMIT 10
-    `;
+    const rows =
+      actionKey === "envoi_suivi"
+        ? await sql`
+            SELECT id, categorie, NULL::text AS priorite, cree_le,
+                   LEFT(brouillon, 160) AS apercu,
+                   correction_signalee_le IS NOT NULL AS corrigee,
+                   COUNT(*) FILTER (WHERE cree_le > now() - interval '7 days') OVER () AS recents7j
+            FROM suivi_auto_journal
+            WHERE org_id = ${orgId} AND agent_id = ${agentId} AND action_key = ${actionKey}
+            ORDER BY cree_le DESC
+            LIMIT 10
+          `
+        : await sql`
+            SELECT id, categorie, priorite, cree_le,
+                   LEFT(brouillon, 160) AS apercu,
+                   correction_signalee_le IS NOT NULL AS corrigee,
+                   COUNT(*) FILTER (WHERE cree_le > now() - interval '7 days') OVER () AS recents7j
+            FROM reponse_auto_journal
+            WHERE org_id = ${orgId} AND agent_id = ${agentId} AND action_key = ${actionKey}
+            ORDER BY cree_le DESC
+            LIMIT 10
+          `;
     return {
       recents7j: rows.length > 0 ? Number(rows[0].recents7j) : 0,
       entrees: rows.map((r) => ({
