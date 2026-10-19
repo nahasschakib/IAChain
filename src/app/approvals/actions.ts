@@ -98,8 +98,14 @@ export async function resolveApproval(
   try {
     const rev = updated[0];
     const p = rev.payload as { suivi_id?: number } | null;
-    if (rev.tag === "Suivi d'avancement" && p?.suivi_id) {
+        if (rev.tag === "Suivi d'avancement" && p?.suivi_id) {
       const proposee = typeof texteFinal === "string" ? texteFinal.trim().slice(0, 5000) : "";
+      // Lecture avant mise à jour : le texte d'origine sert de référence pour détecter une correction.
+      const sb = await sql`
+        SELECT node_key, canal, texte, agent_id
+        FROM suivi_brouillons
+        WHERE id = ${p.suivi_id} AND org_id = ${orgId}
+      `;
       if (decision === "approuve") {
         await sql`
           UPDATE suivi_brouillons
@@ -111,6 +117,25 @@ export async function resolveApproval(
           UPDATE suivi_brouillons SET statut = 'rejete'
           WHERE id = ${p.suivi_id} AND org_id = ${orgId}
         `;
+      }
+      // Suivi des corrections (P4-07) : une ligne par message décidé.
+      try {
+        if (sb[0]) {
+          const original = String(sb[0].texte ?? "").trim();
+          const retenu = decision === "approuve" ? proposee || original : null;
+          const modifie = decision === "approuve" && retenu !== original;
+          await sql`
+            INSERT INTO suivi_revisions
+              (org_id, approval_id, suivi_id, agent_id, categorie, canal,
+               decision, brouillon_original, texte_final, modifie, decided_by)
+            VALUES (${orgId}, ${id}, ${p.suivi_id}, ${sb[0].agent_id as number},
+                    ${sb[0].node_key as string}, ${(sb[0].canal as string) ?? "email"},
+                    ${decision}, ${original}, ${retenu}, ${modifie}, ${userId})
+            ON CONFLICT (approval_id) DO NOTHING
+          `;
+        }
+      } catch (err) {
+        console.error("resolveApproval suivi revision", err);
       }
     }
   } catch (e) {
