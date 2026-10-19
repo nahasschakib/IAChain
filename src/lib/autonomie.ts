@@ -151,11 +151,19 @@ export async function getSeriesSuivi(
                  AND o.categorie = r.categorie AND o.revoked_at IS NULL
              ) AS promue
       FROM suivi_revisions r
-      LEFT JOIN (
-        SELECT categorie, MAX(decided_at) AS derniere
-        FROM suivi_revisions
-        WHERE org_id = ${orgId} AND agent_id = ${agentId} AND canal = ${canal}
-          AND (modifie OR decision = 'rejete')
+          LEFT JOIN (
+        SELECT categorie, MAX(quand) AS derniere
+        FROM (
+          SELECT categorie, decided_at AS quand
+          FROM suivi_revisions
+          WHERE org_id = ${orgId} AND agent_id = ${agentId} AND canal = ${canal}
+            AND (modifie OR decision = 'rejete')
+          UNION ALL
+          SELECT categorie, correction_signalee_le AS quand
+          FROM suivi_auto_journal
+          WHERE org_id = ${orgId} AND agent_id = ${agentId} AND canal = ${canal}
+            AND correction_signalee_le IS NOT NULL
+        ) c
         GROUP BY categorie
       ) d ON d.categorie = r.categorie
       WHERE r.org_id = ${orgId} AND r.agent_id = ${agentId} AND r.canal = ${canal}

@@ -1,5 +1,5 @@
 "use server";
-import { auth } from "@clerk/nextjs/server";
+
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
@@ -76,30 +76,53 @@ export async function revoquerPromotion(
   revalidatePath("/agents/[slug]", "page");
   return { ok: true };
 }
-export async function signalerCorrection(journalId: number, motif?: string) {
-  // GARDE : identique à revoquerPromotion (réservé à l'Admin SOCYTAY)
-  // ... copier ici les lignes de garde existantes ...
-  const { userId } = await auth();
-  if (!userId) return { ok: false, error: "Non authentifié." };
-  const [entree] = await sql`
-    SELECT id, org_id, agent_id, action_key, categorie, canal, correction_signalee_le
-    FROM reponse_auto_journal
-    WHERE id = ${journalId}
-  `;
+export async function signalerCorrection(
+  journalId: number,
+  motif?: string,
+  actionKey = "reponse_email"
+): Promise<Resultat> {
+  const t = await resolveTenant();
+  if (!t.ok) return { ok: false, error: "Accès refusé." };
+  const { userId, orgId, isPlatformAdmin } = t.ctx;
+  if (!isPlatformAdmin) return { ok: false, error: "Seul l'Admin SOCYTAY peut signaler une correction." };
+  if (!ACTIONS_PROMOUVABLES.includes(actionKey)) return { ok: false, error: "Action non concernée." };
+
+  const rows =
+    actionKey === "envoi_suivi"
+      ? await sql`
+          SELECT id, org_id, agent_id, action_key, categorie, canal, correction_signalee_le
+          FROM suivi_auto_journal
+          WHERE id = ${journalId} AND org_id = ${orgId}
+        `
+      : await sql`
+          SELECT id, org_id, agent_id, action_key, categorie, canal, correction_signalee_le
+          FROM reponse_auto_journal
+          WHERE id = ${journalId} AND org_id = ${orgId}
+        `;
+  const entree = rows[0];
   if (!entree) return { ok: false, error: "Entrée introuvable." };
   if (entree.correction_signalee_le) return { ok: false, error: "Correction déjà signalée." };
 
   const motifPropre = motif?.trim() ? motif.trim().slice(0, 500) : null;
 
   // 1. Marquer l'entrée du journal
-  await sql`
-    UPDATE reponse_auto_journal
-    SET correction_signalee_le = now(),
-        correction_signalee_par = ${userId},
-        correction_motif = ${motifPropre}
-    WHERE id = ${journalId}
-  `;
-
+  if (actionKey === "envoi_suivi") {
+    await sql`
+      UPDATE suivi_auto_journal
+      SET correction_signalee_le = now(),
+          correction_signalee_par = ${userId},
+          correction_motif = ${motifPropre}
+      WHERE id = ${journalId} AND org_id = ${orgId}
+    `;
+  } else {
+    await sql`
+      UPDATE reponse_auto_journal
+      SET correction_signalee_le = now(),
+          correction_signalee_par = ${userId},
+          correction_motif = ${motifPropre}
+      WHERE id = ${journalId} AND org_id = ${orgId}
+    `;
+  }
   // 2. Rétrograder : révoquer la promotion active de cette catégorie
   await sql`
     UPDATE org_autonomie

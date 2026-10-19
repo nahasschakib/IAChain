@@ -3,7 +3,13 @@
 import { useState, useTransition } from "react";
 import { signalerCorrection } from "@/lib/autonomie-actions";
 
-export default function SignalerCorrection({ journalId }: { journalId: number }) {
+export default function SignalerCorrection({
+  journalId,
+  actionKey = "reponse_email",
+}: {
+  journalId: number;
+  actionKey?: string;
+}) {
   const [ouvert, setOuvert] = useState(false);
   const [motif, setMotif] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -57,7 +63,7 @@ export default function SignalerCorrection({ journalId }: { journalId: number })
           disabled={pending}
           onClick={() =>
             start(async () => {
-              const r = await signalerCorrection(journalId, motif);
+                const r = await signalerCorrection(journalId, motif, actionKey);
               if (!r.ok) setErreur(r.error ?? "Erreur.");
             })
           }

@@ -118,7 +118,7 @@ export default function SerieAcceptes({ autonomie }: { autonomie: Autonomie }) {
               <div style={{ fontSize: "11px", color: "#b45309", marginTop: "4px" }}>Correction signalée</div>
             ) : autonomie.peutAppliquer ? (
               <div style={{ marginTop: "4px" }}>
-                <SignalerCorrection journalId={e.id} />
+                  <SignalerCorrection journalId={e.id} actionKey={autonomie.actionKey} />
               </div>
             ) : null}
           </div>
