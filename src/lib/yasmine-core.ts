@@ -13,8 +13,8 @@ export type YasmineCoreInput = {
   signal: string;
   canaux: string[];
   compteCrm: string;
+  origine?: "ilyas";
 };
-
 // Cœur de l'agent Yasmine : appelé par l'écran Studio ET par le moteur de workflow.
 export async function executeYasmine(
   ctx: { orgId: string; userId: string },
@@ -46,7 +46,12 @@ export async function executeYasmine(
 
   try {
     const ai = await runAiTool({ system: YASMINE_SYSTEM, prompt, tool: YASMINE_TOOL, tier: "fast" });
-    const result = scoreFiche(parseExtraction(ai.data, signal, compteCrm), canaux);
+       const scored = scoreFiche(parseExtraction(ai.data, signal, compteCrm), canaux);
+    // Un compte identifié par Ilyas est une société nommée et sourcée : jamais « Signal insuffisant ».
+    const result =
+      input.origine === "ilyas" && scored.societe && scored.verdict === "Signal insuffisant"
+        ? { ...scored, verdict: "Fiche partielle" as const }
+        : scored;
     const cost = await computeCost(ai.model, ai.inputTokens, ai.outputTokens);
     const stored = { ...result, cost_mad: cost?.mad ?? null, cost_usd: cost?.usd ?? null, usd_mad_rate: cost?.rate ?? null };
 
