@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { MehdiResult } from "@/lib/mehdi";
+import { remiseAdmissible, type GrilleSegment, type PolitiqueTarifaire } from "@/lib/politique-regle";
 
 // Listes par défaut : elles s'appliquent à une organisation qui n'a pas défini les siennes (voir org-profile.ts).
 export const SEGMENTS = ["PME", "ETI", "Grand compte", "Secteur public"] as const;
@@ -20,10 +21,16 @@ export type KarimAnalysis = {
   informations_manquantes: string[];
 };
 
+// Remise maximale admissible pour le segment : décidée par le code d'après la politique tarifaire, jamais par l'IA.
+export type KarimRemise =
+  | { defini: true; grille: GrilleSegment; plafond_pct: number; plafond_derogation_pct: number; politique_version: number }
+  | { defini: false; raison: string };
+
 export type KarimResult = KarimAnalysis & {
   budget_cadre: string;
   registre: (typeof REGISTRES)[number];
   statut: "Plan prêt" | "Plan à compléter";
+  remise?: KarimRemise; // absent des exécutions antérieures à P4-09d
 };
 
 export type KarimOutcome = { ok: true; result: KarimResult; costMad?: number } | { ok: false; error: string };
@@ -149,6 +156,18 @@ export function buildPlan(
     budget_cadre: prêt ? budgetCadre(budget) : budgetCadre(""),
     registre: reg,
     statut: prêt ? "Plan prêt" : "Plan à compléter",
+  };
+}
+
+export function remiseKarim(p: PolitiqueTarifaire | null, segment: string): KarimRemise {
+  const a = remiseAdmissible(p, segment);
+  if (!a.defini) return { defini: false, raison: a.raison };
+  return {
+    defini: true,
+    grille: a.grille,
+    plafond_pct: a.plafond,
+    plafond_derogation_pct: a.plafondDerogation,
+    politique_version: p!.version,
   };
 }
 

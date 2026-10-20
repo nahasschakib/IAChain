@@ -2,6 +2,7 @@ import { sql } from "@/lib/db";
 import { runAiTool } from "@/lib/ai";
 import { computeCost } from "@/lib/cost";
 import { getOrgProfile } from "@/lib/org-profile";
+import { getPolitiqueActive } from "@/lib/politique-tarifaire";
 import {
   KARIM_SYSTEM,
   karimTool,
@@ -9,7 +10,9 @@ import {
   parseImposed,
   applyImposed,
   buildPlan,
+  remiseKarim,
   type KarimOutcome,
+  type KarimRemise,
 } from "@/lib/karim";
 
 export type KarimCoreInput = {
@@ -65,7 +68,15 @@ export async function executeKarim(
 
   try {
     const ai = await runAiTool({ system: KARIM_SYSTEM, prompt, tool: karimTool(lists), tier: "fast" });
-    const result = buildPlan(applyImposed(parseAnalysis(ai.data, lists), imposed), budget, registre);
+       const plan = buildPlan(applyImposed(parseAnalysis(ai.data, lists), imposed), budget, registre);
+    let remise: KarimRemise;
+    try {
+      remise = remiseKarim(await getPolitiqueActive(orgId), plan.segment);
+    } catch (e) {
+      console.error("executeKarim politique", e);
+      remise = { defini: false, raison: "Politique tarifaire illisible (erreur technique)" };
+    }
+    const result = { ...plan, remise };
     const cost = await computeCost(ai.model, ai.inputTokens, ai.outputTokens);
     const stored = { ...result, cost_mad: cost?.mad ?? null, cost_usd: cost?.usd ?? null, usd_mad_rate: cost?.rate ?? null };
 

@@ -5,6 +5,8 @@ const tileLabel: React.CSSProperties = { fontSize: "11px", color: "var(--muted-f
 const cardHead: React.CSSProperties = { padding: "10px 14px", background: "var(--steel-tint)", fontSize: "12px", fontWeight: 600 };
 const card: React.CSSProperties = { border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden", marginBottom: "20px" };
 
+const pct = (n: number) => `${String(n).replace(".", ",")} %`;
+
 function Box({ children, error }: { children: React.ReactNode; error?: boolean }) {
   return (
     <div
@@ -95,8 +97,25 @@ export default function KarimResultPanel({ state }: { state: KarimRunState }) {
 
       <div style={card}>
         <div style={cardHead}>Cadre budgétaire</div>
-        <p style={{ margin: 0, padding: "14px", fontSize: "13px", lineHeight: 1.6 }}>{r.budget_cadre}</p>
+                <p style={{ margin: 0, padding: "14px", fontSize: "13px", lineHeight: 1.6 }}>{r.budget_cadre}</p>
       </div>
+
+      {r.remise && (
+        <div style={card}>
+          <div style={cardHead}>Remise maximale admissible</div>
+          {r.remise.defini ? (
+            <p style={{ margin: 0, padding: "14px", fontSize: "13px", lineHeight: 1.6 }}>
+              <strong>{pct(r.remise.plafond_pct)}</strong> (grille {r.remise.grille === "standard" ? "standard" : "grands comptes"}).
+              Au-delà, jusqu&apos;à {pct(r.remise.plafond_derogation_pct)} avec un motif d&apos;exception et l&apos;approbation de la
+              direction. Politique tarifaire v{r.remise.politique_version}.
+            </p>
+          ) : (
+            <p style={{ margin: 0, padding: "14px", fontSize: "13px", lineHeight: 1.6, color: "var(--muted-foreground)" }}>
+              Non définie : {r.remise.raison}. Aucune remise ne doit être proposée sans contrôle manuel.
+            </p>
+          )}
+        </div>
+      )}
 
       {r.informations_manquantes.length > 0 && (
         <div style={card}>
@@ -111,8 +130,8 @@ export default function KarimResultPanel({ state }: { state: KarimRunState }) {
 
       <div style={{ background: "var(--steel-tint)", borderRadius: "10px", padding: "12px 14px", fontSize: "12.5px", lineHeight: 1.5 }}>
         <strong>TRAÇABILITÉ</strong> — Plan rédigé par l&apos;IA à partir du profil fourni, sans prix ni référence
-        inventés ; le cadre budgétaire est calculé par le code à partir du budget retenu. La décision de transmission
-        reste humaine.
+         inventés ; le cadre budgétaire et la remise admissible sont calculés par le code (budget retenu, politique
+        tarifaire de l&apos;organisation). La décision de transmission reste humaine.
         {outcome.costMad !== undefined && (
           <> Coût de cette exécution : {outcome.costMad.toFixed(3).replace(".", ",")} MAD.</>
         )}
