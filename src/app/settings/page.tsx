@@ -5,6 +5,8 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { resolveTenant } from "@/lib/tenant";
 import { getOrgProfile, listOrgOptions } from "@/lib/org-profile";
 import ProfilCommercial from "@/components/settings/ProfilCommercial";
+import PolitiqueTarifaire from "@/components/settings/PolitiqueTarifaire";
+import { getPolitiqueActive } from "@/lib/politique-tarifaire";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
@@ -14,9 +16,13 @@ export default async function SettingsPage() {
   const organization = orgId ? await (await clerkClient()).organizations.getOrganization({ organizationId: orgId }) : null;
 
   const tenant = await resolveTenant();
-  const [profile, options] = tenant.ok
-    ? await Promise.all([getOrgProfile(tenant.ctx.orgId), listOrgOptions(tenant.ctx.orgId)])
-    : [null, null];
+    const [profile, options, politique] = tenant.ok
+    ? await Promise.all([
+        getOrgProfile(tenant.ctx.orgId),
+        listOrgOptions(tenant.ctx.orgId),
+        getPolitiqueActive(tenant.ctx.orgId),
+      ])
+    : [null, null, null];
 
   return (
     <AppShell
@@ -108,9 +114,35 @@ export default async function SettingsPage() {
               </div>
               <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>Profil commercial</span>
             </div>
-            <ProfilCommercial offer={profile.offer} options={options} canEdit={tenant.ctx.isOrgAdmin} />
+                       <ProfilCommercial offer={profile.offer} options={options} canEdit={tenant.ctx.isOrgAdmin} />
           </div>
         )}
+
+        {tenant.ok && profile && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, var(--steel-tint), #cddce7)",
+                  color: "var(--steel)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M19 5L5 19M8 8.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM16 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>Politique tarifaire</span>
+            </div>
+            <PolitiqueTarifaire politique={politique} segments={profile.segments} canEdit={tenant.ctx.isOrgAdmin} />
+          </div>
+        )}
+        
       </div>
     </AppShell>
   );
