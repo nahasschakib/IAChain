@@ -166,6 +166,22 @@ export async function resolveApproval(
   } catch (e) {
     console.error("resolveApproval suivi", e);
   }
+  // Analyse des causes (P4-08) : l'analyse de Hamza suit la décision. Aucune action externe.
+  try {
+    const rev = updated[0];
+    const p = rev.payload as { analyse_id?: number | string } | null;
+    const analyseId = Number(p?.analyse_id);
+    if (rev.tag === "Analyse des causes" && Number.isInteger(analyseId) && analyseId > 0) {
+      await sql`
+        UPDATE analyses_causes
+        SET statut = ${decision === "approuve" ? "valide" : "rejete"},
+            decided_by = ${userId}, decided_at = now()
+        WHERE id = ${analyseId} AND org_id = ${orgId} AND statut = 'a_valider'
+      `;
+    }
+  } catch (e) {
+    console.error("resolveApproval analyse causes", e);
+  }
 
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
