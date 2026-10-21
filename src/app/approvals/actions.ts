@@ -182,6 +182,22 @@ export async function resolveApproval(
   } catch (e) {
     console.error("resolveApproval analyse causes", e);
   }
+    // Relance de devis (P4-10b) : le brouillon d'Anas suit la décision. Aucun envoi réel.
+  try {
+    const rev = updated[0];
+    const p = rev.payload as { relance_id?: number | string } | null;
+    const relanceId = Number(p?.relance_id);
+    if (rev.tag === "Relance de devis" && Number.isInteger(relanceId) && relanceId > 0) {
+      await sql`
+        UPDATE relances_devis
+        SET statut = ${decision === "approuve" ? "valide" : "rejete"},
+            decided_by = ${userId}, decided_at = now()
+        WHERE id = ${relanceId} AND org_id = ${orgId} AND statut = 'a_valider'
+      `;
+    }
+  } catch (e) {
+    console.error("resolveApproval relance devis", e);
+  }
 
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
