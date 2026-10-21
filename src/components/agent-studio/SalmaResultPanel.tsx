@@ -58,11 +58,46 @@ export default function SalmaResultPanel({ state }: { state: SalmaRunState }) {
 
   if (pending) return <Box>Salma travaille sur la proposition…</Box>;
   if (!outcome) {
+    const etapes: [string, string][] = [
+      ["Décris le dossier", "Saisis le client, l'objectif du prospect et le cadre budgétaire, puis choisis la remise et le registre de rédaction."],
+      ["Demande les lignes à l'IA", "Clique sur « Proposer les lignes avec l'IA » : elle choisit, dans ton catalogue de prestations, celles qui répondent au besoin."],
+      ["Ajuste, puis chiffre", "Corrige les quantités, ajoute ou retire des lignes, indique le segment du client, puis clique sur « Chiffrer la proposition »."],
+    ];
     return (
-      <Box>
-        Renseignez le client et l&apos;objectif, puis lancez « Proposer les lignes avec l&apos;IA ». Après vos ajustements,
-        « Chiffrer la proposition » affiche ici la proposition commerciale.
-      </Box>
+      <div style={{ padding: "28px", border: "1px dashed var(--border)", borderRadius: "12px", color: "var(--muted-foreground)" }}>
+        <div style={{ fontSize: "13px", fontWeight: 700, color: "inherit", marginBottom: "14px" }}>
+          Comment préparer une proposition
+        </div>
+        <div style={{ display: "grid", gap: "12px" }}>
+          {etapes.map(([titre, aide], i) => (
+            <div key={titre} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <span
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {i + 1}
+              </span>
+              <div style={{ fontSize: "13px", lineHeight: 1.5 }}>
+                <strong style={{ color: "var(--foreground, inherit)" }}>{titre}.</strong> {aide}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: "12px", lineHeight: 1.5, marginTop: "16px" }}>
+          La proposition s&apos;affichera ici. Les montants, la TVA et le délai sont calculés par le code ; rien n&apos;est envoyé au
+          client avant le contrôle de la remise et l&apos;approbation.
+        </div>
+      </div>
     );
   }
   if (!outcome.ok) return <Box error>{outcome.error}</Box>;

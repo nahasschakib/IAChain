@@ -44,12 +44,24 @@ export default function SalmaLiveRun({
   // Saisie de secours : en dehors de la chaîne, rien ne dérive l'objectif ni le cadre budgétaire.
   const [objectifSaisi, setObjectifSaisi] = useState("");
   const [budgetSaisi, setBudgetSaisi] = useState("");
+  const [chiffre, setChiffre] = useState(false);
+
+  // Guide : où en est l'utilisateur ?
+  const objectifOk = (String(values.objectif ?? "").trim() || objectifSaisi.trim()).length >= 10;
+  const clientOk = String(values.client ?? "").trim().length >= 2;
+  const etapes = [
+    { fait: objectifOk && clientOk, titre: "Décris le dossier", aide: "Client, remise, registre et objectif du prospect." },
+    { fait: etape !== null, titre: "Demande les lignes à l'IA", aide: "Elle ne propose que des prestations de ton catalogue." },
+    { fait: chiffre, titre: "Ajuste, puis chiffre", aide: "Quantités, segment du client, puis « Chiffrer la proposition »." },
+  ];
+  const courante = etapes.findIndex((e) => !e.fait);
 
   const parId = new Map((etape?.catalogue ?? []).map((p) => [p.id, p]));
   const restantes = (etape?.catalogue ?? []).filter((p) => !lignes.some((l) => l.prestation_id === p.id));
 
   const proposer = () => {
     setMessage(null);
+    setChiffre(false);
     onState({ pending: true, outcome: null });
     startTransition(async () => {
       try {
@@ -112,12 +124,48 @@ export default function SalmaLiveRun({
         outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
       }
       if (!outcome.ok) setMessage(outcome.error);
+      setChiffre(outcome.ok);
       onState({ pending: false, outcome });
     });
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ border: "1px solid var(--border)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
+          COMMENT ÇA MARCHE
+        </div>
+        {etapes.map((e, i) => (
+          <div key={e.titre} style={{ display: "flex", gap: 10, alignItems: "flex-start", opacity: e.fait || i === courante ? 1 : 0.55 }}>
+            <span
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 999,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 11,
+                fontWeight: 700,
+                background: e.fait ? "#166534" : i === courante ? "var(--steel-deep)" : "transparent",
+                color: e.fait || i === courante ? "#fff" : "var(--muted-foreground)",
+                border: e.fait || i === courante ? "none" : "1px solid var(--border)",
+              }}
+            >
+              {e.fait ? "✓" : i + 1}
+            </span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: i === courante ? 700 : 600 }}>{e.titre}</div>
+              <div style={petit}>{e.aide}</div>
+            </div>
+          </div>
+        ))}
+        <div style={petit}>
+          Le code calcule les montants, la TVA et le délai ; l&apos;IA ne choisit que des lignes du catalogue et rédige
+          l&apos;introduction. Rien n&apos;est envoyé au client : la proposition passe ensuite par un contrôle puis une approbation.
+        </div>
+      </div>
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={petit}>Objectif du prospect (saisie ; dans la chaîne, il sera repris du plan de Karim)</span>
         <Textarea
