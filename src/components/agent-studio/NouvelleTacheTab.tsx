@@ -42,6 +42,8 @@ import OthmaneLiveRun, { type OthmaneRunState } from "./OthmaneLiveRun";
 import OthmaneResultPanel from "./OthmaneResultPanel";
 import LinaLiveRun, { type LinaRunState } from "./LinaLiveRun";
 import LinaResultPanel from "./LinaResultPanel";
+import SalmaLiveRun, { type SalmaRunState } from "./SalmaLiveRun";
+import SalmaResultPanel from "./SalmaResultPanel";
 import RimPreview from "./previews/RimPreview";
 import AdilPreview from "./previews/AdilPreview";
 import WalidPreview from "./previews/WalidPreview";
@@ -144,6 +146,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const [sofiaState, setSofiaState] = useState<SofiaRunState>({ pending: false, outcome: null });
   const [othmaneState, setOthmaneState] = useState<OthmaneRunState>({ pending: false, outcome: null });
   const [linaState, setLinaState] = useState<LinaRunState>({ pending: false, outcome: null });
+   const [salmaState, setSalmaState] = useState<SalmaRunState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
   const isYasmine = agent.slug === "yasmine";
   const isKarim = agent.slug === "karim";
@@ -151,7 +154,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const isSofia = agent.slug === "sofia";
   const isOthmane = agent.slug === "othmane";
   const isLina = agent.slug === "lina";
-  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia || isOthmane || isLina;
+   const isSalma = agent.slug === "salma";
+  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia || isOthmane || isLina || isSalma;
   const Preview = isLive ? undefined : PREVIEWS[agent.slug];
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
@@ -197,6 +201,12 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       : linaState.outcome
       ? "résultat réel · IA"
       : "en attente du brief"
+       : isSalma
+    ? salmaState.pending
+      ? "chiffrage en cours…"
+      : salmaState.outcome
+      ? "résultat réel · IA"
+      : "en attente des lignes"
       : status === "done"
        ? config.doneLabel
     : status === "running"
@@ -247,6 +257,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
             {isSofia && <SofiaLiveRun values={values} onState={setSofiaState} />}
             {isOthmane && <OthmaneLiveRun values={values} onState={setOthmaneState} />}
            {isLina && <LinaLiveRun values={values} onState={setLinaState} />}
+            {isSalma && <SalmaLiveRun values={values} onState={setSalmaState} />}
             {!isLive &&  (
             <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
@@ -268,7 +279,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : isOthmane ? "PLAN MARKETING" : isLina ? "CONTENUS RÉDIGÉS" : "APERÇU DU LIVRABLE"}
+          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : isOthmane ? "PLAN MARKETING" : isLina ? "CONTENUS RÉDIGÉS" : isSalma ? "PROPOSITION COMMERCIALE" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -298,6 +309,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           <OthmaneResultPanel state={othmaneState} />
         ) : isLina ? (
           <LinaResultPanel state={linaState} />
+          ) : isSalma ? (
+          <SalmaResultPanel state={salmaState} />
         ) : Preview ? (
           <Preview values={values} />
         ) : (
