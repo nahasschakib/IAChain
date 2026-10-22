@@ -105,7 +105,7 @@ export async function runProspectToCash(
     // 2) Mehdi, alimenté par la fiche de Yasmine
     await setNode(executionId, "mehdi", "running", null);
     const ficheTexte = ficheToText(fiche);
-        const m = await executeMehdi(ctx, {
+    const m = await executeMehdi(ctx, {
       fiche: ficheTexte,
       fit: input.fit || "Non précisé",
       budget: input.budget || "Non précisé",
@@ -119,6 +119,21 @@ export async function runProspectToCash(
     const q = m.outcome.result;
     const noteMehdi = q.verdict === "À compléter" ? "Fiche à compléter" : `${q.verdict} ${q.score}/100`;
     await setNode(executionId, "mehdi", "done", noteMehdi, m.agentRunId);
+        // Rattache le go/no-go créé par Mehdi à ce dossier (visible dans « À faire » et dans la vue Dossier).
+    try {
+      await sql`
+        UPDATE approvals
+        SET payload = COALESCE(payload, '{}'::jsonb) || jsonb_build_object('dossier_id', ${executionId}::int)
+        WHERE id = (
+          SELECT a.id FROM approvals a
+          WHERE a.org_id = ${ctx.orgId} AND a.tag = 'Go/no-go' AND a.status = 'en_attente'
+            AND a.created_at >= (SELECT started_at FROM workflow_executions WHERE id = ${executionId})
+          ORDER BY a.id DESC LIMIT 1
+        )
+      `;
+    } catch (e) {
+      console.error("runProspectToCash go/no-go", e);
+    }
 
     // Seul un prospect « Qualifié » est transmis à Karim.
     if (q.verdict !== "Qualifié") {

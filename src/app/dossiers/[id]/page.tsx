@@ -34,16 +34,20 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 820 }}>
-        {d.prochaine ? (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "var(--steel-tint)", border: "1px solid var(--line)", borderRadius: 14, padding: "16px 22px" }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "var(--graphite)", marginBottom: 4 }}>PROCHAINE ACTION</div>
-              <div style={{ fontSize: 14 }}>{d.prochaine.texte}</div>
+        {d.actions.length > 0 ? (
+          d.actions.map((a) => (
+            <div key={a.href + a.bouton} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, background: "var(--steel-tint)", border: "1px solid var(--line)", borderRadius: 14, padding: "16px 22px" }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", color: "var(--graphite)", marginBottom: 4 }}>
+                  {d.actions.length > 1 ? "ACTION ATTENDUE" : "PROCHAINE ACTION"}
+                </div>
+                <div style={{ fontSize: 14 }}>{a.texte}</div>
+              </div>
+              <Link href={a.href} style={{ background: "var(--steel-deep)", color: "#f5f6f8", fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 8, textDecoration: "none", whiteSpace: "nowrap" }}>
+                {a.bouton}
+              </Link>
             </div>
-            <Link href={d.prochaine.href} style={{ background: "var(--steel-deep)", color: "#f5f6f8", fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 8, textDecoration: "none", whiteSpace: "nowrap" }}>
-              {d.prochaine.bouton}
-            </Link>
-          </div>
+          ))
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: "14px 22px", fontSize: 13, color: "var(--graphite)", boxShadow: CARD_SHADOW }}>
             {d.statut === "termine"

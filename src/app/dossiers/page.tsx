@@ -38,7 +38,7 @@ export default async function DossiersPage() {
               <div>
                 <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>{d.client}</div>
                 <div style={{ fontSize: 12, color: "var(--graphite)" }}>
-                  Exécution {d.runLabel ?? `#${d.executionId}`} · {new Date(d.startedAt).toLocaleDateString("fr-FR")}
+                  {d.horsChaine ? "Devis validé hors chaîne" : `Exécution ${d.runLabel ?? `#${d.executionId}`}`} · {new Date(d.startedAt).toLocaleDateString("fr-FR")}
                 </div>
               </div>
               <span style={{ fontSize: 12, fontWeight: 600, color: s.couleur }}>{s.label}</span>

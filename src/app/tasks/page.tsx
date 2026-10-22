@@ -32,6 +32,7 @@ type Action = {
   quoi: string;
   bouton: string;
   href: string;
+  dossierId?: number; // dossier (exécution de la chaîne) auquel la ligne se rattache
   agent: string;
   quand: string;
   priorite: number; // plus petit = plus tôt dans la liste
@@ -64,6 +65,7 @@ export default async function TasksPage() {
         quoi: "Salma a proposé des lignes du catalogue : vérifie les quantités, puis chiffre le devis.",
         bouton: "Valider les lignes",
         href: `/agents/salma?dossier=${d.executionId}`,
+        dossierId: d.executionId,
         agent: "Salma",
         quand: "En attente",
         priorite: 0,
@@ -75,7 +77,16 @@ export default async function TasksPage() {
 
   // 2) Décisions humaines en attente (approbations).
   const rows = await sql`
-    SELECT a.id, a.title, a.tag, a.agent_label, a.created_at
+    SELECT a.id, a.title, a.tag, a.agent_label, a.created_at,
+           (SELECT x.id FROM workflow_executions x
+            JOIN workflows w ON w.id = x.workflow_id AND w.slug = 'prospect-to-cash'
+            WHERE x.org_id = a.org_id
+              AND x.id::text = COALESCE(
+                a.payload->>'dossier_id',
+                a.payload->>'execution_id',
+                (SELECT d.execution_id::text FROM devis_validations d
+                 WHERE d.org_id = a.org_id AND d.id::text = a.payload->>'devis_validation_id'))
+           ) AS dossier
     FROM approvals a
     WHERE a.org_id = ${orgId} AND a.status = 'en_attente'
     ORDER BY a.created_at DESC
@@ -90,6 +101,7 @@ export default async function TasksPage() {
       quoi: c.quoi,
       bouton: c.bouton,
       href: `/approvals?id=${row.id}`,
+      dossierId: /^[0-9]+$/.test(String(row.dossier ?? "")) ? Number(row.dossier) : undefined,
       agent: String(row.agent_label ?? ""),
       quand: formatDate(new Date(row.created_at as string)),
       priorite: 1,
@@ -161,9 +173,16 @@ export default async function TasksPage() {
               <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{a.titre}</div>
               <div style={{ fontSize: 12.5, color: "var(--graphite)" }}>{a.quoi}</div>
             </div>
-            <Link href={a.href} style={bouton}>
-              {a.bouton}
-            </Link>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+              {a.dossierId && (
+                <Link href={`/dossiers/${a.dossierId}`} style={{ fontSize: 12.5, fontWeight: 600, color: "var(--steel)", textDecoration: "none", whiteSpace: "nowrap" }}>
+                  Voir le dossier
+                </Link>
+              )}
+              <Link href={a.href} style={bouton}>
+                {a.bouton}
+              </Link>
+            </div>
           </div>
         ))}
       </div>

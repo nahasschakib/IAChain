@@ -18,7 +18,7 @@ export type EtapeDossier = {
   note: string | null;
 };
 
-export type ProchaineAction = { texte: string; bouton: string; href: string } | null;
+export type ProchaineAction = { texte: string; bouton: string; href: string };
 
 export type Dossier = {
   executionId: number;
@@ -26,7 +26,7 @@ export type Dossier = {
   runLabel: string | null;
   statut: string; // en_cours | termine | echoue
   etapes: EtapeDossier[];
-  prochaine: ProchaineAction;
+  actions: ProchaineAction[]; // actions attendues de l'utilisateur, la plus en amont d'abord
 };
 
 export type ResumeDossier = {
@@ -36,6 +36,7 @@ export type ResumeDossier = {
   statut: string;
   etapeCourante: string;
   startedAt: string;
+  horsChaine: boolean; // devis validé hors chaîne (exécution « Devis ») : une seule étape
 };
 
 // Liste des dossiers (une exécution de la chaîne = un dossier), les plus récents d'abord.
@@ -55,6 +56,7 @@ export async function listerDossiers(orgId: string): Promise<ResumeDossier[]> {
     statut: String(r.status),
     etapeCourante: String(r.current_step ?? ""),
     startedAt: new Date(r.started_at as string).toISOString(),
+    horsChaine: /^Devis/.test(String(r.run_label ?? "")),
   }));
 }
 
@@ -82,16 +84,30 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
     };
   });
 
-  // Prochaine action humaine : une seule, la plus en amont.
-  let prochaine: ProchaineAction = null;
+  // Actions humaines attendues, la plus en amont d'abord.
+  const actions: ProchaineAction[] = [];
+  // Go/no-go de Mehdi rattaché à ce dossier (payload.dossier_id posé par la chaîne).
+  const gng = await sql`
+    SELECT a.id FROM approvals a
+    WHERE a.org_id = ${orgId} AND a.status = 'en_attente' AND a.tag = 'Go/no-go'
+      AND a.payload->>'dossier_id' = ${String(executionId)}
+    ORDER BY a.id DESC LIMIT 1
+  `;
+  if (gng[0]) {
+    actions.push({
+      texte: "Mehdi a qualifié ce prospect : décide de le transmettre à la vente ou non.",
+      bouton: "Décider du go/no-go",
+      href: `/approvals?id=${Number(gng[0].id)}`,
+    });
+  }
   const salma = etapes.find((e) => e.key === "salma");
   const appr = etapes.find((e) => e.key === "approval");
   if (salma?.etat === "waiting") {
-    prochaine = {
+    actions.push({
       texte: "Salma a proposé des lignes du catalogue : vérifie les quantités, puis chiffre le devis.",
       bouton: "Valider les lignes",
       href: `/agents/salma?dossier=${executionId}`,
-    };
+    });
   } else if (appr?.etat === "waiting") {
     const a = await sql`
       SELECT a.id FROM approvals a
@@ -99,11 +115,11 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
       WHERE a.org_id = ${orgId} AND a.status = 'en_attente' AND d.execution_id = ${executionId}
       ORDER BY a.id DESC LIMIT 1
     `;
-    prochaine = {
+    actions.push({
       texte: "Nadia a contrôlé le devis : décide s'il peut partir.",
       bouton: "Examiner le devis",
       href: a[0] ? `/approvals?id=${Number(a[0].id)}` : "/approvals",
-    };
+    });
   }
 
   return {
@@ -112,6 +128,6 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
     runLabel: (ex[0].run_label as string | null) ?? null,
     statut: String(ex[0].status),
     etapes,
-    prochaine,
+    actions,
   };
 }

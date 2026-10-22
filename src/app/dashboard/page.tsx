@@ -3,6 +3,7 @@ import { sql } from "@/lib/db";
 import { getTenantContext } from "@/lib/tenant";
 import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
+import AFaireCard from "@/components/dashboard/AFaireCard";
 import type { CSSProperties } from "react";
 export const dynamic = "force-dynamic";
 
@@ -302,6 +303,9 @@ export default async function DashboardPage() {
         >
           {todayLabel}
         </p>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <AFaireCard orgId={orgId} />
       </div>
 
       {/* KPI ROW */}
