@@ -70,12 +70,14 @@ export default function ApprovalsInbox({
   processed,
   stats,
   experts,
+  initialId,
 }: {
   pending: PendingItem[];
   history: HistoryItem[];
   processed: ProcessedItem[];
   stats: Stats;
   experts: Expert[];
+   initialId?: number | null;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(pending[0]?.id ?? null);
   const selected = pending.find((p) => p.id === selectedId) ?? pending[0];

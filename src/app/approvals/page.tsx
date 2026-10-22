@@ -52,8 +52,13 @@ function formatDuration(min: number | null): string {
   return `${Math.round(t / 1440)} j`;
 }
 
-export default async function ApprovalsPage() {
+export default async function ApprovalsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ id?: string }> | { id?: string };
+}) {
   const { orgId } = await getTenantContext();
+  const idDemande = Number(((await searchParams) ?? {}).id);
 
   const pendingRows = await sql`
     SELECT a.id, a.title, a.tag, a.agent_label, a.payload, a.created_at,
@@ -165,7 +170,14 @@ export default async function ApprovalsPage() {
         </>
       }
     >
-      <ApprovalsInbox pending={pending} history={history} processed={processed} stats={stats} experts={experts} />
+      <ApprovalsInbox
+        pending={pending}
+        history={history}
+        processed={processed}
+        stats={stats}
+        experts={experts}
+        initialId={Number.isInteger(idDemande) && idDemande > 0 ? idDemande : null}
+      />
     </AppShell>
   );
 }

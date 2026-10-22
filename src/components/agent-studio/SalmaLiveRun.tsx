@@ -90,6 +90,15 @@ export default function SalmaLiveRun({
     });
   };
 
+  // Arrivée depuis la page « À faire » (/agents/salma?dossier=<exécution>) : le dossier est repris tout de suite.
+  useEffect(() => {
+    try {
+      const d = Number(new URLSearchParams(window.location.search).get("dossier"));
+      if (Number.isInteger(d) && d > 0) reprendre(d);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Guide : où en est l'utilisateur ?
   const objectifOk = (String(values.objectif ?? "").trim() || objectifSaisi.trim()).length >= 10;
   const clientOk = String(values.client ?? "").trim().length >= 2;

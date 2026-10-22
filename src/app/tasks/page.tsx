@@ -1,65 +1,114 @@
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
 import { getTenantContext } from "@/lib/tenant";
+import { listerDossiersChaine } from "@/lib/salma-chaine";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
-const CARD_SHADOW_HOVER = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
 
 function formatDate(date: Date): string {
   const now = new Date();
   const diffDays = Math.floor(
     (now.setHours(0, 0, 0, 0) - new Date(date).setHours(0, 0, 0, 0)) / 86400000,
   );
-  if (diffDays <= 0)
-    return date.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  if (diffDays <= 0) return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   if (diffDays === 1) return "Hier";
   return `${diffDays} j`;
 }
 
+// Pour chaque type d'approbation : ce que l'utilisateur doit faire, dit simplement, et le libellé du bouton.
+const CONSIGNES: Record<string, { quoi: string; bouton: string }> = {
+  "Go/no-go": { quoi: "Mehdi a qualifié ce prospect : décide de le transmettre à la vente ou non.", bouton: "Décider" },
+  "Validation du devis": { quoi: "Nadia a contrôlé le devis de Salma : décide s'il peut partir.", bouton: "Examiner le devis" },
+  "Suivi d'avancement": { quoi: "Soumaya a rédigé un message de suivi pour le client : relis-le avant tout envoi.", bouton: "Relire le message" },
+  "Relance de devis": { quoi: "Anas a rédigé une relance de devis : relis-la avant tout envoi.", bouton: "Relire la relance" },
+};
+const CONSIGNE_PAR_DEFAUT = { quoi: "Une décision humaine est attendue.", bouton: "Traiter" };
+
+type Action = {
+  cle: string;
+  type: string;
+  titre: string;
+  quoi: string;
+  bouton: string;
+  href: string;
+  agent: string;
+  quand: string;
+  priorite: number; // plus petit = plus tôt dans la liste
+};
+
+const bouton: React.CSSProperties = {
+  background: "var(--steel-deep)",
+  color: "#f5f6f8",
+  fontSize: 13,
+  fontWeight: 600,
+  padding: "8px 14px",
+  borderRadius: 8,
+  textDecoration: "none",
+  whiteSpace: "nowrap",
+};
+
 export default async function TasksPage() {
   const { orgId } = await getTenantContext();
+
+  const actions: Action[] = [];
+
+  // 1) Dossiers de la chaîne qui attendent les lignes de Salma : l'action la plus en amont, donc la première.
+  try {
+    const dossiers = await listerDossiersChaine(orgId);
+    for (const d of dossiers) {
+      actions.push({
+        cle: `salma-${d.executionId}`,
+        type: "Lignes du devis",
+        titre: `Devis à préparer · ${d.client}`,
+        quoi: "Salma a proposé des lignes du catalogue : vérifie les quantités, puis chiffre le devis.",
+        bouton: "Valider les lignes",
+        href: `/agents/salma?dossier=${d.executionId}`,
+        agent: "Salma",
+        quand: "En attente",
+        priorite: 0,
+      });
+    }
+  } catch (e) {
+    console.error("TasksPage dossiers", e);
+  }
+
+  // 2) Décisions humaines en attente (approbations).
   const rows = await sql`
-    SELECT a.title, a.detail, a.agent_label, a.created_at
+    SELECT a.id, a.title, a.tag, a.agent_label, a.created_at
     FROM approvals a
     WHERE a.org_id = ${orgId} AND a.status = 'en_attente'
     ORDER BY a.created_at DESC
   `;
-
-  const tasks = rows.map((row) => ({
-    title: row.title as string,
-    detail: row.detail as string,
-    agent: row.agent_label as string,
-    created: formatDate(new Date(row.created_at as string)),
-  }));
+  for (const row of rows) {
+    const tag = String(row.tag ?? "");
+    const c = CONSIGNES[tag] ?? CONSIGNE_PAR_DEFAUT;
+    actions.push({
+      cle: `appr-${row.id}`,
+      type: tag || "Décision",
+      titre: String(row.title ?? "Décision"),
+      quoi: c.quoi,
+      bouton: c.bouton,
+      href: `/approvals?id=${row.id}`,
+      agent: String(row.agent_label ?? ""),
+      quand: formatDate(new Date(row.created_at as string)),
+      priorite: 1,
+    });
+  }
 
   return (
     <AppShell
       topbar={
-        <span
-          style={{
-            fontFamily: "var(--font-display)",
-            fontWeight: 700,
-            fontSize: 18,
-          }}
-        >
-          Tâches en attente
-        </span>
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18 }}>À faire</span>
       }
     >
-      <style>{`
-        .task-row {
-          transition: box-shadow 0.15s ease, transform 0.15s ease;
-        }
-        .task-row:hover {
-          box-shadow: ${CARD_SHADOW_HOVER};
-          transform: translateY(-1px);
-        }
-      `}</style>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {tasks.length === 0 && (
+        <div style={{ fontSize: 13, color: "var(--graphite)", lineHeight: 1.5 }}>
+          Tout ce qui attend une action de ta part, au même endroit. Chaque ligne dit quoi faire ; le bouton t&apos;emmène directement
+          à la bonne étape, sans passer par les agents ni les workflows.
+        </div>
+
+        {actions.length === 0 && (
           <div
             style={{
               color: "var(--graphite)",
@@ -71,17 +120,18 @@ export default async function TasksPage() {
               boxShadow: CARD_SHADOW,
             }}
           >
-            Aucune tâche en attente.
+            Rien à faire pour le moment. Lance une exécution depuis Workflows, Prospect to Cash : ce qui demandera ton action apparaîtra ici.
           </div>
         )}
-        {tasks.map((task, i) => (
+
+        {actions.map((a) => (
           <div
-            key={`${task.title}-${i}`}
-            className="task-row"
+            key={a.cle}
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
+              gap: 16,
               background: "var(--surface)",
               border: "1px solid var(--line)",
               borderRadius: 14,
@@ -89,80 +139,31 @@ export default async function TasksPage() {
               boxShadow: CARD_SHADOW,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 9,
-                  background: "rgba(184,128,47,0.12)",
-                  color: "var(--amber)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M12 7v5l3.2 2"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <div>
-                <div
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span
                   style={{
-                    fontFamily: "var(--font-display)",
-                    fontWeight: 700,
-                    fontSize: 15,
-                    marginBottom: 3,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "var(--steel-deep)",
+                    background: "var(--steel-tint)",
+                    borderRadius: 20,
+                    padding: "2px 10px",
                   }}
                 >
-                  {task.title}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--graphite)" }}>
-                  {task.detail}
-                </div>
+                  {a.type}
+                </span>
+                <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: "var(--graphite)" }}>
+                  {a.agent ? `${a.agent} · ` : ""}
+                  {a.quand}
+                </span>
               </div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{a.titre}</div>
+              <div style={{ fontSize: 12.5, color: "var(--graphite)" }}>{a.quoi}</div>
             </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono)",
-                  color: "var(--graphite)",
-                  background: "var(--paper)",
-                  border: "1px solid var(--line)",
-                  borderRadius: 20,
-                  padding: "3px 10px",
-                }}
-              >
-                {task.agent}
-              </span>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono)",
-                  color: "var(--graphite)",
-                  minWidth: 40,
-                  textAlign: "right",
-                }}
-              >
-                {task.created}
-              </span>
-            </div>
+            <Link href={a.href} style={bouton}>
+              {a.bouton}
+            </Link>
           </div>
         ))}
       </div>

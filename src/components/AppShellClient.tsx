@@ -63,7 +63,7 @@ const PILOTAGE_ITEMS: NavItem[] = [
   },
   {
     href: "/tasks",
-    label: "Tâches",
+    label: "À faire",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M5 12L10 17L19 7" stroke="#f5f6f8" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
