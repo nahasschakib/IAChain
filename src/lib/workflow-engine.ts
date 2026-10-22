@@ -2,6 +2,9 @@ import { sql } from "@/lib/db";
 import { executeYasmine } from "@/lib/yasmine-core";
 import { executeMehdi } from "@/lib/mehdi-core";
 import { executeKarim } from "@/lib/karim-core";
+import { proposerLignesSalma } from "@/lib/salma-core";
+import { executeNadia } from "@/lib/nadia-core";
+import { BUDGETS_SALMA } from "@/lib/salma";
 import { ficheToText } from "@/lib/yasmine";
 import { profilFromMehdi } from "@/lib/karim";
 
@@ -18,7 +21,7 @@ export type ChainInput = {
 };
 
 export type ChainOutcome =
-  | { ok: true; executionId: number; status: "termine" | "echoue"; note: string }
+  | { ok: true; executionId: number; status: "termine" | "echoue" | "attente"; note: string }
   | { ok: false; error: string };
 
 type NodeState = "pending" | "waiting" | "running" | "done" | "failed";
@@ -50,9 +53,9 @@ async function finish(
   `;
 }
 
-// Chaîne Prospect to Cash, périmètre actuel : Yasmine → Mehdi → Karim (si Mehdi qualifie).
+// Chaîne Prospect to Cash : Yasmine → Mehdi → Karim (si Mehdi qualifie) → Salma (lignes proposées, puis pause).
 // Le champ `mapping` des nœuds n'est pas interprété : les passages sont faits ici, en code.
-// Les étapes suivantes (Salma, Anas, Nadia, approbation) ne sont pas encore branchées.
+// La suite (chiffrage par un humain, Nadia, validation du devis) est reprise par continuerApresSalma.
 export async function runProspectToCash(
   ctx: { orgId: string; userId: string },
   input: ChainInput
@@ -140,15 +143,109 @@ export async function runProspectToCash(
       await finish(executionId, "echoue", 2, "karim");
       return { ok: true, executionId, status: "echoue", note: k.outcome.error };
     }
-    const statut = k.outcome.result.statut;
+    const plan = k.outcome.result;
+    const statut = plan.statut;
     await setNode(executionId, "karim", "done", statut, k.agentRunId);
-    await finish(executionId, "termine", 3, "karim");
-    return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · ${statut}` };
+
+    // Sans plan d'approche exploitable, la chaîne s'arrête ici comme avant.
+    if (statut !== "Plan prêt") {
+      await finish(executionId, "termine", 3, "karim");
+      return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · ${statut}` };
+    }
+
+    // 4) Salma : lignes du catalogue proposées à partir du client (Yasmine), de l'angle d'approche et du cadre
+    // budgétaire (Karim). Un humain valide ensuite les lignes dans le Studio de Salma : la chaîne attend.
+    await sql`
+      INSERT INTO workflow_node_runs (execution_id, node_key, state, org_id)
+      VALUES (${executionId}, 'salma', 'running', ${ctx.orgId}),
+             (${executionId}, 'nadia', 'pending', ${ctx.orgId}),
+             (${executionId}, 'approval', 'pending', ${ctx.orgId})
+    `;
+    const cadre = (BUDGETS_SALMA as readonly string[]).find((b) => String(plan.budget_cadre ?? "").includes(b)) ?? "";
+    const s = await proposerLignesSalma(ctx, { client: societe, objectif: plan.approach_angle, budget: cadre });
+    if (!s.outcome.ok) {
+      await setNode(executionId, "salma", "pending", `Lignes non proposées : ${s.outcome.error}`);
+      await finish(executionId, "termine", 3, "karim");
+      return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · ${statut} · Salma non lancée : ${s.outcome.error}` };
+    }
+    const n = s.outcome.proposition.lignes.length;
+    await setNode(
+      executionId,
+      "salma",
+      "waiting",
+      n > 0 ? `Lignes à valider (${n})` : "Aucune ligne retenue : à compléter",
+      s.agentRunId
+    );
+    await sql`
+      UPDATE workflow_executions SET progress_done = 3, progress_total = 6, current_step = 'salma'
+      WHERE id = ${executionId}
+    `;
+    return {
+      ok: true,
+      executionId,
+      status: "attente",
+      note: `${societe} · ${noteMehdi} · ${statut} · Salma a proposé ${n} ligne${n > 1 ? "s" : ""} : à valider dans le Studio de Salma`,
+    };
   } catch (e) {
     console.error("runProspectToCash", e);
     try {
       await finish(executionId, "echoue", 0, "yasmine");
     } catch {}
     return { ok: false, error: "La chaîne a échoué. Réessaie dans un instant." };
+  }
+}
+
+// Reprise de la chaîne après le chiffrage de Salma (humain) : Nadia contrôle la remise, puis la validation du
+// devis est soumise, rattachée à la même exécution. Sans effet si l'exécution de Salma n'appartient pas à une chaîne
+// en attente. N'échoue jamais bruyamment : le chiffrage est déjà enregistré.
+export async function continuerApresSalma(
+  ctx: { orgId: string; userId: string },
+  salmaRunId: number
+): Promise<void> {
+  if (!Number.isInteger(salmaRunId)) return;
+  const rows = await sql`
+    SELECT execution_id FROM workflow_node_runs
+    WHERE node_key = 'salma' AND state = 'waiting' AND agent_run_id = ${salmaRunId} AND org_id = ${ctx.orgId}
+    LIMIT 1
+  `;
+  if (!rows[0]) return;
+  const executionId = Number(rows[0].execution_id);
+
+  // Prise du nœud en une instruction : un second chiffrage ne relance pas la chaîne.
+  const pris = await sql`
+    UPDATE workflow_node_runs SET state = 'done', note = 'Devis chiffré'
+    WHERE execution_id = ${executionId} AND node_key = 'salma' AND state = 'waiting' AND org_id = ${ctx.orgId}
+    RETURNING execution_id
+  `;
+  if (!pris[0]) return;
+  await sql`
+    UPDATE workflow_executions SET progress_done = 4, current_step = 'nadia'
+    WHERE id = ${executionId} AND org_id = ${ctx.orgId}
+  `;
+
+  await setNode(executionId, "nadia", "running", null);
+  const n = await executeNadia(ctx, { salmaRunId, executionId });
+  if (!n.outcome.ok) {
+    await setNode(executionId, "nadia", "failed", n.outcome.error);
+    await finish(executionId, "echoue", 4, "nadia");
+    return;
+  }
+  const r = n.outcome.result;
+  await setNode(executionId, "nadia", "done", r.verdict, n.agentRunId);
+
+  if (r.validation_devis === "soumise" || r.validation_devis === "deja_soumise") {
+    // Une validation déjà en attente (contrôle fait à la main avant la reprise) est rattachée à cette exécution.
+    await sql`
+      UPDATE devis_validations SET execution_id = ${executionId}
+      WHERE org_id = ${ctx.orgId} AND salma_run_id = ${salmaRunId} AND statut = 'a_valider' AND execution_id IS NULL
+    `;
+    await setNode(executionId, "approval", "waiting", "Validation du devis à décider");
+    await sql`
+      UPDATE workflow_executions SET progress_done = 5, current_step = 'approval'
+      WHERE id = ${executionId} AND org_id = ${ctx.orgId}
+    `;
+  } else {
+    await setNode(executionId, "approval", "pending", `Non lancé : ${r.verdict}`);
+    await finish(executionId, "termine", 5, "nadia");
   }
 }

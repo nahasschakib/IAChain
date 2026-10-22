@@ -1,8 +1,9 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { proposerSalma, chiffrerSalma } from "@/app/agents/salma-actions";
+import { proposerSalma, chiffrerSalma, dossiersChaine, reprendreDossier } from "@/app/agents/salma-actions";
+import type { DossierChaine } from "@/lib/salma-chaine";
 import { BUDGETS_SALMA, type SalmaOutcome } from "@/lib/salma";
 import { formatMAD, type Prestation } from "@/lib/catalogue-regle";
 
@@ -41,10 +42,53 @@ export default function SalmaLiveRun({
   const [segment, setSegment] = useState("");
   const [ajout, setAjout] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [succes, setSucces] = useState<string | null>(null);
   // Saisie de secours : en dehors de la chaîne, rien ne dérive l'objectif ni le cadre budgétaire.
   const [objectifSaisi, setObjectifSaisi] = useState("");
   const [budgetSaisi, setBudgetSaisi] = useState("");
   const [chiffre, setChiffre] = useState(false);
+  // Dossiers de la chaîne Prospect to Cash qui attendent la validation des lignes.
+  const [dossiers, setDossiers] = useState<DossierChaine[]>([]);
+  const [dossierRepris, setDossierRepris] = useState<string | null>(null);
+
+  const chargerDossiers = () => {
+    dossiersChaine()
+      .then(setDossiers)
+      .catch(() => setDossiers([]));
+  };
+  useEffect(chargerDossiers, []);
+
+  const reprendre = (executionId: number) => {
+    setMessage(null);
+    setSucces(null);
+    startTransition(async () => {
+      try {
+        const r = await reprendreDossier(executionId);
+        if (!r.ok) {
+          setMessage(r.error);
+          chargerDossiers();
+          return;
+        }
+        setEtape({ agentRunId: r.agentRunId, catalogue: r.catalogue, segments: r.segments, infos: r.proposition.informations_manquantes });
+        setLignes(
+          r.proposition.lignes.map((l) => ({
+            prestation_id: l.prestation_id,
+            quantite: String(l.quantite),
+            justification: l.justification,
+          }))
+        );
+        setSegment(r.segment);
+        setAjout("");
+        setChiffre(false);
+        setDossierRepris(r.client);
+        onState({ pending: false, outcome: null });
+        if (r.proposition.lignes.length === 0)
+          setMessage("L'IA n'a retenu aucune prestation du catalogue : ajoute-les à la main ci-dessous.");
+      } catch {
+        setMessage("Le dossier n'a pas pu être chargé. Réessaie dans un instant.");
+      }
+    });
+  };
 
   // Guide : où en est l'utilisateur ?
   const objectifOk = (String(values.objectif ?? "").trim() || objectifSaisi.trim()).length >= 10;
@@ -98,6 +142,7 @@ export default function SalmaLiveRun({
   const chiffrer = () => {
     if (!etape) return;
     setMessage(null);
+    setSucces(null);
     const quantites = lignes.map((l) => (/^\s*\d+\s*$/.test(l.quantite) ? Number(l.quantite) : NaN));
     if (quantites.some((q) => Number.isNaN(q))) {
       setMessage("Quantités : saisis des nombres entiers.");
@@ -124,6 +169,11 @@ export default function SalmaLiveRun({
         outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
       }
       if (!outcome.ok) setMessage(outcome.error);
+      else if (dossierRepris) {
+        setSucces(`Devis chiffré pour ${dossierRepris}. La chaîne continue : Nadia contrôle la remise, puis la validation du devis arrive dans Approbations.`);
+        setDossierRepris(null);
+        chargerDossiers();
+      }
       setChiffre(outcome.ok);
       onState({ pending: false, outcome });
     });
@@ -166,6 +216,27 @@ export default function SalmaLiveRun({
           l&apos;introduction. Rien n&apos;est envoyé au client : la proposition passe ensuite par un contrôle puis une approbation.
         </div>
       </div>
+      {dossiers.length > 0 && (
+        <div style={{ border: "1px solid var(--steel-deep)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
+            DOSSIERS EN ATTENTE (CHAÎNE PROSPECT TO CASH)
+          </div>
+          <div style={petit}>
+            Ces prospects ont été qualifiés par la chaîne. Salma a déjà proposé des lignes : clique sur « Reprendre », ajuste les
+            quantités, puis chiffre. La chaîne repart toute seule vers Nadia.
+          </div>
+          {dossiers.map((d) => (
+            <div key={d.executionId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, fontSize: 13 }}>
+                <strong>{d.client}</strong> <span style={petit}>· exécution {d.runLabel ?? `#${d.executionId}`}{d.note ? ` · ${d.note}` : ""}</span>
+              </div>
+              <Button type="button" onClick={() => reprendre(d.executionId)} disabled={pending}>
+                Reprendre
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
       <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={petit}>Objectif du prospect (saisie ; dans la chaîne, il sera repris du plan de Karim)</span>
         <Textarea
@@ -283,6 +354,7 @@ export default function SalmaLiveRun({
         </div>
       )}
 
+      {succes && <div style={{ fontSize: 12.5, color: "#166534", lineHeight: 1.45 }}>{succes}</div>}
       {message && <div style={{ fontSize: 12.5, color: "var(--red, #b91c1c)", lineHeight: 1.45 }}>{message}</div>}
     </div>
   );

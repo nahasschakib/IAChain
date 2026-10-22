@@ -19,6 +19,7 @@ export type NadiaCoreInput = {
   motifException?: string; // motif invoqué, à choisir dans la politique tarifaire
   commentaire?: string;
   segment?: string; // utilisé seulement si la proposition n'a pas de segment
+  executionId?: number; // exécution de la chaîne Prospect to Cash dont ce contrôle fait partie (P4-09j)
 };
 
 // Propositions récentes de Salma (les plus récentes d'abord) et motifs de la politique active.
@@ -58,6 +59,7 @@ export async function executeNadia(
 
   const salmaRunId = Number(input.salmaRunId);
   if (!Number.isInteger(salmaRunId)) return echec("Choisis d'abord une proposition de Salma.");
+  const executionId = Number.isInteger(Number(input.executionId)) && Number(input.executionId) > 0 ? Number(input.executionId) : null;
   const motifException = String(input.motifException ?? "").replace(/\s+/g, " ").trim();
   const commentaire = String(input.commentaire ?? "").trim();
   if (motifException.length > MAX_MOTIF) return echec(`Motif trop long (${MAX_MOTIF} caractères maximum).`);
@@ -145,8 +147,8 @@ export async function executeNadia(
       let validationId: number | null = null;
       try {
         const ins = await sql`
-          INSERT INTO devis_validations (org_id, salma_run_id, nadia_run_id, client, verdict, created_by)
-          VALUES (${orgId}, ${salmaRunId}, ${agentRunId}, ${prop.client}, ${result.verdict}, ${userId})
+          INSERT INTO devis_validations (org_id, salma_run_id, nadia_run_id, client, verdict, created_by, execution_id)
+          VALUES (${orgId}, ${salmaRunId}, ${agentRunId}, ${prop.client}, ${result.verdict}, ${userId}, ${executionId})
           ON CONFLICT DO NOTHING
           RETURNING id
         `;

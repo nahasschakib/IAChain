@@ -344,7 +344,7 @@ export default function NewExecutionButton({
                       fontSize: 14,
                     }}
                   >
-                    <strong>{done.status === "termine" ? "Exécution terminée" : "Exécution arrêtée"}</strong>
+                    <strong>{done.status === "termine" ? "Exécution terminée" : done.status === "attente" ? "Exécution en attente de votre action" : "Exécution arrêtée"}</strong>
                     <div style={{ marginTop: 4, color: "var(--graphite)" }}>{done.note}</div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>

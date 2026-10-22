@@ -199,8 +199,9 @@ export async function resolveApproval(
     console.error("resolveApproval relance devis", e);
   }
 
-  // Validation du devis (P4-10d) : un devis approuvé crée l'exécution « Prospect to Cash » du dossier et
-  // émet l'événement « étape validée » (étape Salma) qui alimente le suivi d'avancement de Soumaya.
+ // Validation du devis (P4-10d, P4-09j) : un devis approuvé émet l'événement « étape validée » (étape Salma) qui
+  // alimente le suivi d'avancement de Soumaya. Si le devis vient d'une exécution de la chaîne Prospect to Cash
+  // (execution_id renseigné), cette exécution est clôturée ; sinon une exécution « Devis » est créée.
   try {
     const rev = updated[0];
     const p = rev.payload as { devis_validation_id?: number | string } | null;
@@ -211,10 +212,42 @@ export async function resolveApproval(
         UPDATE devis_validations
         SET statut = ${decision === "approuve" ? "valide" : "rejete"}, decided_by = ${userId}, decided_at = now()
         WHERE id = ${validationId} AND org_id = ${orgId} AND statut = 'a_valider'
-        RETURNING id, salma_run_id, client, verdict
+        RETURNING id, salma_run_id, client, verdict, execution_id
       `;
-      if (pris[0] && decision === "approuve") {
-        const v = pris[0];
+      const v = pris[0];
+      const chaineId = v && v.execution_id ? Number(v.execution_id) : null;
+      if (v && chaineId) {
+        // Exécution de la chaîne : le dernier nœud et l'exécution reflètent la décision.
+        if (decision === "approuve") {
+          await sql`
+            UPDATE workflow_node_runs SET state = 'done', note = 'Devis validé'
+            WHERE execution_id = ${chaineId} AND node_key = 'approval' AND org_id = ${orgId}
+          `;
+          await sql`
+            UPDATE workflow_executions
+            SET status = 'termine', progress_done = 6, current_step = 'approval', finished_at = now()
+            WHERE id = ${chaineId} AND org_id = ${orgId}
+          `;
+          const sa = await sql`SELECT id FROM agents WHERE slug = 'salma'`;
+          await sql`
+            INSERT INTO etapes_validees
+              (org_id, execution_id, node_key, approval_id, agent_id, tag, decided_by, payload)
+            VALUES (${orgId}, ${chaineId}, 'salma', ${id}, ${sa[0]?.id ?? null},
+                    ${rev.tag}, ${userId}, '{}'::jsonb)
+            ON CONFLICT (approval_id) DO NOTHING
+          `;
+        } else {
+          await sql`
+            UPDATE workflow_node_runs SET state = 'failed', note = 'Devis rejeté'
+            WHERE execution_id = ${chaineId} AND node_key = 'approval' AND org_id = ${orgId}
+          `;
+          await sql`
+            UPDATE workflow_executions
+            SET status = 'echoue', progress_done = 5, current_step = 'approval', finished_at = now()
+            WHERE id = ${chaineId} AND org_id = ${orgId}
+          `;
+        }
+      } else if (v && decision === "approuve") {
         const wf = await sql`SELECT id FROM workflows WHERE slug = 'prospect-to-cash'`;
         const sa = await sql`SELECT id FROM agents WHERE slug = 'salma'`;
         const ver = await sql`
