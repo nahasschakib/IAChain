@@ -199,6 +199,22 @@ export async function resolveApproval(
   } catch (e) {
     console.error("resolveApproval relance devis", e);
   }
+    // Séquence de nurturing (P4-10h) : la séquence d'Anas suit la décision. Aucun envoi réel.
+  try {
+    const rev = updated[0];
+    const p = rev.payload as { sequence_id?: number | string } | null;
+    const sequenceId = Number(p?.sequence_id);
+    if (rev.tag === "Séquence de nurturing" && Number.isInteger(sequenceId) && sequenceId > 0) {
+      await sql`
+        UPDATE sequences_nurturing
+        SET statut = ${decision === "approuve" ? "valide" : "rejete"},
+            decided_by = ${userId}, decided_at = now()
+        WHERE id = ${sequenceId} AND org_id = ${orgId} AND statut = 'a_valider'
+      `;
+    }
+  } catch (e) {
+    console.error("resolveApproval sequence nurturing", e);
+  }
 
  // Validation du devis (P4-10d, P4-09j) : un devis approuvé émet l'événement « étape validée » (étape Salma) qui
   // alimente le suivi d'avancement de Soumaya. Si le devis vient d'une exécution de la chaîne Prospect to Cash
