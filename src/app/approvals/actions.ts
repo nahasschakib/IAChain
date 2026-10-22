@@ -199,6 +199,61 @@ export async function resolveApproval(
     console.error("resolveApproval relance devis", e);
   }
 
+  // Validation du devis (P4-10d) : un devis approuvé crée l'exécution « Prospect to Cash » du dossier et
+  // émet l'événement « étape validée » (étape Salma) qui alimente le suivi d'avancement de Soumaya.
+  try {
+    const rev = updated[0];
+    const p = rev.payload as { devis_validation_id?: number | string } | null;
+    const validationId = Number(p?.devis_validation_id);
+    if (rev.tag === "Validation du devis" && Number.isInteger(validationId) && validationId > 0) {
+      // Prise de la validation en une instruction : jamais deux exécutions pour le même devis.
+      const pris = await sql`
+        UPDATE devis_validations
+        SET statut = ${decision === "approuve" ? "valide" : "rejete"}, decided_by = ${userId}, decided_at = now()
+        WHERE id = ${validationId} AND org_id = ${orgId} AND statut = 'a_valider'
+        RETURNING id, salma_run_id, client, verdict
+      `;
+      if (pris[0] && decision === "approuve") {
+        const v = pris[0];
+        const wf = await sql`SELECT id FROM workflows WHERE slug = 'prospect-to-cash'`;
+        const sa = await sql`SELECT id FROM agents WHERE slug = 'salma'`;
+        const ver = await sql`
+          SELECT result->>'version' AS version FROM agent_runs
+          WHERE id = ${v.salma_run_id as number} AND org_id = ${orgId}
+        `;
+        if (wf[0]) {
+          const exec = await sql`
+            INSERT INTO workflow_executions
+              (workflow_id, status, progress_done, progress_total, current_step, client_label, run_label, org_id, finished_at)
+            VALUES (${wf[0].id as number}, 'termine', 1, 1, 'salma', ${v.client as string}, 'Devis', ${orgId}, now())
+            RETURNING id
+          `;
+          const executionId = exec[0].id as number;
+          await sql`
+            UPDATE workflow_executions SET run_label = ${`Devis ${ver[0]?.version ?? `#${executionId}`}`}
+            WHERE id = ${executionId} AND org_id = ${orgId}
+          `;
+          await sql`
+            INSERT INTO workflow_node_runs (execution_id, node_key, state, note, org_id)
+            VALUES (${executionId}, 'salma', 'done', ${`Devis validé · ${v.verdict as string}`}, ${orgId})
+          `;
+          await sql`
+            INSERT INTO etapes_validees
+              (org_id, execution_id, node_key, approval_id, agent_id, tag, decided_by, payload)
+            VALUES (${orgId}, ${executionId}, 'salma', ${id}, ${sa[0]?.id ?? null},
+                    ${rev.tag}, ${userId}, '{}'::jsonb)
+            ON CONFLICT (approval_id) DO NOTHING
+          `;
+          await sql`
+            UPDATE devis_validations SET execution_id = ${executionId}
+            WHERE id = ${validationId} AND org_id = ${orgId}
+          `;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("resolveApproval validation devis", e);
+  }
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
   revalidatePath("/workflows");

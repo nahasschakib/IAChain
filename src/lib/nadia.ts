@@ -24,6 +24,8 @@ export type NadiaResult = PropositionLue & {
   commentaire: string;
   politique_version: number | null;
   proposition_run_id: number;
+  // Validation humaine du devis (P4-10d) : soumise à approbation après un verdict Conforme ou Dérogation requise.
+  validation_devis?: "soumise" | "deja_soumise" | "deja_validee" | "non_requise" | "erreur";
   version: string | null; // vN du livrable de Nadia
 };
 

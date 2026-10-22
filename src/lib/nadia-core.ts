@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { getPolitiqueActive } from "@/lib/politique-tarifaire";
+import { formatMAD } from "@/lib/catalogue-regle";
 import {
   MAX_COMMENTAIRE,
   MAX_MOTIF,
@@ -7,6 +8,7 @@ import {
   lireProposition,
   type ListePourNadia,
   type NadiaOutcome,
+  type NadiaResult,
   type PropositionResume,
 } from "@/lib/nadia";
 
@@ -135,7 +137,68 @@ export async function executeNadia(
       console.error("executeNadia trace", e);
     }
 
-    return { outcome: { ok: true, result }, agentRunId };
+    // Validation du devis (P4-10d) : un devis conforme, ou en dérogation, est soumis à une approbation humaine.
+    // Un échec ici ne remet jamais en cause le verdict.
+    let validation: NonNullable<NadiaResult["validation_devis"]> = "non_requise";
+    if (result.verdict === "Conforme" || result.verdict === "Dérogation requise") {
+      validation = "erreur";
+      let validationId: number | null = null;
+      try {
+        const ins = await sql`
+          INSERT INTO devis_validations (org_id, salma_run_id, nadia_run_id, client, verdict, created_by)
+          VALUES (${orgId}, ${salmaRunId}, ${agentRunId}, ${prop.client}, ${result.verdict}, ${userId})
+          ON CONFLICT DO NOTHING
+          RETURNING id
+        `;
+        if (!ins[0]) {
+          const ex = await sql`
+            SELECT statut FROM devis_validations
+            WHERE org_id = ${orgId} AND salma_run_id = ${salmaRunId} AND statut IN ('a_valider', 'valide')
+            ORDER BY id DESC LIMIT 1
+          `;
+          validation = ex[0]?.statut === "valide" ? "deja_validee" : "deja_soumise";
+        } else {
+          validationId = ins[0].id as number;
+          const ttc = Number((src[0].result as Record<string, unknown>)?.total_ttc);
+          const payload = {
+            source: "Proposé par Agent Nadia · Contrôle de remise",
+            aiReco:
+              result.verdict === "Conforme"
+                ? "Valider le devis : remise conforme à la politique tarifaire"
+                : "Valider le devis : dérogation de remise, accord de la direction requis",
+            chips: ["Prospect to Cash", result.verdict],
+            extractTitle: "Devis à valider",
+            extract:
+              `${prop.client} — ${Number.isFinite(ttc) ? `${formatMAD(ttc)} MAD TTC, ` : ""}remise ${String(prop.remise_pct).replace(".", ",")} %.\n` +
+              `${result.motif}.`,
+            props: [
+              { k: "Client", v: prop.client },
+              { k: "Proposition", v: prop.version ?? `n° ${salmaRunId}` },
+              { k: "Remise", v: `${String(prop.remise_pct).replace(".", ",")} %` },
+              { k: "Contrôle de remise", v: result.verdict },
+            ],
+            lineage: ["Proposition de Salma", "Contrôle de Nadia", "Validation humaine"],
+            devis_validation_id: validationId,
+          };
+          await sql`
+            INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+            VALUES (${`Validation du devis · ${prop.client}`}, 'Validation du devis', ${agentId}, ${agent.name as string},
+                    ${JSON.stringify(payload)}::jsonb, ${orgId})
+          `;
+          validation = "soumise";
+        }
+      } catch (e) {
+        console.error("executeNadia validation devis", e);
+        // Libère la place pour une nouvelle tentative si l'approbation n'a pas pu être créée.
+        if (validationId !== null) {
+          try {
+            await sql`DELETE FROM devis_validations WHERE id = ${validationId} AND org_id = ${orgId} AND statut = 'a_valider'`;
+          } catch {}
+        }
+      }
+    }
+
+    return { outcome: { ok: true, result: { ...result, validation_devis: validation } }, agentRunId };
   } catch (e) {
     console.error("executeNadia", e);
     try {

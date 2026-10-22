@@ -78,6 +78,23 @@ export default function NadiaResultPanel({ state }: { state: NadiaRunState }) {
         </div>
       </div>
 
+      {r.validation_devis && r.validation_devis !== "non_requise" && (
+        <div style={card}>
+          <div style={{ padding: "10px 14px", background: "var(--steel-tint)", fontSize: 12, fontWeight: 600 }}>Validation du devis</div>
+          <p style={{ margin: 0, padding: 14, fontSize: 13, lineHeight: 1.6 }}>
+            {r.validation_devis === "soumise" && (
+              <>
+                Devis soumis à validation humaine : décide-le dans <a href="/approvals">Approbations</a>. Une fois validé, le suivi
+                d&apos;avancement peut informer le client.
+              </>
+            )}
+            {r.validation_devis === "deja_soumise" && "Ce devis est déjà en attente de validation dans Approbations."}
+            {r.validation_devis === "deja_validee" && "Ce devis a déjà été validé."}
+            {r.validation_devis === "erreur" && "La validation du devis n'a pas pu être créée : relance le contrôle."}
+          </p>
+        </div>
+      )}
+
       <div style={{ background: "var(--steel-tint)", borderRadius: 10, padding: "12px 14px", fontSize: "12.5px", lineHeight: 1.5 }}>
         <strong>TRAÇABILITÉ</strong> — Verdict calculé par le code à partir de la politique tarifaire de l&apos;organisation et de la proposition
         de Salma (exécution n° {r.proposition_run_id}). Aucune IA, coût nul. Nadia signale, elle ne modifie jamais une remise.
