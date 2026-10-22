@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
+import { traiterSuivis } from "@/lib/suivi-traiter";
 
 export async function resolveApproval(
   id: number,
@@ -286,6 +287,15 @@ export async function resolveApproval(
     }
   } catch (e) {
     console.error("resolveApproval validation devis", e);
+  }
+  // Suivi d'avancement (P4-10f) : le brouillon de Soumaya est produit tout de suite après la validation d'un devis,
+  // sans appel manuel de /api/suivi/traiter. Un échec n'annule pas la décision.
+  try {
+    if (decision === "approuve" && updated[0]?.tag === "Validation du devis") {
+      await traiterSuivis(orgId, userId);
+    }
+  } catch (e) {
+    console.error("resolveApproval suivi", e);
   }
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
