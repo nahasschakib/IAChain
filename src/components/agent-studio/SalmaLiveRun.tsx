@@ -92,10 +92,13 @@ export default function SalmaLiveRun({
 
   // Arrivée depuis la page « À faire » (/agents/salma?dossier=<exécution>) : le dossier est repris tout de suite.
   useEffect(() => {
+    let d = 0;
     try {
-      const d = Number(new URLSearchParams(window.location.search).get("dossier"));
-      if (Number.isInteger(d) && d > 0) reprendre(d);
+      d = Number(new URLSearchParams(window.location.search).get("dossier"));
     } catch {}
+    if (!Number.isInteger(d) || d <= 0) return;
+    const t = setTimeout(() => reprendre(d), 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

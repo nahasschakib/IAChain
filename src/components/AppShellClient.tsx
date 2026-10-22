@@ -61,6 +61,15 @@ const PILOTAGE_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+    {
+    href: "/dossiers",
+    label: "Dossiers",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M4 7h6l2 2h8v9H4z" stroke="#f5f6f8" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
   {
     href: "/tasks",
     label: "À faire",
