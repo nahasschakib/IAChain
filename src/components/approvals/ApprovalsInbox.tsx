@@ -681,7 +681,9 @@ export default function ApprovalsInbox({
                 </>
               ) : (
                 <>
-                    {otherActions.map((label) => (
+                    {otherActions
+                      .filter((label) => label !== "Modifier" || selected.tag === "Réponse support" || selected.tag === "Suivi d'avancement")
+                      .map((label) => (
                     <button
                       key={label}
                       type="button"
