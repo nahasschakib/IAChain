@@ -9,6 +9,8 @@ import PolitiqueTarifaire from "@/components/settings/PolitiqueTarifaire";
 import { getPolitiqueActive } from "@/lib/politique-tarifaire";
 import CataloguePrestations from "@/components/settings/CataloguePrestations";
 import { listPrestations } from "@/lib/catalogue-prestations";
+import BrandkitForm from "@/components/settings/BrandkitForm";
+import { getBrandkit, brandkitManque, libellesManquants, masquerRib } from "@/lib/brandkit";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 
@@ -18,14 +20,21 @@ export default async function SettingsPage() {
   const organization = orgId ? await (await clerkClient()).organizations.getOrganization({ organizationId: orgId }) : null;
 
   const tenant = await resolveTenant();
-  const [profile, options, politique, prestations] = tenant.ok
+    const [profile, options, politique, prestations, brandkit] = tenant.ok
     ? await Promise.all([
         getOrgProfile(tenant.ctx.orgId),
         listOrgOptions(tenant.ctx.orgId),
         getPolitiqueActive(tenant.ctx.orgId),
         listPrestations(tenant.ctx.orgId),
+        getBrandkit(tenant.ctx.orgId).catch((e) => {
+          console.error("settings brandkit", e);
+          return null;
+        }),
       ])
-    : [null, null, null, null];
+    : [null, null, null, null, null];
+        // Le RIB reste côté serveur : seul son masque est transmis au navigateur.
+        const brandkitManquant = libellesManquants(brandkitManque(brandkit, "facture"));
+        const brandkitClient = brandkit ? { ...brandkit, rib: null } : null;
 
   return (
     <AppShell
@@ -95,6 +104,35 @@ export default async function SettingsPage() {
             <span>{organization?.name ?? "Personnel"}</span>
           </div>
         </div>
+                {tenant.ok && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, var(--steel-tint), #cddce7)",
+                  color: "var(--steel)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 20V6l8-3 8 3v14M9 20v-5h6v5M8 9h2M14 9h2M8 12h2M14 12h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>Brand kit</span>
+            </div>
+            <BrandkitForm
+              kit={brandkitClient}
+              ribMasque={masquerRib(brandkit?.rib ?? null)}
+              manque={brandkitManquant}
+              canEdit={tenant.ctx.isOrgAdmin}
+            />
+          </div>
+        )}
 
         {tenant.ok && profile && options && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
