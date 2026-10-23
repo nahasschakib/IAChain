@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
 import { traiterSuivis } from "@/lib/suivi-traiter";
+import { appliquerDecisionFacture } from "@/lib/karima-core";
 
 export async function resolveApproval(
   id: number,
@@ -303,6 +304,19 @@ export async function resolveApproval(
     }
   } catch (e) {
     console.error("resolveApproval validation devis", e);
+  }
+    // Validation de la facture (P4-10i) : la facture de Karima suit la décision. Approbation : numéro attribué
+  // (AAAA-NNNN). Rejet : facture « rejete », sans numéro. Aucun envoi au client.
+  try {
+    const rev = updated[0];
+    const p = rev.payload as { facture_id?: number | string } | null;
+    const factureId = Number(p?.facture_id);
+    if (rev.tag === "Validation de la facture" && Number.isInteger(factureId) && factureId > 0) {
+      const r = await appliquerDecisionFacture({ orgId, userId, factureId, decision });
+      if (!r.ok) console.error("resolveApproval validation facture", r.error);
+    }
+  } catch (e) {
+    console.error("resolveApproval validation facture", e);
   }
   // Suivi d'avancement (P4-10f) : le brouillon de Soumaya est produit tout de suite après la validation d'un devis,
   // sans appel manuel de /api/suivi/traiter. Un échec n'annule pas la décision.
