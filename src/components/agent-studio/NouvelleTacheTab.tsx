@@ -46,6 +46,8 @@ import SalmaLiveRun, { type SalmaRunState } from "./SalmaLiveRun";
 import SalmaResultPanel from "./SalmaResultPanel";
 import NadiaLiveRun, { type NadiaRunState } from "./NadiaLiveRun";
 import NadiaResultPanel from "./NadiaResultPanel";
+import KarimaLiveRun, { type KarimaRunState } from "./KarimaLiveRun";
+import KarimaResultPanel from "./KarimaResultPanel";
 import AnasRelanceRun, { type AnasRelanceState } from "./AnasRelanceRun";
 import AnasRelancePanel from "./AnasRelancePanel";
 import AnasNurturingRun, { type AnasNurturingState } from "./AnasNurturingRun";
@@ -155,6 +157,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const [salmaState, setSalmaState] = useState<SalmaRunState>({ pending: false, outcome: null });
   const [nadiaState, setNadiaState] = useState<NadiaRunState>({ pending: false, outcome: null });
   const [anasRelanceState, setAnasRelanceState] = useState<AnasRelanceState>({ pending: false, outcome: null });
+  const [karimaState, setKarimaState] = useState<KarimaRunState>({ pending: false, outcome: null });
   const [anasNurturingState, setAnasNurturingState] = useState<AnasNurturingState>({ pending: false, outcome: null });
   const isMehdi = agent.slug === "mehdi";
   const isYasmine = agent.slug === "yasmine";
@@ -165,10 +168,11 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
   const isLina = agent.slug === "lina";
   const isSalma = agent.slug === "salma";
   const isNadia = agent.slug === "nadia";
+  const isKarima = agent.slug === "karima";
   const isAnas = agent.slug === "anas";
   const anasRelanceActif = isAnas && (anasRelanceState.pending || anasRelanceState.outcome !== null);
   const anasNurturingActif = isAnas && (anasNurturingState.pending || anasNurturingState.outcome !== null);
-  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia || isOthmane || isLina || isSalma || isNadia || anasRelanceActif || anasNurturingActif;
+  const isLive = isMehdi || isYasmine || isKarim || isIlyas || isSofia || isOthmane || isLina || isSalma || isNadia || isKarima || anasRelanceActif || anasNurturingActif;
   const Preview = isLive ? undefined : PREVIEWS[agent.slug];
   const buttonLabel =
     status === "running" ? "Exécution en cours…" : status === "done" ? "Relancer l'agent" : config.buttonLabel;
@@ -226,6 +230,12 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       : nadiaState.outcome
       ? "résultat réel · code"
       : "en attente de la proposition"
+      : isKarima
+    ? karimaState.pending
+      ? "établissement en cours…"
+      : karimaState.outcome
+      ? "résultat réel · code"
+      : "en attente du devis"
       : anasNurturingActif
       ? anasNurturingState.pending
       ? "rédaction en cours…"
@@ -286,6 +296,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
              {isLina && <LinaLiveRun values={values} onState={setLinaState} />}
             {isSalma && <SalmaLiveRun values={values} onState={setSalmaState} />}
             {isNadia && <NadiaLiveRun values={values} onState={setNadiaState} />}
+            {isKarima && <KarimaLiveRun values={values} onState={setKarimaState} />}
             {isAnas && (
                     <AnasNurturingRun
                       onState={(s) => {
@@ -323,7 +334,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
       <div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
           <span style={{ fontSize: "12px", fontWeight: 700, letterSpacing: "0.05em", color: "var(--muted-foreground)" }}>
-          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : isOthmane ? "PLAN MARKETING" : isLina ? "CONTENUS RÉDIGÉS" : isSalma ? "PROPOSITION COMMERCIALE" : isNadia ? "VERDICT DE REMISE" : anasNurturingActif ? "SÉQUENCE DE NURTURING" : anasRelanceActif ? "RELANCE DE DEVIS" : "APERÇU DU LIVRABLE"}
+          {isMehdi ? "RÉSULTAT DE LA QUALIFICATION" : isYasmine ? "RÉSULTAT DE LA CAPTURE" : isKarim ? "PLAN D'APPROCHE" : isIlyas ? "LISTE DE COMPTES CIBLÉS" : isSofia ? "RÉSULTAT DE LA VEILLE" : isOthmane ? "PLAN MARKETING" : isLina ? "CONTENUS RÉDIGÉS" : isSalma ? "PROPOSITION COMMERCIALE" : isNadia ? "VERDICT DE REMISE" : isKarima ? "FACTURE" : anasNurturingActif ? "SÉQUENCE DE NURTURING" : anasRelanceActif ? "RELANCE DE DEVIS" : "APERÇU DU LIVRABLE"}
           </span>
           <span
             style={{
@@ -357,6 +368,8 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
           <SalmaResultPanel state={salmaState} />
            ) : isNadia ? (
           <NadiaResultPanel state={nadiaState} />
+           ) : isKarima ? (
+          <KarimaResultPanel state={karimaState} />
           ) : anasNurturingActif ? (
           <AnasNurturingPanel state={anasNurturingState} />
         ) : anasRelanceActif ? (
