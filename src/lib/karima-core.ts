@@ -1,7 +1,8 @@
 import { sql } from "@/lib/db";
 import { formatMAD } from "@/lib/catalogue-regle";
-import { getBrandkit, brandkitManque, libellesManquants } from "@/lib/brandkit";
-import { calculerFacture, ecartsAvecDevis, lireDevisFacturable } from "@/lib/karima-facture";
+import { getBrandkit, brandkitManque, libellesManquants, type Brandkit } from "@/lib/brandkit";
+import { calculerFacture, ecartsAvecDevis, lireDevisFacturable, type LigneDevis } from "@/lib/karima-facture";
+import { construireUbl, UBL_PROFIL_LIBELLE, type FacturePourUbl } from "@/lib/karima-ubl";
 
 type Ctx = { orgId: string; userId: string };
 
@@ -379,5 +380,77 @@ export async function appliquerDecisionFacture(a: {
   } catch (e) {
     console.error("appliquerDecisionFacture trace", e);
   }
+  // XML de la facture : un échec n'annule jamais la validation (il sera régénéré au téléchargement).
+  try {
+    await genererEtEnregistrerXml(orgId, factureId);
+  } catch (e) {
+    console.error("appliquerDecisionFacture xml", e);
+  }
   return { ok: true, numero: f.numero as string };
+}
+// Génère le XML UBL d'une facture validée et l'enregistre (statut de transmission « non_transmise »).
+// Le fichier d'une facture déjà soumise à une plateforme n'est jamais écrasé.
+async function genererEtEnregistrerXml(orgId: string, factureId: number): Promise<{ numero: string; xml: string } | null> {
+  const rows = await sql`
+    SELECT numero, to_char(date_emission, 'YYYY-MM-DD') AS date_emission,
+           to_char(date_echeance, 'YYYY-MM-DD') AS date_echeance,
+           devise, reference_commande, devis_version, emetteur, lignes, client,
+           client_ice, client_identifiant_fiscal, client_rc, client_adresse,
+           remise_pct, total_brut_ht, remise_montant, total_ht, total_tva, total_ttc, tva_detail
+    FROM factures
+    WHERE id = ${factureId} AND org_id = ${orgId} AND statut = 'valide'
+  `;
+  const f = rows[0];
+  if (!f) return null;
+
+  const detail = Array.isArray(f.tva_detail) ? (f.tva_detail as { taux?: unknown }[]) : [];
+  const tauxTva = Number(detail[0]?.taux);
+  if (!Number.isFinite(tauxTva)) throw new Error("Taux de TVA illisible sur la facture.");
+
+  const facture: FacturePourUbl = {
+    numero: String(f.numero),
+    date_emission: String(f.date_emission),
+    date_echeance: String(f.date_echeance),
+    devise: String(f.devise ?? "MAD"),
+    reference_commande: (f.reference_commande as string | null) ?? null,
+    devis_version: (f.devis_version as string | null) ?? null,
+    emetteur: f.emetteur as Brandkit,
+    client: {
+      nom: String(f.client),
+      ice: String(f.client_ice ?? ""),
+      identifiant_fiscal: (f.client_identifiant_fiscal as string | null) ?? null,
+      rc: (f.client_rc as string | null) ?? null,
+      adresse: String(f.client_adresse ?? ""),
+    },
+    lignes: f.lignes as LigneDevis[],
+    total_brut_ht: Number(f.total_brut_ht),
+    remise_pct: Number(f.remise_pct),
+    remise_montant: Number(f.remise_montant),
+    total_net_ht: Number(f.total_ht),
+    tva_pct: tauxTva,
+    tva_montant: Number(f.total_tva),
+    total_ttc: Number(f.total_ttc),
+  };
+  const xml = construireUbl(facture);
+
+  await sql`
+    INSERT INTO facture_transmissions (org_id, facture_id, fournisseur, statut, xml, xml_profil)
+    VALUES (${orgId}, ${factureId}, 'dgi', 'non_transmise', ${xml}, ${UBL_PROFIL_LIBELLE})
+    ON CONFLICT (facture_id, fournisseur) DO UPDATE
+      SET xml = EXCLUDED.xml, xml_profil = EXCLUDED.xml_profil, updated_at = now()
+      WHERE facture_transmissions.statut = 'non_transmise'
+  `;
+  return { numero: String(f.numero), xml };
+}
+
+// XML d'une facture validée : celui déjà enregistré, sinon généré à la demande.
+export async function xmlDeLaFacture(orgId: string, factureId: number): Promise<{ numero: string; xml: string } | null> {
+  const ex = await sql`
+    SELECT f.numero, t.xml
+    FROM facture_transmissions t
+    JOIN factures f ON f.id = t.facture_id AND f.org_id = t.org_id
+    WHERE t.facture_id = ${factureId} AND t.org_id = ${orgId} AND t.fournisseur = 'dgi' AND t.xml IS NOT NULL
+  `;
+  if (ex[0]) return { numero: String(ex[0].numero), xml: String(ex[0].xml) };
+  return genererEtEnregistrerXml(orgId, factureId);
 }
