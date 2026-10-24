@@ -3,6 +3,8 @@ import { formatMAD } from "@/lib/catalogue-regle";
 import { getBrandkit, brandkitManque, libellesManquants, type Brandkit } from "@/lib/brandkit";
 import { calculerFacture, ecartsAvecDevis, lireDevisFacturable, type LigneDevis } from "@/lib/karima-facture";
 import { construireUbl, UBL_PROFIL_LIBELLE, type FacturePourUbl } from "@/lib/karima-ubl";
+import { getPolitiqueActive } from "@/lib/politique-tarifaire";
+import { controlerFacture, lireControleDevis } from "@/lib/nadia";
 
 type Ctx = { orgId: string; userId: string };
 
@@ -117,7 +119,7 @@ export async function executeKarima(
   try {
     // 1. Le devis doit être validé et appartenir à l'organisation.
     const vals = await sql`
-      SELECT id, salma_run_id, client, execution_id
+      SELECT id, salma_run_id, nadia_run_id, client, execution_id
       FROM devis_validations
       WHERE id = ${validationId} AND org_id = ${orgId} AND statut = 'valide'
     `;
@@ -135,6 +137,29 @@ export async function executeKarima(
     const ecarts = ecartsAvecDevis(devis, calcul);
     if (ecarts.length > 0) {
       return echec(`Les montants du devis ne correspondent pas au recalcul : ${ecarts.slice(0, 3).join(" ; ")}.`);
+    }
+        // 2 bis. Second contrôle de Nadia (code, sans IA) : la remise de la facture doit respecter la politique.
+    // Non conforme ou impossible à conclure : pas de facture, et l'action corrective est indiquée.
+    const nrun = val.nadia_run_id
+      ? await sql`SELECT result FROM agent_runs WHERE id = ${val.nadia_run_id as number} AND org_id = ${orgId} AND status = 'ok'`
+      : [];
+    const ctrlDevis = nrun[0] ? lireControleDevis(nrun[0].result) : null;
+    if (!ctrlDevis)
+      return echec(
+        "Le contrôle de remise de Nadia sur ce devis est introuvable ou illisible. Action corrective : relancer le contrôle de Nadia sur la proposition, puis faire valider le devis."
+      );
+    let politique;
+    try {
+      politique = await getPolitiqueActive(orgId);
+    } catch (e) {
+      console.error("executeKarima politique", e);
+      return echec("Politique tarifaire illisible (erreur technique). Réessaie dans un instant.");
+    }
+    const controle = controlerFacture(politique, ctrlDevis, devis.remise_pct, val.nadia_run_id as number);
+    if (controle.verdict !== "Conforme") {
+      return echec(
+        `Facture refusée : ${controle.motif}. Action corrective : ${controle.action_corrective ?? "contrôle manuel requis."}`
+      );
     }
 
     // 3. Brand kit de l'organisation (émetteur).
@@ -222,14 +247,14 @@ export async function executeKarima(
         org_id, salma_run_id, validation_id, execution_id, client, client_account_id,
         client_ice, client_identifiant_fiscal, client_rc, client_adresse,
         emetteur, lignes, remise_pct, total_brut_ht, remise_montant, total_ht, total_tva, total_ttc, tva_detail,
-        devise, reference_commande, devis_version, statut, agent_run_id, version, created_by
+        devise, reference_commande, devis_version, controle, statut, agent_run_id, version, created_by
       ) VALUES (
         ${orgId}, ${salmaRunId}, ${validationId}, ${val.execution_id ?? null}, ${devis.client}, ${compteId},
         ${ice}, ${identifiantFiscal || null}, ${rc || null}, ${adresse},
         ${JSON.stringify(emetteur)}::jsonb, ${JSON.stringify(calcul.lignes)}::jsonb, ${calcul.remise_pct},
         ${calcul.total_brut_ht}, ${calcul.remise_montant}, ${calcul.total_net_ht}, ${calcul.tva_montant}, ${calcul.total_ttc},
         ${JSON.stringify(calcul.tva_detail)}::jsonb,
-        'MAD', ${referenceCommande || null}, ${devis.version}, 'brouillon', ${agentRunId}, ${version}, ${userId}
+       'MAD', ${referenceCommande || null}, ${devis.version}, ${JSON.stringify(controle)}::jsonb, 'brouillon', ${agentRunId}, ${version}, ${userId}
       )
       ON CONFLICT DO NOTHING
       RETURNING id
@@ -254,11 +279,13 @@ export async function executeKarima(
         props: [
           { k: "Client", v: devis.client },
           { k: "Devis", v: devis.version ?? `n° ${salmaRunId}` },
-          { k: "Total TTC", v: `${formatMAD(calcul.total_ttc)} MAD` },
+                    { k: "Total TTC", v: `${formatMAD(calcul.total_ttc)} MAD` },
+          { k: "Contrôle de remise", v: controle.derogation_couverte ? "Conforme (dérogation validée sur le devis)" : "Conforme" },
           { k: "Numéro", v: "Attribué à la validation" },
         ],
-        lineage: ["Devis validé par un humain", "Facture établie par Karima", "Validation humaine"],
+        lineage: ["Devis validé par un humain", "Contrôle de remise de Nadia", "Facture établie par Karima", "Validation humaine"],
         facture_id: factureId,
+      
       };
       await sql`
         INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
