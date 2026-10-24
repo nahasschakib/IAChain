@@ -26,6 +26,7 @@ export type DevisAFacturer = {
   devisVersion: string | null;
   factureStatut: string | null; // facture déjà en cours ou validée pour ce devis
   factureNumero: string | null;
+  factureId: number | null;
   identiteClientComplete: boolean; // ICE et adresse connus dans la fiche client
   clientIce: string | null;
   clientIdentifiantFiscal: string | null;
@@ -57,13 +58,13 @@ const nettoyer = (v: unknown) => String(v ?? "").replace(/\s+/g, " ").trim();
 export async function listerPourKarima(orgId: string): Promise<DevisAFacturer[]> {
   const rows = await sql`
     SELECT v.id, v.salma_run_id, v.client, v.execution_id, a.result,
-           f.statut AS facture_statut, f.numero AS facture_numero,
+           f.id AS facture_id, f.statut AS facture_statut, f.numero AS facture_numero,
            c.ice AS compte_ice, c.adresse AS compte_adresse,
            c.identifiant_fiscal AS compte_if, c.rc AS compte_rc
     FROM devis_validations v
     JOIN agent_runs a ON a.id = v.salma_run_id AND a.org_id = v.org_id
     LEFT JOIN LATERAL (
-      SELECT statut, numero FROM factures
+      SELECT id, statut, numero FROM factures
       WHERE org_id = v.org_id AND validation_id = v.id AND statut IN ('brouillon', 'a_valider', 'valide')
       ORDER BY id DESC LIMIT 1
     ) f ON true
@@ -88,6 +89,7 @@ export async function listerPourKarima(orgId: string): Promise<DevisAFacturer[]>
       devisVersion: typeof r.version === "string" ? r.version : null,
       factureStatut: (row.facture_statut as string | null) ?? null,
       factureNumero: (row.facture_numero as string | null) ?? null,
+      factureId: (row.facture_id as number | null) || null,
       identiteClientComplete: Boolean(row.compte_ice) && Boolean(row.compte_adresse),
       clientIce: (row.compte_ice as string | null) || null,
       clientIdentifiantFiscal: (row.compte_if as string | null) || null,

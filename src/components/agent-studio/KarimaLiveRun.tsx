@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { chargerPourKarima, runKarima } from "@/app/agents/karima-actions";
 import type { DevisAFacturer, KarimaOutcome } from "@/lib/karima-core";
 
@@ -140,9 +141,22 @@ export default function KarimaLiveRun({ values, onState }: { values: Values; onS
             ))}
           </select>
         )}
-        {dejaFactures.length > 0 && (
+                {dejaFactures.length > 0 && (
           <div style={petit}>
-            Déjà facturés ou en cours : {dejaFactures.map((d) => `${d.client}${d.devisVersion ? ` ${d.devisVersion}` : ""}${d.factureNumero ? ` (facture ${d.factureNumero})` : " (en attente de validation)"}`).join(" ; ")}.
+            Déjà facturés ou en cours :{" "}
+            {dejaFactures.map((d, i) => (
+              <span key={d.validationId}>
+                {i > 0 ? " ; " : ""}
+                {d.client}
+                {d.devisVersion ? ` ${d.devisVersion}` : ""}{" "}
+                {d.factureId ? (
+                  <Link href={`/factures/${d.factureId}`} style={{ textDecoration: "underline" }}>
+                    ({d.factureNumero ? `facture ${d.factureNumero}` : "en attente de validation"})
+                  </Link>
+                ) : null}
+              </span>
+            ))}
+            {"."}
           </div>
         )}
       </div>
