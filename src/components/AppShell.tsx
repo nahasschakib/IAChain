@@ -17,11 +17,13 @@ export default async function AppShell(props: {
   let approvalsCount = 0;
   let orgName: string | null = null;
   let permissionsCount: number | null = null; // null = lien masqué (réservé à l'Admin SOCYTAY)
+  let facturesVisibles = false; // lien « Factures » réservé aux administrateurs de l'organisation
 
   try {
     const t = await resolveTenant();
     if (t.ok) {
       orgName = t.ctx.tenantName;
+      facturesVisibles = t.ctx.isOrgAdmin;
       const rows = await sql`
         SELECT COUNT(*)::int AS n FROM approvals
         WHERE org_id = ${t.ctx.orgId} AND status = 'en_attente'
@@ -48,6 +50,7 @@ export default async function AppShell(props: {
       approvalsCount={approvalsCount}
       orgName={orgName}
       permissionsCount={permissionsCount}
+      facturesVisibles={facturesVisibles}
     />
   );
 }

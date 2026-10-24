@@ -166,6 +166,16 @@ const PERMISSIONS_ITEM: NavItem = {
     </svg>
   ),
 };
+const FACTURES_ITEM: NavItem = {
+  href: "/factures",
+  label: "Factures",
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M6 3H15L19 7V21H6V3Z" stroke="#f5f6f8" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 12H16M9 16H16M9 8H12" stroke="#f5f6f8" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+};
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
@@ -217,10 +227,11 @@ export default function AppShellClient({
   children,
   searchPlaceholder = "Rechercher un agent, un workflow…",
   topbarAction,
-    topbar,
+  topbar,
   approvalsCount = 0,
   orgName = null,
   permissionsCount = null,
+  facturesVisibles = false,
 }: {
   children: ReactNode;
   searchPlaceholder?: string;
@@ -229,6 +240,8 @@ export default function AppShellClient({
   approvalsCount?: number;
   orgName?: string | null;
    permissionsCount?: number | null;
+   facturesVisibles?: boolean;
+   
 }) {
   const pathname = usePathname();
 
@@ -329,6 +342,12 @@ export default function AppShellClient({
               active={pathname === item.href || pathname.startsWith(item.href + "/")}
             />
           ))}
+           {facturesVisibles && (
+            <NavLink
+              item={FACTURES_ITEM}
+              active={pathname === FACTURES_ITEM.href || pathname.startsWith(FACTURES_ITEM.href + "/")}
+            />
+          )}
 
           <span
             style={{
