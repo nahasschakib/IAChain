@@ -98,6 +98,18 @@ export async function listerPourKarima(orgId: string): Promise<DevisAFacturer[]>
     };
   });
 }
+// Un refus de facture laisse une trace : « À faire » l'affiche tant que le devis n'a pas de facture.
+// Un échec d'enregistrement ne doit jamais masquer le message de refus.
+async function noterRefus(orgId: string, validationId: number, verdict: string, motif: string, action: string | null) {
+  try {
+    await sql`
+      INSERT INTO facture_refus (org_id, validation_id, verdict, motif, action_corrective)
+      VALUES (${orgId}, ${validationId}, ${verdict}, ${motif}, ${action})
+    `;
+  } catch (e) {
+    console.error("noterRefus", e);
+  }
+}
 
 // Cœur de Karima : établit un brouillon de facture à partir d'un devis validé et le soumet à l'approbation.
 // Aucun appel IA, aucun envoi. Le numéro n'est attribué qu'à l'approbation (appliquerDecisionFacture).
@@ -146,10 +158,18 @@ export async function executeKarima(
       ? await sql`SELECT result FROM agent_runs WHERE id = ${val.nadia_run_id as number} AND org_id = ${orgId} AND status = 'ok'`
       : [];
     const ctrlDevis = nrun[0] ? lireControleDevis(nrun[0].result) : null;
-    if (!ctrlDevis)
+        if (!ctrlDevis) {
+      await noterRefus(
+        orgId,
+        validationId,
+        "À contrôler manuellement",
+        "Le contrôle de remise de Nadia sur ce devis est introuvable ou illisible",
+        "Relancer le contrôle de Nadia sur la proposition, puis faire valider le devis."
+      );
       return echec(
         "Le contrôle de remise de Nadia sur ce devis est introuvable ou illisible. Action corrective : relancer le contrôle de Nadia sur la proposition, puis faire valider le devis."
       );
+    }
     let politique;
     try {
       politique = await getPolitiqueActive(orgId);
@@ -159,6 +179,7 @@ export async function executeKarima(
     }
     const controle = controlerFacture(politique, ctrlDevis, devis.remise_pct, val.nadia_run_id as number);
     if (controle.verdict !== "Conforme") {
+       await noterRefus(orgId, validationId, controle.verdict, controle.motif, controle.action_corrective ?? null);
       return echec(
         `Facture refusée : ${controle.motif}. Action corrective : ${controle.action_corrective ?? "contrôle manuel requis."}`
       );
