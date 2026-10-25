@@ -70,7 +70,17 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
                   <div style={{ fontSize: 14, fontWeight: 600 }}>
                     {e.titre} <span style={{ fontWeight: 400, color: "var(--graphite)", fontSize: 12 }}>· {e.agent}</span>
                   </div>
-                  {e.note && <div style={{ fontSize: 12.5, color: "var(--graphite)" }}>{e.note}</div>}
+                                   {e.note && (
+                    <div style={{ fontSize: 12.5, color: "var(--graphite)" }}>
+                      {e.href ? (
+                        <Link href={e.href} style={{ color: "inherit", textDecoration: "underline" }}>
+                          {e.note}
+                        </Link>
+                      ) : (
+                        e.note
+                      )}
+                    </div>
+                  )}
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 600, color: "var(--graphite)" }}>{s.label}</span>
               </div>
