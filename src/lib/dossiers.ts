@@ -165,6 +165,15 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
       href: `/approvals?id=${factureEnAttenteId}`,
     });
   }
+  // Devis validé et aucune facture établie ni en attente : la suite est la facture de Karima.
+  const etapeFac = etapes.find((e) => e.key === "facture");
+  if (appr?.etat === "done" && etapeFac?.etat === "pending") {
+    actions.push({
+      texte: "Le devis est validé : établis la facture (ICE et adresse du client requis).",
+      bouton: "Établir la facture",
+      href: "/agents/karima",
+    });
+  }
 
   return {
     executionId,
