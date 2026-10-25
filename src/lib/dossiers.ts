@@ -8,6 +8,7 @@ export const ETAPES_DOSSIER: { key: string; titre: string; agent: string }[] = [
   { key: "salma", titre: "Devis", agent: "Salma" },
   { key: "nadia", titre: "Contrôle de la remise", agent: "Nadia" },
   { key: "approval", titre: "Validation du devis", agent: "Vous" },
+  { key: "facture", titre: "Facture", agent: "Karima" },
 ];
 
 export type EtapeDossier = {
@@ -16,6 +17,7 @@ export type EtapeDossier = {
   agent: string;
   etat: "done" | "running" | "waiting" | "pending" | "failed";
   note: string | null;
+  href?: string; // lien vers l'objet produit par l'étape (ex. la facture)
 };
 
 export type ProchaineAction = { texte: string; bouton: string; href: string };
@@ -83,6 +85,41 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
       note: (n?.note as string | null | undefined) ?? null,
     };
   });
+  // Facture : Karima n'a pas de nœud dans la chaîne, l'état se déduit de la table factures
+  // (rattachée au dossier par la validation du devis). Un rejet ne consomme aucun numéro.
+  let factureEnAttenteId: number | null = null;
+  try {
+    const fac = await sql`
+      SELECT f.id, f.numero
+      FROM factures f
+      JOIN devis_validations d ON d.id = f.validation_id AND d.org_id = f.org_id
+      WHERE f.org_id = ${orgId} AND d.execution_id = ${executionId}
+      ORDER BY (f.numero IS NOT NULL) DESC, f.id DESC
+      LIMIT 1
+    `;
+    const etapeFacture = etapes.find((e) => e.key === "facture");
+    if (fac[0] && etapeFacture) {
+      if (fac[0].numero) {
+        etapeFacture.etat = "done";
+        etapeFacture.note = `Facture ${String(fac[0].numero)}`;
+        etapeFacture.href = `/factures/${Number(fac[0].id)}`;
+      } else {
+        const ap = await sql`
+          SELECT a.id FROM approvals a
+          WHERE a.org_id = ${orgId} AND a.status = 'en_attente'
+            AND a.payload->>'facture_id' = ${String(fac[0].id)}
+          ORDER BY a.id DESC LIMIT 1
+        `;
+        if (ap[0]) {
+          etapeFacture.etat = "waiting";
+          etapeFacture.note = "Facture à valider";
+          factureEnAttenteId = Number(ap[0].id);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("chargerDossier facture", e);
+  }
 
   // Actions humaines attendues, la plus en amont d'abord.
   const actions: ProchaineAction[] = [];
@@ -119,6 +156,13 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
       texte: "Nadia a contrôlé le devis : décide s'il peut partir.",
       bouton: "Examiner le devis",
       href: a[0] ? `/approvals?id=${Number(a[0].id)}` : "/approvals",
+    });
+  }
+  if (factureEnAttenteId !== null) {
+    actions.push({
+      texte: "Karima a préparé la facture : vérifie-la, puis valide-la pour qu'elle reçoive son numéro.",
+      bouton: "Examiner la facture",
+      href: `/approvals?id=${factureEnAttenteId}`,
     });
   }
 
