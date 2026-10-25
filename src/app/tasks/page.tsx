@@ -50,7 +50,8 @@ const bouton: React.CSSProperties = {
 };
 
 export default async function TasksPage() {
-  const { orgId } = await getTenantContext();
+  const ctx = await getTenantContext();
+  const { orgId } = ctx;
 
   const actions: Action[] = [];
 
@@ -73,6 +74,41 @@ export default async function TasksPage() {
     }
   } catch (e) {
     console.error("TasksPage dossiers", e);
+  }
+  // 1 bis) Factures refusées par Karima : le motif et l'action corrective restent visibles
+  // tant que le devis n'a pas de facture (hors facture rejetée). Réservé aux administrateurs.
+  if (ctx.isOrgAdmin) {
+    try {
+      const refus = await sql`
+        SELECT DISTINCT ON (r.validation_id)
+               r.id, r.validation_id, r.verdict, r.motif, r.action_corrective, r.created_at,
+               d.client, d.execution_id
+        FROM facture_refus r
+        JOIN devis_validations d ON d.id = r.validation_id AND d.org_id = r.org_id
+        WHERE r.org_id = ${orgId}
+          AND NOT EXISTS (
+            SELECT 1 FROM factures f
+            WHERE f.org_id = r.org_id AND f.validation_id = r.validation_id AND f.statut <> 'rejete'
+          )
+        ORDER BY r.validation_id, r.id DESC
+      `;
+      for (const r of refus) {
+        actions.push({
+          cle: `refus-${r.id}`,
+          type: "Facture refusée",
+          titre: `Facture refusée · ${String(r.client ?? "Devis")}`,
+          quoi: `${String(r.motif)}. Action corrective : ${String(r.action_corrective ?? "contrôle manuel requis.")}`,
+          bouton: "Ouvrir Karima",
+          href: "/agents/karima",
+          dossierId: r.execution_id ? Number(r.execution_id) : undefined,
+          agent: "Karima",
+          quand: formatDate(new Date(r.created_at as string)),
+          priorite: 0,
+        });
+      }
+    } catch (e) {
+      console.error("TasksPage refus facture", e);
+    }
   }
 
   // 2) Décisions humaines en attente (approbations).
