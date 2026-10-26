@@ -6,6 +6,9 @@ import { resolveTenant } from "@/lib/tenant";
 import { traiterSuivis } from "@/lib/suivi-traiter";
 import { appliquerDecisionFacture } from "@/lib/karima-core";
 
+// Décisions réservées aux administrateurs de l'organisation (P7-14).
+const TAGS_ADMIN = ["Validation du devis", "Validation de la facture"];
+
 export async function resolveApproval(
   id: number,
   decision: "approuve" | "rejete",
@@ -18,6 +21,14 @@ export async function resolveApproval(
 
   const why = reason?.trim() || null;
   if (decision === "rejete" && !why) return { ok: false, error: "Le motif du rejet est obligatoire." };
+
+  // Un devis ou une facture ne se décide que par un administrateur : lecture du tag avant toute écriture.
+  if (!t.ctx.isOrgAdmin) {
+    const cible = await sql`SELECT tag FROM approvals WHERE id = ${id} AND org_id = ${orgId}`;
+    if (TAGS_ADMIN.includes(String(cible[0]?.tag ?? ""))) {
+      return { ok: false, error: "Seul un administrateur de l'organisation peut décider de cette demande." };
+    }
+  }
 
   // Le filtre org_id garantit qu'on ne peut pas agir sur la demande d'un autre client.
   const updated = await sql`
