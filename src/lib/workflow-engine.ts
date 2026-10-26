@@ -192,7 +192,7 @@ export async function runProspectToCash(
       s.agentRunId
     );
     await sql`
-      UPDATE workflow_executions SET progress_done = 3, progress_total = 6, current_step = 'salma'
+      UPDATE workflow_executions SET progress_done = 3, progress_total = 7, current_step = 'salma'
       WHERE id = ${executionId}
     `;
     return {
