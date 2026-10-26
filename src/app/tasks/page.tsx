@@ -22,6 +22,11 @@ const CONSIGNES: Record<string, { quoi: string; bouton: string }> = {
   "Validation du devis": { quoi: "Nadia a contrôlé le devis de Salma : décide s'il peut partir.", bouton: "Examiner le devis" },
   "Suivi d'avancement": { quoi: "Soumaya a rédigé un message de suivi pour le client : relis-le avant tout envoi.", bouton: "Relire le message" },
   "Relance de devis": { quoi: "Anas a rédigé une relance de devis : relis-la avant tout envoi.", bouton: "Relire la relance" },
+  "Validation de la facture": { quoi: "Karima a préparé la facture : vérifie les montants et l'identité du client, puis valide-la pour qu'elle reçoive son numéro.", bouton: "Examiner la facture" },
+  "Réponse support": { quoi: "Imane a rédigé une réponse à un e-mail client : relis-la, corrige-la si besoin, puis décide.", bouton: "Relire la réponse" },
+  "Analyse des causes": { quoi: "Hamza a analysé les e-mails de la période : valide les causes et recommandations avant d'agir.", bouton: "Examiner l'analyse" },
+  "Séquence de nurturing": { quoi: "Anas a rédigé une séquence de messages pour un prospect : relis-la avant tout envoi.", bouton: "Relire la séquence" },
+  "Escalade": { quoi: "Un e-mail demande l'intervention d'un humain : prends-le en charge.", bouton: "Traiter l'escalade" },
 };
 const CONSIGNE_PAR_DEFAUT = { quoi: "Une décision humaine est attendue.", bouton: "Traiter" };
 
