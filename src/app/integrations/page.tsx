@@ -1,5 +1,6 @@
 import AppShell from "@/components/AppShell";
 import { sql } from "@/lib/db";
+import { getTenantContext } from "@/lib/tenant";
 
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
@@ -62,7 +63,8 @@ function formatRelative(value: string | null): string {
 const LEVEL_TONE: Record<string, string> = { ok: "signal", warn: "amber", error: "red" };
 
 export default async function IntegrationsPage() {
-  const rows = await sql`SELECT name, status, tone, description, meta FROM integrations ORDER BY id`;
+  const { orgId } = await getTenantContext();
+  const rows = await sql`SELECT name, status, tone, description, meta FROM integrations WHERE org_id = ${orgId} ORDER BY id`;
   const CONNECTED = rows.map((row) => ({
     name: row.name as string,
     status: row.status as string,
@@ -74,7 +76,8 @@ export default async function IntegrationsPage() {
     SELECT i.name, i.tone, i.status, i.last_sync_at,
            COUNT(l.id) FILTER (WHERE l.level = 'error' AND l.created_at > now() - interval '7 days') AS errors_7d
     FROM integrations i
-    LEFT JOIN integration_logs l ON l.integration_id = i.id
+    LEFT JOIN integration_logs l ON l.integration_id = i.id AND l.org_id = ${orgId}
+    WHERE i.org_id = ${orgId}
     GROUP BY i.id
     ORDER BY i.id
   `;
@@ -82,6 +85,7 @@ export default async function IntegrationsPage() {
     SELECT i.name, l.level, l.message, l.created_at
     FROM integration_logs l
     JOIN integrations i ON i.id = l.integration_id
+    WHERE l.org_id = ${orgId} AND i.org_id = ${orgId}
     ORDER BY l.created_at DESC
     LIMIT 6
   `;
@@ -89,7 +93,7 @@ export default async function IntegrationsPage() {
     SELECT m.source_field, m.agent_field, m.transform
     FROM integration_mappings m
     JOIN integrations i ON i.id = m.integration_id
-    WHERE i.name ILIKE 'CRM%'
+    WHERE i.name ILIKE 'CRM%' AND i.org_id = ${orgId} AND m.org_id = ${orgId}
     ORDER BY m.position
   `;
 
