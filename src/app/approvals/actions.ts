@@ -241,10 +241,16 @@ export async function resolveApproval(
             UPDATE workflow_node_runs SET state = 'done', note = 'Devis validé'
             WHERE execution_id = ${chaineId} AND node_key = 'approval' AND org_id = ${orgId}
           `;
+          // La facture reste à établir (Karima attend un humain : ICE, adresse, brand kit) : l'exécution reste ouverte.
           await sql`
             UPDATE workflow_executions
-            SET status = 'termine', progress_done = 6, current_step = 'approval', finished_at = now()
+            SET status = 'en_cours', progress_done = 6, progress_total = 7, current_step = 'karima'
             WHERE id = ${chaineId} AND org_id = ${orgId}
+          `;
+                    await sql`
+            INSERT INTO workflow_node_runs (execution_id, node_key, state, note, org_id)
+            VALUES (${chaineId}, 'karima', 'waiting', 'Facture à établir', ${orgId})
+            ON CONFLICT (execution_id, node_key) DO NOTHING
           `;
           const sa = await sql`SELECT id FROM agents WHERE slug = 'salma'`;
           await sql`
@@ -313,7 +319,29 @@ export async function resolveApproval(
     const factureId = Number(p?.facture_id);
     if (rev.tag === "Validation de la facture" && Number.isInteger(factureId) && factureId > 0) {
       const r = await appliquerDecisionFacture({ orgId, userId, factureId, decision });
-      if (!r.ok) console.error("resolveApproval validation facture", r.error);
+      if (!r.ok) {
+        console.error("resolveApproval validation facture", r.error);
+      } else if (decision === "approuve") {
+        // Facture numérotée : le dernier nœud de la chaîne est fait, l'exécution se clôt à 7/7.
+        // Un rejet laisse le nœud en attente : une nouvelle facture reste possible.
+        const noeud = await sql`
+          UPDATE workflow_node_runs n
+          SET state = 'done', note = 'Facture établie'
+          FROM factures f
+          JOIN devis_validations d ON d.id = f.validation_id AND d.org_id = f.org_id
+          WHERE f.id = ${factureId} AND f.org_id = ${orgId}
+            AND n.execution_id = d.execution_id AND n.node_key = 'karima'
+            AND n.org_id = ${orgId} AND n.state = 'waiting'
+          RETURNING n.execution_id
+        `;
+        if (noeud[0]) {
+          await sql`
+            UPDATE workflow_executions
+            SET status = 'termine', progress_done = 7, progress_total = 7, current_step = 'karima', finished_at = now()
+            WHERE id = ${Number(noeud[0].execution_id)} AND org_id = ${orgId}
+          `;
+        }
+      }
     }
   } catch (e) {
     console.error("resolveApproval validation facture", e);
