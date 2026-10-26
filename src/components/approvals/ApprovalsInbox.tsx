@@ -20,6 +20,7 @@ export type ApprovalPayload = {
   props?: { k: string; v: string }[];
   lineage?: string[];
   actions?: string[];
+  facture_id?: number | string;
 };
 
 export type PendingItem = {
@@ -507,6 +508,20 @@ export default function ApprovalsInbox({
                 </div>
               </div>
             )}
+
+             {selected.tag === "Validation de la facture" &&
+              Number.isInteger(Number(payload?.facture_id)) &&
+              Number(payload?.facture_id) > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <Link
+                    href={`/factures/${Number(payload?.facture_id)}`}
+                    style={{ fontSize: 13, fontWeight: 600, color: "var(--steel)" }}
+                  >
+                    Voir la facture →
+                  </Link>
+                </div>
+              )}
+              
               {selected.workflowSlug && (
               <div style={{ marginBottom: 14 }}>
                 <Link
