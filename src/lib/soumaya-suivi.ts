@@ -54,7 +54,7 @@ export function messageDevisModele(client: string, contactNom: string | null, ve
   return (
     `${accueil}\n\n` +
     `Nous vous informons que la proposition commerciale (version ${version}) préparée pour ${client} vient d'être validée de notre côté. ` +
-    `Elle vous sera transmise par notre équipe.\n\n` +
+    `Notre équipe vous la transmettra prochainement.\n\n` +
     `Nous restons à votre écoute pour toute question.\n\n` +
     `Cordialement, L'équipe`
   );
@@ -87,7 +87,7 @@ export async function redigerSuivi(
         (contexte.contactNom ? `Nom du contact : ${contexte.contactNom}\n` : "") +
         (devis
           ? `Version du devis validé : ${devis}\n` +
-            `Étape suivante connue : le devis sera transmis au client par notre équipe (sans date).\n`
+            `Situation : le devis est validé de notre côté mais pas encore envoyé ; notre équipe le transmettra prochainement, sans date. Écris que le devis est validé et que l'équipe le transmettra prochainement ; n'écris jamais qu'il est joint, envoyé ou déjà transmis.\n`
           : ""),
       tool: OUTIL,
       tier: "fast",
