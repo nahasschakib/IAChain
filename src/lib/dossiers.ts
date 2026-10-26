@@ -90,7 +90,7 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
   let factureEnAttenteId: number | null = null;
   try {
     const fac = await sql`
-      SELECT f.id, f.numero
+      SELECT f.id, f.numero, f.statut
       FROM factures f
       JOIN devis_validations d ON d.id = f.validation_id AND d.org_id = f.org_id
       WHERE f.org_id = ${orgId} AND d.execution_id = ${executionId}
@@ -114,6 +114,8 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
           etapeFacture.etat = "waiting";
           etapeFacture.note = "Facture à valider";
           factureEnAttenteId = Number(ap[0].id);
+        } else if (fac[0].statut === "rejete") {
+          etapeFacture.note = "Facture rejetée, à refaire";
         }
       }
     }
