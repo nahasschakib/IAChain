@@ -27,6 +27,7 @@ export type ChainOutcome =
 type NodeState = "pending" | "waiting" | "running" | "done" | "failed";
 
 async function setNode(
+  orgId: string,
   executionId: number,
   nodeKey: string,
   state: NodeState,
@@ -36,11 +37,12 @@ async function setNode(
   await sql`
     UPDATE workflow_node_runs
     SET state = ${state}, note = ${note}, agent_run_id = COALESCE(${agentRunId}, agent_run_id)
-    WHERE execution_id = ${executionId} AND node_key = ${nodeKey}
+    WHERE execution_id = ${executionId} AND node_key = ${nodeKey} AND org_id = ${orgId}
   `;
 }
 
 async function finish(
+  orgId: string,
   executionId: number,
   status: "termine" | "echoue",
   done: number,
@@ -49,7 +51,7 @@ async function finish(
   await sql`
     UPDATE workflow_executions
     SET status = ${status}, progress_done = ${done}, current_step = ${step}, finished_at = now()
-    WHERE id = ${executionId}
+    WHERE id = ${executionId} AND org_id = ${orgId}
   `;
 }
 
@@ -73,7 +75,7 @@ export async function runProspectToCash(
     RETURNING id
   `;
   const executionId = exec[0].id as number;
-  await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId}`;
+  await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId} AND org_id = ${ctx.orgId}`;
 
   await sql`
     INSERT INTO workflow_node_runs (execution_id, node_key, state, org_id)
@@ -86,24 +88,24 @@ export async function runProspectToCash(
     // 1) Yasmine
     const y = await executeYasmine(ctx, { signal, canaux: input.canaux, compteCrm: input.compteCrm });
     if (!y.outcome.ok) {
-      await setNode(executionId, "yasmine", "failed", y.outcome.error, y.agentRunId);
-      await finish(executionId, "echoue", 0, "yasmine");
+      await setNode(ctx.orgId, executionId, "yasmine", "failed", y.outcome.error, y.agentRunId);
+      await finish(ctx.orgId, executionId, "echoue", 0, "yasmine");
       return { ok: true, executionId, status: "echoue", note: y.outcome.error };
     }
     const fiche = y.outcome.result;
     const societe = fiche.societe || "Prospect";
-    await sql`UPDATE workflow_executions SET client_label = ${societe} WHERE id = ${executionId}`;
+    await sql`UPDATE workflow_executions SET client_label = ${societe} WHERE id = ${executionId} AND org_id = ${ctx.orgId}`;
 
     if (fiche.verdict === "Signal insuffisant") {
-      await setNode(executionId, "yasmine", "failed", "Signal insuffisant", y.agentRunId);
-      await finish(executionId, "echoue", 0, "yasmine");
+      await setNode(ctx.orgId, executionId, "yasmine", "failed", "Signal insuffisant", y.agentRunId);
+      await finish(ctx.orgId, executionId, "echoue", 0, "yasmine");
       return { ok: true, executionId, status: "echoue", note: "Signal insuffisant : la chaîne s'arrête avant Mehdi." };
     }
-    await setNode(executionId, "yasmine", "done", fiche.verdict, y.agentRunId);
-    await sql`UPDATE workflow_executions SET progress_done = 1, current_step = 'mehdi' WHERE id = ${executionId}`;
+    await setNode(ctx.orgId, executionId, "yasmine", "done", fiche.verdict, y.agentRunId);
+    await sql`UPDATE workflow_executions SET progress_done = 1, current_step = 'mehdi' WHERE id = ${executionId} AND org_id = ${ctx.orgId}`;
 
     // 2) Mehdi, alimenté par la fiche de Yasmine
-    await setNode(executionId, "mehdi", "running", null);
+    await setNode(ctx.orgId, executionId, "mehdi", "running", null);
     const ficheTexte = ficheToText(fiche);
     const m = await executeMehdi(ctx, {
       fiche: ficheTexte,
@@ -112,13 +114,13 @@ export async function runProspectToCash(
       maturite: input.maturite || "Non précisé",
     });
     if (!m.outcome.ok) {
-      await setNode(executionId, "mehdi", "failed", m.outcome.error, m.agentRunId);
-      await finish(executionId, "echoue", 1, "mehdi");
+      await setNode(ctx.orgId, executionId, "mehdi", "failed", m.outcome.error, m.agentRunId);
+      await finish(ctx.orgId, executionId, "echoue", 1, "mehdi");
       return { ok: true, executionId, status: "echoue", note: m.outcome.error };
     }
     const q = m.outcome.result;
     const noteMehdi = q.verdict === "À compléter" ? "Fiche à compléter" : `${q.verdict} ${q.score}/100`;
-    await setNode(executionId, "mehdi", "done", noteMehdi, m.agentRunId);
+    await setNode(ctx.orgId, executionId, "mehdi", "done", noteMehdi, m.agentRunId);
         // Rattache le go/no-go créé par Mehdi à ce dossier (visible dans « À faire » et dans la vue Dossier).
     try {
       await sql`
@@ -137,14 +139,14 @@ export async function runProspectToCash(
 
     // Seul un prospect « Qualifié » est transmis à Karim.
     if (q.verdict !== "Qualifié") {
-      await setNode(executionId, "karim", "pending", `Non lancé : ${q.verdict}`);
-      await finish(executionId, "termine", 2, "mehdi");
+      await setNode(ctx.orgId, executionId, "karim", "pending", `Non lancé : ${q.verdict}`);
+      await finish(ctx.orgId, executionId, "termine", 2, "mehdi");
       return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · Karim non lancé` };
     }
-    await sql`UPDATE workflow_executions SET progress_done = 2, current_step = 'karim' WHERE id = ${executionId}`;
+    await sql`UPDATE workflow_executions SET progress_done = 2, current_step = 'karim' WHERE id = ${executionId} AND org_id = ${ctx.orgId}`;
 
     // 3) Karim, alimenté par la fiche de Yasmine et l'évaluation de Mehdi
-    await setNode(executionId, "karim", "running", null);
+    await setNode(ctx.orgId, executionId, "karim", "running", null);
     const k = await executeKarim(ctx, {
       profil: profilFromMehdi(ficheTexte, q),
       budget: q.budget_estime,
@@ -154,17 +156,17 @@ export async function runProspectToCash(
       offer: input.offer,
     });
     if (!k.outcome.ok) {
-      await setNode(executionId, "karim", "failed", k.outcome.error, k.agentRunId);
-      await finish(executionId, "echoue", 2, "karim");
+      await setNode(ctx.orgId, executionId, "karim", "failed", k.outcome.error, k.agentRunId);
+      await finish(ctx.orgId, executionId, "echoue", 2, "karim");
       return { ok: true, executionId, status: "echoue", note: k.outcome.error };
     }
     const plan = k.outcome.result;
     const statut = plan.statut;
-    await setNode(executionId, "karim", "done", statut, k.agentRunId);
+    await setNode(ctx.orgId, executionId, "karim", "done", statut, k.agentRunId);
 
     // Sans plan d'approche exploitable, la chaîne s'arrête ici comme avant.
     if (statut !== "Plan prêt") {
-      await finish(executionId, "termine", 3, "karim");
+      await finish(ctx.orgId, executionId, "termine", 3, "karim");
       return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · ${statut}` };
     }
 
@@ -179,12 +181,13 @@ export async function runProspectToCash(
     const cadre = (BUDGETS_SALMA as readonly string[]).find((b) => String(plan.budget_cadre ?? "").includes(b)) ?? "";
     const s = await proposerLignesSalma(ctx, { client: societe, objectif: plan.approach_angle, budget: cadre });
     if (!s.outcome.ok) {
-      await setNode(executionId, "salma", "pending", `Lignes non proposées : ${s.outcome.error}`);
-      await finish(executionId, "termine", 3, "karim");
+      await setNode(ctx.orgId, executionId, "salma", "pending", `Lignes non proposées : ${s.outcome.error}`);
+      await finish(ctx.orgId, executionId, "termine", 3, "karim");
       return { ok: true, executionId, status: "termine", note: `${societe} · ${noteMehdi} · ${statut} · Salma non lancée : ${s.outcome.error}` };
     }
     const n = s.outcome.proposition.lignes.length;
     await setNode(
+      ctx.orgId,
       executionId,
       "salma",
       "waiting",
@@ -192,8 +195,8 @@ export async function runProspectToCash(
       s.agentRunId
     );
     await sql`
-      UPDATE workflow_executions SET progress_done = 3, progress_total = 7, current_step = 'salma'
-      WHERE id = ${executionId}
+    UPDATE workflow_executions SET progress_done = 3, progress_total = 7, current_step = 'salma'
+    WHERE id = ${executionId} AND org_id = ${ctx.orgId}
     `;
     return {
       ok: true,
@@ -204,7 +207,7 @@ export async function runProspectToCash(
   } catch (e) {
     console.error("runProspectToCash", e);
     try {
-      await finish(executionId, "echoue", 0, "yasmine");
+      await finish(ctx.orgId, executionId, "echoue", 0, "yasmine");
     } catch {}
     return { ok: false, error: "La chaîne a échoué. Réessaie dans un instant." };
   }
@@ -238,15 +241,15 @@ export async function continuerApresSalma(
     WHERE id = ${executionId} AND org_id = ${ctx.orgId}
   `;
 
-  await setNode(executionId, "nadia", "running", null);
+  await setNode(ctx.orgId, executionId, "nadia", "running", null);
   const n = await executeNadia(ctx, { salmaRunId, executionId });
   if (!n.outcome.ok) {
-    await setNode(executionId, "nadia", "failed", n.outcome.error);
-    await finish(executionId, "echoue", 4, "nadia");
+    await setNode(ctx.orgId, executionId, "nadia", "failed", n.outcome.error);
+    await finish(ctx.orgId, executionId, "echoue", 4, "nadia");
     return;
   }
   const r = n.outcome.result;
-  await setNode(executionId, "nadia", "done", r.verdict, n.agentRunId);
+  await setNode(ctx.orgId, executionId, "nadia", "done", r.verdict, n.agentRunId);
 
   if (r.validation_devis === "soumise" || r.validation_devis === "deja_soumise") {
     // Une validation déjà en attente (contrôle fait à la main avant la reprise) est rattachée à cette exécution.
@@ -254,13 +257,13 @@ export async function continuerApresSalma(
       UPDATE devis_validations SET execution_id = ${executionId}
       WHERE org_id = ${ctx.orgId} AND salma_run_id = ${salmaRunId} AND statut = 'a_valider' AND execution_id IS NULL
     `;
-    await setNode(executionId, "approval", "waiting", "Validation du devis à décider");
+    await setNode(ctx.orgId, executionId, "approval", "waiting", "Validation du devis à décider");
     await sql`
       UPDATE workflow_executions SET progress_done = 5, current_step = 'approval'
       WHERE id = ${executionId} AND org_id = ${ctx.orgId}
     `;
   } else {
-    await setNode(executionId, "approval", "pending", `Non lancé : ${r.verdict}`);
-    await finish(executionId, "termine", 5, "nadia");
+    await setNode(ctx.orgId, executionId, "approval", "pending", `Non lancé : ${r.verdict}`);
+    await finish(ctx.orgId, executionId, "termine", 5, "nadia");
   }
 }
