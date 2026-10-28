@@ -81,7 +81,7 @@ export async function POST() {
         RETURNING id
       `;
       const executionId = exec[0].id as number;
-      await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId}`;
+      await sql`UPDATE workflow_executions SET run_label = ${`#${executionId}`} WHERE id = ${executionId} AND org_id = ${orgId}`;
 
       const noteTri = `${m.tri_categorie} · priorité ${m.tri_priorite ?? "?"}`;
       await sql`
