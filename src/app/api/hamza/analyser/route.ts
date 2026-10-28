@@ -78,15 +78,33 @@ export async function POST(req: Request) {
       lineage: ["E-mails triés", "Analyse Hamza", "Validation humaine"],
       analyse_id: r.analyseId,
     };
-    await sql`
-      INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
-      VALUES (${`Analyse des causes · ${periode}`}, 'Analyse des causes', ${agentId}, 'Hamza',
-              ${JSON.stringify(payload)}::jsonb, ${orgId})
-    `;
-    await sql`
-      UPDATE analyses_causes SET statut = 'a_valider'
-      WHERE id = ${r.analyseId} AND org_id = ${orgId}
-    `;
+    // On réserve d'abord la place « en attente » : l'index unique (db/077) refuse un second passage.
+    try {
+      await sql`
+        UPDATE analyses_causes SET statut = 'a_valider'
+        WHERE id = ${r.analyseId} AND org_id = ${orgId}
+      `;
+    } catch (e) {
+      if ((e as { code?: string }).code === "23505")
+        return NextResponse.json(
+          { ok: false, error: "Une analyse est déjà en attente de validation." },
+          { status: 409 }
+        );
+      throw e;
+    }
+    try {
+      await sql`
+        INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+        VALUES (${`Analyse des causes · ${periode}`}, 'Analyse des causes', ${agentId}, 'Hamza',
+                ${JSON.stringify(payload)}::jsonb, ${orgId})
+      `;
+    } catch (e) {
+      await sql`
+        UPDATE analyses_causes SET statut = 'brouillon'
+        WHERE id = ${r.analyseId} AND org_id = ${orgId}
+      `;
+      throw e;
+    }
   } catch (err) {
     // L'analyse est conservée en statut « brouillon » ; rien n'est perdu.
     console.error("hamza approbation", err);
