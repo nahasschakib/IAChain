@@ -121,7 +121,11 @@ describe("verdictRemise", () => {
 });
 
 describe("erreursPolitique", () => {
-  const { id: _id, version: _version, ...valide } = politique;
+   const valide: Omit<PolitiqueTarifaire, "id" | "version"> = {
+    plafonds: politique.plafonds,
+    segments: politique.segments,
+    motifs: politique.motifs,
+  };
 
   it("accepte une politique valide", () => {
     expect(erreursPolitique(valide)).toEqual([]);
