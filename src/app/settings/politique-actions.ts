@@ -103,6 +103,8 @@ export async function savePolitique(input: PolitiqueInput): Promise<PolitiqueRes
     return { ok: true, version: Number(rows[0].version) };
   } catch (e) {
     console.error("savePolitique", e);
+    if ((e as { code?: string }).code === "23505")
+      return { ok: false, error: "La politique vient d'être modifiée par un autre enregistrement. Recharge la page et réessaie." };
     return { ok: false, error: "Enregistrement impossible. Réessaie dans un instant." };
   }
 }
