@@ -75,10 +75,14 @@ Catégories :
 Règle : toute question sur une facture (erreur, montant, remboursement, paiement refusé,
 renouvellement) est classée facturation_paiement, équipe finance. Un remboursement ou
 une facture contestée implique le traitement validation_humaine.
-Priorité : critique (service bloqué, fraude ou sécurité, perte financière), haute,
+Priorité :
+- critique : service bloqué, fraude ou sécurité, perte financière
+- haute : client très mécontent, échéance proche, montant ou client important en jeu
+- normale : toute demande qui attend une réponse (question, demande commerciale, demande de démonstration)
+- basse : suggestion, remerciement, information sans action attendue
 Règle : toute question portant sur un prix ou un tarif est classée demande_commerciale,
 avec l'équipe commercial.
-normale, basse.
+Règle : une demande de démonstration, de brochure, de présentation ou de rendez-vous faite par un prospect est classée demande_commerciale, équipe commercial, priorité normale au minimum.
 Sentiment : positif, neutre, insatisfait, tres_mecontent.
 Équipe : support_n1, support_n2 (technique), finance, commercial, securite.
 Traitement : reponse_immediate (réponse simple), investigation (analyse nécessaire),
