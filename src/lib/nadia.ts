@@ -194,5 +194,5 @@ export function controlerFacture(
         "La politique a changé depuis le devis : relancer le contrôle de Nadia avec un motif d'exception, ou faire rechiffrer la remise par Salma, puis valider le nouveau devis.",
     };
   }
-  return { ...avecPlafond, ...refus(v.motif, REVOIR) };
+  return { ...refus(v.motif, REVOIR), plafond_pct: a.plafond };
 }

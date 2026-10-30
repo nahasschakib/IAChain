@@ -202,6 +202,7 @@ describe("controlerFacture : verdict final", () => {
     expect(r.motif).toContain("motif d'exception est requis");
     expect(r.action_corrective).toContain("rechiffrer");
     expect(r.derogation_couverte).toBe(false);
+    expect(r.plafond_pct).toBe(5);
   });
 
   it("refuse une dérogation dont le motif a disparu de la politique", () => {
@@ -211,6 +212,7 @@ describe("controlerFacture : verdict final", () => {
     expect(r.motif).toContain("absent de la politique");
     expect(r.action_corrective).toContain("rechiffrer");
     expect(r.derogation_couverte).toBe(false);
+    expect(r.plafond_pct).toBe(5);
   });
 
   it("refuse une remise au-delà du plafond absolu actuel", () => {
@@ -218,6 +220,8 @@ describe("controlerFacture : verdict final", () => {
     expect(r.verdict).toBe("Non conforme");
     expect(r.motif).toContain("plafond absolu");
     expect(r.action_corrective).toContain("rechiffrer");
+    expect(r.derogation_couverte).toBe(false);
+    expect(r.plafond_pct).toBe(5);
   });
 
   it("ne renvoie jamais un verdict hors des trois valeurs prévues", () => {
