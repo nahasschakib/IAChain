@@ -15,9 +15,12 @@ const refus = (raison: string): VerdictQuota => ({ autorise: false, restant: 0, 
 export function verifierQuotaEnvoi(
   envoyesAujourdhui: number,
   plafond: number = QUOTA_JOURNALIER_DEFAUT,
+  limiteFournisseur: number = QUOTA_JOURNALIER_FOURNISSEUR,
 ): VerdictQuota {
-  if (!Number.isInteger(plafond) || plafond < 1 || plafond > QUOTA_JOURNALIER_FOURNISSEUR)
-    return refus(`Plafond d'envoi invalide : un entier de 1 à ${QUOTA_JOURNALIER_FOURNISSEUR} est attendu`);
+  if (!Number.isInteger(limiteFournisseur) || limiteFournisseur < 1)
+    return refus("Limite du fournisseur invalide : envoi suspendu par précaution");
+  if (!Number.isInteger(plafond) || plafond < 1 || plafond > limiteFournisseur)
+    return refus(`Plafond d'envoi invalide : un entier de 1 à ${limiteFournisseur} est attendu`);
   if (!Number.isInteger(envoyesAujourdhui) || envoyesAujourdhui < 0)
     return refus("Nombre d'envois du jour illisible : envoi suspendu par précaution");
   if (envoyesAujourdhui >= plafond)

@@ -42,10 +42,21 @@ describe("verifierQuotaEnvoi", () => {
       expect(verifierQuotaEnvoi(0, p).autorise).toBe(false);
   });
 
-  it("refuse par précaution un nombre d'envois illisible", () => {
+   it("refuse par précaution un nombre d'envois illisible", () => {
     for (const n of [-1, 2.5, Number.NaN, Number.POSITIVE_INFINITY])
       expect(verifierQuotaEnvoi(n, 100).autorise).toBe(false);
   });
+
+  it("accepte un plafond jusqu'à la limite propre à un autre fournisseur", () => {
+    expect(verifierQuotaEnvoi(0, 400, 500)).toEqual({ autorise: true, restant: 400 });
+    expect(verifierQuotaEnvoi(0, 501, 500).autorise).toBe(false);
+  });
+
+  it("refuse une limite de fournisseur invalide", () => {
+    for (const l of [0, -1, 2.5, Number.NaN])
+      expect(verifierQuotaEnvoi(0, 100, l).autorise).toBe(false);
+  });
+
 });
 
 describe("cleJourUtc", () => {
