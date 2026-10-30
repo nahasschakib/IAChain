@@ -3,13 +3,16 @@ import { sql } from "@/lib/db";
 import { runAiTool } from "@/lib/ai";
 import { computeCost } from "@/lib/cost";
 import { decoderEntites } from "@/lib/tri-email";
+import { getBrandkit } from "@/lib/brandkit";
+import { signatureOrganisation } from "@/lib/signature-regle";
 
 const SYSTEME = `Tu es Imane, agent du support client d'une entreprise marocaine.
 Tu rédiges un BROUILLON de réponse à l'e-mail d'un client, qu'un humain pourra relire.
 
 Règles :
 - Réponds dans la langue du client (français par défaut).
-- Ton poli, clair et concis (4 à 8 lignes). Commence par une formule d'accueil, termine par « Cordialement, Le support ».
+- Ton poli, clair et concis (4 à 8 lignes). Commence par une formule d'accueil, termine par « Cordialement, » suivi de la signature indiquée dans le message.
+- Si la catégorie est demande_commerciale : ton commercial, chaleureux, orienté échange. Ne cite ni brochure, ni document, ni démonstration, ni rendez-vous, ni tarif, ni délai : rien n'est promis. Remercie, puis pose une ou deux questions de qualification (secteur d'activité, besoin). Ne dis pas que quelqu'un reviendra vers le client.
 - Tu ne connais que l'objet et un court extrait de l'e-mail. N'invente jamais de fait.
 - Ne promets jamais de remboursement, de prix, de remise, de délai ou d'engagement contractuel.
 - Si l'extrait ne suffit pas pour répondre, accuse réception, dis que la demande est prise en charge
@@ -54,9 +57,16 @@ export async function redigerReponse(
   const { orgId, userId, agentId } = ctx;
   const debut = Date.now();
   try {
+    let signature = "Le support";
+    try {
+      signature = signatureOrganisation(await getBrandkit(orgId));
+    } catch (e) {
+      console.error("imane signature", (e as { code?: string }).code ?? "erreur");
+    }
     const ai = await runAiTool({
       system: SYSTEME,
       prompt:
+        `Signature : ${signature}\n` +
         `Catégorie : ${m.tri_categorie} · priorité ${m.tri_priorite ?? "?"}\n` +
         `Justification du tri : ${m.tri_justification ?? ""}\n\n` +
         `Expéditeur : ${m.expediteur ?? ""}\n` +
