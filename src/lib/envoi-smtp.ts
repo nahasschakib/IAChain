@@ -78,9 +78,9 @@ export async function envoyerReponse(
       secure: port === 465,
       requireTLS: port !== 465,
       auth: { user: String(c.identifiant), pass: motDePasse },
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 20_000,
+      connectionTimeout: 5_000,
+      greetingTimeout: 5_000,
+      socketTimeout: 8_000,
     });
     await transport.sendMail({
       from: nom ? { name: nom, address: adresseBoite } : adresseBoite,
