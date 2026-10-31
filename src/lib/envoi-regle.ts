@@ -33,3 +33,47 @@ export function verifierQuotaEnvoi(
 export function cleJourUtc(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
+
+// Adresse simple : un seul destinataire, sans espace ni caractère de contrôle.
+const ADRESSE = /^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
+const AUTOMATIQUES = /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounces?|notifications?)([+._-]|@)/i;
+
+// Extrait l'adresse d'un expéditeur « Nom <adresse> ». Renvoie null si elle est illisible,
+// multiple ou contient un caractère de contrôle (retour à la ligne : risque d'injection d'en-têtes).
+export function extraireAdresse(expediteur: string | null | undefined): string | null {
+  if (!expediteur || /[\r\n\0]/.test(expediteur)) return null;
+  const paires = expediteur.match(/<[^<>]*>/g) ?? [];
+  if (paires.length > 1) return null;
+  let brut = expediteur.trim();
+  if (paires.length === 1) {
+    const avant = expediteur.slice(0, expediteur.indexOf("<")).replace(/"[^"]*"/g, "");
+    if (avant.includes("@")) return null;
+    const m = expediteur.match(/<([^<>]+)>\s*$/);
+    if (!m) return null;
+    brut = m[1].trim();
+  }
+  if (brut.length > 254 || !ADRESSE.test(brut)) return null;
+  return brut.toLowerCase();
+}
+
+// Objet d'une réponse : « Re: » ajouté une seule fois, sans retour à la ligne.
+export function objetReponse(objet: string | null | undefined): string {
+  const o = (objet ?? "").replace(/[\r\n\0]+/g, " ").trim().slice(0, 200);
+  if (!o) return "Re: votre message";
+  return /^re\s*:/i.test(o) ? o : `Re: ${o}`;
+}
+
+export type Destinataire = { ok: true; adresse: string } | { ok: false; raison: string };
+
+// Destinataire d'une réponse : refuse l'illisible, la boîte d'envoi elle-même et les adresses automatiques.
+export function choisirDestinataire(
+  expediteur: string | null | undefined,
+  adresseConnexion: string | null | undefined,
+): Destinataire {
+  const adresse = extraireAdresse(expediteur);
+  if (!adresse) return { ok: false, raison: "Adresse du destinataire illisible ou multiple" };
+  if (adresse === (adresseConnexion ?? "").trim().toLowerCase())
+    return { ok: false, raison: "Le destinataire est la boîte d'envoi elle-même" };
+  if (AUTOMATIQUES.test(adresse)) return { ok: false, raison: "Adresse automatique (ne pas répondre)" };
+  return { ok: true, adresse };
+}
