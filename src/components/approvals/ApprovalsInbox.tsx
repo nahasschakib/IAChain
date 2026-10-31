@@ -132,6 +132,7 @@ export default function ApprovalsInbox({
       setReason("");
       setEditing(false);
       setDraft("");
+      if (res.avertissement) setError(res.avertissement);
     });
   }
 

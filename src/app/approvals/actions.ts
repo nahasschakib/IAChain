@@ -5,6 +5,7 @@ import { sql } from "@/lib/db";
 import { resolveTenant } from "@/lib/tenant";
 import { traiterSuivis } from "@/lib/suivi-traiter";
 import { appliquerDecisionFacture } from "@/lib/karima-core";
+import { envoyerReponse } from "@/lib/envoi-smtp";
 
 // Décisions réservées aux administrateurs de l'organisation (P7-14).
 const TAGS_ADMIN = ["Validation du devis", "Validation de la facture"];
@@ -14,7 +15,7 @@ export async function resolveApproval(
   decision: "approuve" | "rejete",
   reason?: string,
   texteFinal?: string
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; avertissement?: string }> {
   const t = await resolveTenant();
   if (!t.ok) return { ok: false, error: "Accès refusé." };
   const { userId, orgId } = t.ctx;
@@ -129,6 +130,33 @@ export async function resolveApproval(
     }
   } catch (e) {
     console.error("resolveApproval etape validee", e);
+  }
+
+  // Envoi réel de la réponse validée d'Imane (P3-03h). Sans effet tant que ENVOI_EMAIL_ACTIF n'est pas « oui ».
+  // Un échec n'annule pas la décision : l'e-mail repasse à traiter par un humain.
+  let avertissement: string | undefined;
+  try {
+    const rev = updated[0];
+    const p = rev.payload as { extract?: string; email_id?: string } | null;
+    if (
+      process.env.ENVOI_EMAIL_ACTIF === "oui" &&
+      decision === "approuve" &&
+      rev.tag === "Réponse support" &&
+      p?.email_id
+    ) {
+      const proposee = typeof texteFinal === "string" ? texteFinal.trim().slice(0, 5000) : "";
+      const r = await envoyerReponse(orgId, p.email_id, proposee || (p.extract ?? "").trim());
+      if (!r.ok) {
+        await sql`
+          UPDATE emails_entrants SET statut_traitement = 'attente_interne'
+          WHERE id = ${p.email_id} AND org_id = ${orgId}
+        `;
+        avertissement = `Réponse approuvée mais non envoyée : ${r.raison}. L'e-mail reste à traiter.`;
+      }
+    }
+  } catch (e) {
+    console.error("resolveApproval envoi reponse", e);
+    avertissement = "Réponse approuvée mais l'envoi a échoué. Vérifier avant de relancer.";
   }
 
   // Suivi d'avancement (P4-07) : le brouillon de Soumaya suit la décision.
@@ -369,7 +397,7 @@ export async function resolveApproval(
   revalidatePath("/approvals");
   revalidatePath("/dashboard");
   revalidatePath("/workflows");
-  return { ok: true };
+  return avertissement ? { ok: true, avertissement } : { ok: true };
 
 }
 
