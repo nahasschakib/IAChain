@@ -135,8 +135,7 @@ export default async function IntegrationsPage() {
             >
               Rôle requis · Admin / IT
             </span>
-            <a
-              href="#"
+            <span
               style={{
                 background: "var(--steel-deep)",
                 color: "#f5f6f8",
@@ -144,11 +143,12 @@ export default async function IntegrationsPage() {
                 fontWeight: 600,
                 padding: "9px 16px",
                 borderRadius: 8,
-                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.18)",
+                opacity: 0.55,
+                cursor: "not-allowed",
               }}
             >
-              + Ajouter une intégration
-            </a>
+              + Ajouter une intégration · bientôt
+            </span>
           </div>
         </>
       }
@@ -368,9 +368,9 @@ export default async function IntegrationsPage() {
       {/* GLOBAL CONNECTORS */}
       <div>
         <div style={{ marginBottom: 4 }}>
-          <span style={SECTION_LABEL_STYLE}>DISPONIBLES — CONNECTEURS GLOBAUX</span>
+          <span style={SECTION_LABEL_STYLE}>PRÉVUS — CONNECTEURS GLOBAUX</span>
         </div>
-        <p style={{ fontSize: 12, color: "var(--graphite)", margin: "0 0 14px" }}>Disponibles quel que soit votre marché.</p>
+        <p style={{ fontSize: 12, color: "var(--graphite)", margin: "0 0 14px" }}>Prévus quel que soit votre marché.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 28 }}>
           {GLOBAL_CONNECTORS.map((name) => (
             <div
@@ -395,7 +395,7 @@ export default async function IntegrationsPage() {
       {/* SOURCING MAROC */}
       <div>
         <div style={{ marginBottom: 4 }}>
-          <span style={SECTION_LABEL_STYLE}>DISPONIBLES — SOURCING PROSPECTS · MAROC</span>
+          <span style={SECTION_LABEL_STYLE}>PRÉVUS — SOURCING PROSPECTS · MAROC</span>
         </div>
         <p style={{ fontSize: 12, color: "var(--graphite)", margin: "0 0 14px" }}>Propres au marché sélectionné ci-dessus.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14, marginBottom: 24 }}>
@@ -433,16 +433,16 @@ export default async function IntegrationsPage() {
                 )}
               </div>
               <p style={{ fontSize: 12, color: "var(--graphite)", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
-              <a href="#" style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)", marginTop: 2 }}>
-                Connecter →
-              </a>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--graphite)", marginTop: 2 }}>
+                Bientôt disponible
+              </span>
             </div>
           ))}
         </div>
 
         {/* OTHER MAROC */}
         <div style={{ marginBottom: 4 }}>
-          <span style={SECTION_LABEL_STYLE}>DISPONIBLES — AUTRES · MAROC</span>
+          <span style={SECTION_LABEL_STYLE}>PRÉVUS — AUTRES · MAROC</span>
         </div>
         <p style={{ fontSize: 12, color: "var(--graphite)", margin: "0 0 14px" }}>Propres au marché sélectionné ci-dessus.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
@@ -463,9 +463,9 @@ export default async function IntegrationsPage() {
             >
               <span style={{ fontWeight: 700, fontSize: 14 }}>{item.name}</span>
               <p style={{ fontSize: 12, color: "var(--graphite)", margin: 0, lineHeight: 1.5 }}>{item.desc}</p>
-              <a href="#" style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)", marginTop: 2 }}>
-                Connecter →
-              </a>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--graphite)", marginTop: 2 }}>
+                Bientôt disponible
+              </span>
             </div>
           ))}
         </div>
