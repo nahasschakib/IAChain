@@ -64,38 +64,57 @@ const LEVEL_TONE: Record<string, string> = { ok: "signal", warn: "amber", error:
 
 export default async function IntegrationsPage() {
   const { orgId } = await getTenantContext();
-  const rows = await sql`SELECT name, status, tone, description, meta FROM integrations WHERE org_id = ${orgId} ORDER BY id`;
-  const CONNECTED = rows.map((row) => ({
-    name: row.name as string,
-    status: row.status as string,
-    tone: row.tone as "signal" | "amber",
-    desc: row.description as string,
-    meta: row.meta as string,
-  }));
-    const healthRows = await sql`
-    SELECT i.name, i.tone, i.status, i.last_sync_at,
-           COUNT(l.id) FILTER (WHERE l.level = 'error' AND l.created_at > now() - interval '7 days') AS errors_7d
-    FROM integrations i
-    LEFT JOIN integration_logs l ON l.integration_id = i.id AND l.org_id = ${orgId}
-    WHERE i.org_id = ${orgId}
-    GROUP BY i.id
-    ORDER BY i.id
+  const connexions = await sql`
+    SELECT c.id, c.fournisseur, c.compte_email, c.identifiant, c.statut, c.derniere_sync_at, c.plafond_jour,
+           (SELECT COUNT(*) FROM envois_email e
+              WHERE e.connexion_id = c.id AND e.org_id = ${orgId} AND e.statut = 'envoye'
+                AND e.jour = (now() AT TIME ZONE 'utc')::date) AS envoyes_jour,
+           (SELECT COUNT(*) FROM envois_email e
+              WHERE e.connexion_id = c.id AND e.org_id = ${orgId} AND e.statut = 'echec'
+                AND e.envoye_at > now() - interval '7 days') AS echecs_7j
+    FROM email_connexions c
+    WHERE c.org_id = ${orgId}
+    ORDER BY c.cree_le
   `;
-  const logRows = await sql`
-    SELECT i.name, l.level, l.message, l.created_at
-    FROM integration_logs l
-    JOIN integrations i ON i.id = l.integration_id
-    WHERE l.org_id = ${orgId} AND i.org_id = ${orgId}
-    ORDER BY l.created_at DESC
+  const libelle = (c: Record<string, unknown>): string => {
+    const compte = (c.compte_email as string | null) ?? (c.identifiant as string | null) ?? "boîte e-mail";
+    return `${c.fournisseur === "imap" ? "E-mail" : "Gmail"} · ${compte}`;
+  };
+  const CONNECTED = connexions.map((c) => ({
+    name: libelle(c),
+    status: c.statut as string,
+    tone: (c.statut === "actif" ? "signal" : "amber") as "signal" | "amber",
+    desc:
+      c.fournisseur === "imap"
+        ? "Lecture des e-mails de support et envoi des réponses validées."
+        : "Lecture seule des e-mails de support.",
+    meta:
+      c.fournisseur === "imap"
+        ? `Dernière synchronisation ${formatRelative(c.derniere_sync_at as string | null)} · ${Number(c.envoyes_jour)}/${c.plafond_jour} envois aujourd'hui`
+        : `Dernière synchronisation ${formatRelative(c.derniere_sync_at as string | null)}`,
+  }));
+  const healthRows = connexions.map((c) => ({
+    name: libelle(c),
+    tone: c.statut === "actif" ? "signal" : "amber",
+    last_sync_at: c.derniere_sync_at,
+    errors_7d: c.echecs_7j,
+  }));
+  const envois = await sql`
+    SELECT c.compte_email, c.identifiant, c.fournisseur, e.statut, e.erreur, e.envoye_at
+    FROM envois_email e
+    JOIN email_connexions c ON c.id = e.connexion_id
+    WHERE e.org_id = ${orgId} AND c.org_id = ${orgId}
+    ORDER BY e.envoye_at DESC
     LIMIT 6
   `;
-  const mappingRows = await sql`
-    SELECT m.source_field, m.agent_field, m.transform
-    FROM integration_mappings m
-    JOIN integrations i ON i.id = m.integration_id
-    WHERE i.name ILIKE 'CRM%' AND i.org_id = ${orgId} AND m.org_id = ${orgId}
-    ORDER BY m.position
-  `;
+  const logRows = envois.map((e) => ({
+    name: libelle(e),
+    level: e.statut === "envoye" ? "ok" : "error",
+    message: e.statut === "envoye" ? "Réponse envoyée" : `Échec d'envoi${e.erreur ? ` · ${e.erreur}` : ""}`,
+    created_at: e.envoye_at,
+  }));
+  // Aucun connecteur CRM n'existe encore : pas de mapping à afficher.
+  const mappingRows: { source_field: string; agent_field: string; transform: string | null }[] = [];
 
   return (
     <AppShell
@@ -201,6 +220,9 @@ export default async function IntegrationsPage() {
         <div style={{ marginBottom: 14 }}>
           <span style={SECTION_LABEL_STYLE}>CONNECTÉES</span>
         </div>
+        {CONNECTED.length === 0 && (
+          <div style={{ fontSize: 12, color: "var(--graphite)", marginBottom: 14 }}>Aucune intégration connectée.</div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
           {CONNECTED.map((item) => (
             <div
