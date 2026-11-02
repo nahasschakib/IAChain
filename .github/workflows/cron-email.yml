@@ -1,0 +1,26 @@
+name: Cron e-mail
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: cron-email
+  cancel-in-progress: false
+
+jobs:
+  declencher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Appeler l'orchestrateur e-mail
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          code=$(curl -s -o reponse.json -w "%{http_code}" --max-time 90 \
+            -X POST "$CRON_URL" -H "Authorization: Bearer $CRON_SECRET")
+          echo "HTTP $code"
+          cat reponse.json
+          [ "$code" = "200" ]
