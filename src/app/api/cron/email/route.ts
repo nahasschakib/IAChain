@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { synchroniserImap } from "@/lib/email-sync-imap";
 import { trierEmailsOrganisation } from "@/lib/email-tri-org";
 import { declencherSupport } from "@/lib/email-declenchement";
+import { traiterSuivis } from "@/lib/suivi-traiter";
 
 export const maxDuration = 60;
 
@@ -71,6 +72,20 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("cron email : declenchement", e);
       ligne.declenchement = { erreur: "exception" };
+    }
+    if (Date.now() - debut > BUDGET_MS) {
+      ligne.suivi = { ignore: "budget de temps épuisé" };
+    } else {
+      try {
+        const s = await traiterSuivis(orgId, UTILISATEUR_SYSTEME);
+        ligne.suivi =
+          "erreur" in s
+            ? { erreur: s.erreur }
+            : { exclus: s.exclus, brouillons: s.brouillons, bloques: s.bloques, echecs: s.echecs };
+      } catch (e) {
+        console.error("cron email : suivi", e);
+        ligne.suivi = { erreur: "exception" };
+      }
     }
 
     resultats.push(ligne);
