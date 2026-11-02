@@ -4,6 +4,7 @@ import { redigerSuivi, type EtapeAtraiter } from "@/lib/soumaya-suivi";
 import { contexteSuivi } from "@/lib/suivi-contexte";
 
 const LIMITE = 10;
+const TENTATIVES_MAX = 3; // au-delà, l'étape est mise de côté (évite de refacturer un échec durable)
 
 // Étapes dont la validation envoie déjà un message au client (ou est interne) : pas de suivi.
 const NODES_EXCLUS = ["escalade", "imane_reply"];
@@ -42,7 +43,7 @@ export async function traiterSuivis(orgId: string, userId: string): Promise<Bila
     JOIN workflows w ON w.id = x.workflow_id
     LEFT JOIN workflow_nodes n ON n.workflow_slug = w.slug AND n.node_key = e.node_key
     LEFT JOIN emails_entrants i ON i.id::text = e.payload->>'email_id' AND i.org_id = e.org_id
-    WHERE e.org_id = ${orgId} AND e.statut = 'nouveau'
+    WHERE e.org_id = ${orgId} AND e.statut = 'nouveau' AND e.tentatives < ${TENTATIVES_MAX}
     ORDER BY e.created_at
     LIMIT ${LIMITE}
   `) as EtapeAtraiter[];
@@ -78,7 +79,7 @@ export async function traiterSuivis(orgId: string, userId: string): Promise<Bila
       const r = await redigerSuivi({ orgId, userId, agentId }, e, ctx);
       if (!r.ok) {
         // Échec : l'événement redevient « nouveau » pour un prochain passage.
-        await sql`UPDATE etapes_validees SET statut = 'nouveau' WHERE id = ${e.id} AND org_id = ${orgId}`;
+        await sql`UPDATE etapes_validees SET statut = 'nouveau', tentatives = tentatives + 1 WHERE id = ${e.id} AND org_id = ${orgId}`;
         echecs += 1;
       } else {
         brouillons += 1;
@@ -136,7 +137,7 @@ export async function traiterSuivis(orgId: string, userId: string): Promise<Bila
     } catch (err) {
       console.error("traiter suivi", err);
       try {
-        await sql`UPDATE etapes_validees SET statut = 'nouveau' WHERE id = ${e.id} AND org_id = ${orgId}`;
+        await sql`UPDATE etapes_validees SET statut = 'nouveau', tentatives = tentatives + 1 WHERE id = ${e.id} AND org_id = ${orgId}`;
       } catch {}
       echecs += 1;
     }
