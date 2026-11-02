@@ -1,0 +1,112 @@
+import { sql } from "@/lib/db";
+import { analyserCauses } from "@/lib/hamza-causes";
+
+const GRAVITE_LABEL: Record<string, string> = { faible: "faible", moyenne: "moyenne", elevee: "élevée" };
+
+function jjmmaaaa(d: Date): string {
+  return d.toISOString().slice(0, 10).split("-").reverse().join("/");
+}
+
+export type ResultatAnalyseHamza =
+  | { ok: true; analyseId: string | number; nbEmails: number; causes: number; recommandations: number }
+  | { ok: false; error: string; status: number };
+
+/**
+ * Lance l'analyse des causes de Hamza pour une organisation et crée l'approbation.
+ * Utilisée par la route /api/hamza/analyser (bouton) et par le cron (hebdomadaire).
+ */
+export async function lancerAnalyseHamza(
+  orgId: string,
+  userId: string,
+  jours: number
+): Promise<ResultatAnalyseHamza> {
+  const ag = await sql`SELECT id FROM agents WHERE name = 'Hamza'`;
+  if (!ag[0]) return { ok: false, error: "Agent introuvable", status: 500 };
+  const agentId = ag[0].id as number;
+
+  // Une seule analyse en attente de validation à la fois (évite les doublons coûteux).
+  const enAttente = await sql`
+    SELECT id FROM analyses_causes WHERE org_id = ${orgId} AND statut = 'a_valider' LIMIT 1
+  `;
+  if (enAttente[0])
+    return { ok: false, error: "Une analyse est déjà en attente de validation.", status: 409 };
+
+  const fin = new Date();
+  const debut = new Date(fin.getTime() - jours * 24 * 60 * 60 * 1000);
+
+  const r = await analyserCauses({ orgId, userId, agentId }, { debut, fin });
+  if (!r.ok) return { ok: false, error: r.error, status: 422 };
+
+  try {
+    const lignes: string[] = [r.synthese];
+    if (r.causes.length > 0) {
+      lignes.push("", "Causes identifiées :");
+      for (const c of r.causes) {
+        const n = c.emails.length;
+        lignes.push(
+          `• ${c.cause} (gravité ${GRAVITE_LABEL[c.gravite] ?? c.gravite}, ${n} e-mail${n > 1 ? "s" : ""}) — ${c.description}`
+        );
+      }
+    }
+    if (r.recommandations.length > 0) {
+      lignes.push("", "Recommandations :");
+      for (const x of r.recommandations) lignes.push(`• [${x.priorite}] ${x.action}`);
+    }
+
+    const periode = `du ${jjmmaaaa(debut)} au ${jjmmaaaa(fin)}`;
+    const payload = {
+      source: "Proposé par Agent Hamza · Analyse des causes",
+      aiReco: "Valider l'analyse des causes",
+      chips: ["Support Client", `${r.nbEmails} e-mails`],
+      extractTitle: "Synthèse de l'analyse",
+      extract: lignes.join("\n"),
+      props: [
+        { k: "Période", v: periode },
+        { k: "E-mails analysés", v: String(r.nbEmails) },
+        { k: "Causes identifiées", v: String(r.causes.length) },
+      ],
+      lineage: ["E-mails triés", "Analyse Hamza", "Validation humaine"],
+      analyse_id: r.analyseId,
+    };
+    // On réserve d'abord la place « en attente » : l'index unique (db/077) refuse un second passage.
+    try {
+      await sql`
+        UPDATE analyses_causes SET statut = 'a_valider'
+        WHERE id = ${r.analyseId} AND org_id = ${orgId}
+      `;
+    } catch (e) {
+      if ((e as { code?: string }).code === "23505")
+        return { ok: false, error: "Une analyse est déjà en attente de validation.", status: 409 };
+      throw e;
+    }
+    try {
+      await sql`
+        INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)
+        VALUES (${`Analyse des causes · ${periode}`}, 'Analyse des causes', ${agentId}, 'Hamza',
+                ${JSON.stringify(payload)}::jsonb, ${orgId})
+      `;
+    } catch (e) {
+      await sql`
+        UPDATE analyses_causes SET statut = 'brouillon'
+        WHERE id = ${r.analyseId} AND org_id = ${orgId}
+      `;
+      throw e;
+    }
+  } catch (err) {
+    // L'analyse est conservée en statut « brouillon » ; rien n'est perdu.
+    console.error("hamza approbation", err);
+    return {
+      ok: false,
+      error: "Analyse produite, mais l'approbation n'a pas pu être créée.",
+      status: 500,
+    };
+  }
+
+  return {
+    ok: true,
+    analyseId: r.analyseId,
+    nbEmails: r.nbEmails,
+    causes: r.causes.length,
+    recommandations: r.recommandations.length,
+  };
+}
