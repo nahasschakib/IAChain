@@ -6,9 +6,9 @@ import { resolveTenant } from "@/lib/tenant";
 import { traiterSuivis } from "@/lib/suivi-traiter";
 import { appliquerDecisionFacture } from "@/lib/karima-core";
 import { envoyerReponse } from "@/lib/envoi-smtp";
+import { TAGS_ADMIN } from "@/lib/approbations-roles";
 
-// Décisions réservées aux administrateurs de l'organisation (P7-14).
-const TAGS_ADMIN = ["Validation du devis", "Validation de la facture"];
+
 
 export async function resolveApproval(
   id: number,
@@ -409,6 +409,14 @@ export async function delegateApproval(
   const t = await resolveTenant();
   if (!t.ok) return { ok: false, error: "Accès refusé." };
   const { userId, orgId } = t.ctx;
+
+  // Un devis ou une facture ne se délègue que par un administrateur (même règle que la décision, P7-22).
+  if (!t.ctx.isOrgAdmin) {
+    const cible = await sql`SELECT tag FROM approvals WHERE id = ${id} AND org_id = ${orgId}`;
+    if (TAGS_ADMIN.includes(String(cible[0]?.tag ?? ""))) {
+      return { ok: false, error: "Seul un administrateur de l'organisation peut déléguer cette demande." };
+    }
+  }
 
   const why = reason.trim();
   if (!why) return { ok: false, error: "Le motif de la délégation est obligatoire." };
