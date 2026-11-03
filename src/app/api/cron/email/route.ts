@@ -5,6 +5,7 @@ import { synchroniserImap } from "@/lib/email-sync-imap";
 import { trierEmailsOrganisation } from "@/lib/email-tri-org";
 import { declencherSupport } from "@/lib/email-declenchement";
 import { traiterSuivis } from "@/lib/suivi-traiter";
+import { lancerAnalyseHamza } from "@/lib/hamza-analyse-org";
 
 export const maxDuration = 60;
 
@@ -85,6 +86,30 @@ export async function POST(req: Request) {
       } catch (e) {
         console.error("cron email : suivi", e);
         ligne.suivi = { erreur: "exception" };
+      }
+    }
+
+    // Analyse hebdomadaire de Hamza : au plus une fois tous les 7 jours par organisation.
+    if (Date.now() - debut > BUDGET_MS) {
+      ligne.hamza = { ignore: "budget de temps épuisé" };
+    } else {
+      try {
+        const recente = await sql`
+          SELECT 1 FROM analyses_causes
+          WHERE org_id = ${orgId} AND created_at > now() - interval '7 days'
+          LIMIT 1
+        `;
+        if (recente[0]) {
+          ligne.hamza = { ignore: "analyse récente (moins de 7 jours)" };
+        } else {
+          const a = await lancerAnalyseHamza(orgId, UTILISATEUR_SYSTEME, 7);
+          ligne.hamza = a.ok
+            ? { ok: true, nb_emails: a.nbEmails, causes: a.causes }
+            : { ignore: a.error, status: a.status };
+        }
+      } catch (e) {
+        console.error("cron email : hamza", e);
+        ligne.hamza = { erreur: "exception" };
       }
     }
 
