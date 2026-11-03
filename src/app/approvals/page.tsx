@@ -57,7 +57,7 @@ export default async function ApprovalsPage({
 }: {
   searchParams?: Promise<{ id?: string }> | { id?: string };
 }) {
-  const { orgId } = await getTenantContext();
+  const { orgId, isOrgAdmin } = await getTenantContext();
   const idDemande = Number(((await searchParams) ?? {}).id);
 
   const pendingRows = await sql`
@@ -176,6 +176,7 @@ export default async function ApprovalsPage({
         processed={processed}
         stats={stats}
         experts={experts}
+        isOrgAdmin={isOrgAdmin}
         initialId={Number.isInteger(idDemande) && idDemande > 0 ? idDemande : null}
       />
     </AppShell>

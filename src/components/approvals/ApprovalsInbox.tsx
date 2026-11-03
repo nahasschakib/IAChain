@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { CSSProperties } from "react";
 import { resolveApproval, delegateApproval } from "@/app/approvals/actions";
 import Link from "next/link";
+import { decisionReservee } from "@/lib/approbations-roles";
 
 const CARD_SHADOW = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)";
 const CARD_SHADOW_ELEVATED = "0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.05)";
@@ -71,6 +72,7 @@ export default function ApprovalsInbox({
   processed,
   stats,
   experts,
+  isOrgAdmin,
   initialId,
 }: {
   pending: PendingItem[];
@@ -78,7 +80,8 @@ export default function ApprovalsInbox({
   processed: ProcessedItem[];
   stats: Stats;
   experts: Expert[];
-   initialId?: number | null;
+  isOrgAdmin: boolean;
+  initialId?: number | null;
 }) {
   const [selectedId, setSelectedId] = useState<number | null>(pending[0]?.id ?? null);
   const selected = pending.find((p) => p.id === selectedId) ?? pending[0];
@@ -88,7 +91,8 @@ export default function ApprovalsInbox({
   const primaryAction = actions[actions.length - 1];
   const otherActions = actions.slice(0, -1);
   const chips = payload?.chips ?? [];
-   const [rejecting, setRejecting] = useState(false);
+  const reservee = selected ? decisionReservee(selected.tag, isOrgAdmin) : false;
+  const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -511,6 +515,7 @@ export default function ApprovalsInbox({
             )}
 
              {selected.tag === "Validation de la facture" &&
+             isOrgAdmin &&
               Number.isInteger(Number(payload?.facture_id)) &&
               Number(payload?.facture_id) > 0 && (
                 <div style={{ marginBottom: 14 }}>
@@ -605,6 +610,21 @@ export default function ApprovalsInbox({
             )}
             {error && <div style={{ fontSize: 12, color: "var(--red)", marginBottom: 10 }}>{error}</div>}
 
+            {reservee && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--graphite)",
+                  background: "var(--paper)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                }}
+              >
+                Cette demande ne peut être décidée que par un administrateur de l&apos;organisation.
+              </div>
+            )}
+            {!reservee && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               {rejecting ? (
                 <>
@@ -770,6 +790,7 @@ export default function ApprovalsInbox({
                 </>
               )}
             </div>
+            )}
           </>
         ) : (
           <div style={{ fontSize: 13, color: "var(--graphite)" }}>Sélectionne une demande pour voir son détail.</div>
