@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { adminApi } from "@/lib/api-admin";
 import { sql } from "@/lib/db";
 import { chiffrer } from "@/lib/email-crypto";
 
 export async function GET(req: NextRequest) {
-  const { userId, orgId, orgRole } = await auth();
-  if (!userId || !orgId || orgRole !== "org:admin") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  const a = await adminApi();
+  if (a.err) return a.err;
+  const { orgId } = a.ctx;
 
   const url = new URL(req.url);
   const code = url.searchParams.get("code");

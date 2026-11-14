@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { adminApi } from "@/lib/api-admin";
 import { trierEmailsOrganisation } from "@/lib/email-tri-org";
 
 export async function POST() {
-  const { userId, orgId, orgRole } = await auth();
-  if (!userId || !orgId) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  }
-  if (orgRole !== "org:admin") {
-    return NextResponse.json({ error: "Réservé aux administrateurs" }, { status: 403 });
-  }
+  const a = await adminApi();
+  if (a.err) return a.err;
+  const { userId, orgId } = a.ctx;
 
   const r = await trierEmailsOrganisation(orgId, userId);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

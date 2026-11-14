@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { adminApi } from "@/lib/api-admin";
 import { randomBytes } from "crypto";
 
 export async function GET() {
-  const { userId, orgId, orgRole } = await auth();
-  if (!userId || !orgId) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  }
-  if (orgRole !== "org:admin") {
-    return NextResponse.json({ error: "Réservé aux administrateurs" }, { status: 403 });
-  }
+  const a = await adminApi();
+  if (a.err) return a.err;
+  const { orgId } = a.ctx;
 
   const state = randomBytes(24).toString("hex");
   const params = new URLSearchParams({
