@@ -123,7 +123,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
     setDoneActions([]);
     run();
   };
-    const recorded = useRef(false);
+  const recorded = useRef(false);
   useEffect(() => {
     if (status === "running") recorded.current = false;
     if (status === "done" && !recorded.current) {
@@ -314,7 +314,7 @@ export default function NouvelleTacheTab({ agent, taskFields }: { agent: Agent; 
                     />
                   )}
             {!isLive &&  (
-            <Button type="button" onClick={run} disabled={status === "running"} style={{ width: "100%" }}>
+            <Button type="button" onClick={handleRun} disabled={status === "running"} style={{ width: "100%" }}>
               {buttonLabel}
             </Button>
           )}
