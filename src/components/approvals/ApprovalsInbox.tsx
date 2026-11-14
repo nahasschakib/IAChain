@@ -83,7 +83,7 @@ export default function ApprovalsInbox({
   isOrgAdmin: boolean;
   initialId?: number | null;
 }) {
-  const [selectedId, setSelectedId] = useState<number | null>(pending[0]?.id ?? null);
+  const [selectedId, setSelectedId] =  useState<number | null>(initialId ?? pending[0]?.id ?? null);
   const selected = pending.find((p) => p.id === selectedId) ?? pending[0];
   const payload = selected?.payload ?? null;
 
