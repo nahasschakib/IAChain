@@ -61,7 +61,7 @@ export async function executeSofia(
     const batches = await Promise.all(queries.slice(0, 6).map((q) => searchBrave(q, 10, { freshness })));
     const byUrl = new Map<string, BraveResult>();
     for (const batch of batches) for (const r of batch) byUrl.set(r.url, r);
-    raw = Array.from(byUrl.values());
+    raw = zone === "Maroc" ? keepMoroccoRelevant(Array.from(byUrl.values())) : Array.from(byUrl.values());
   } catch (e) {
     console.error("executeSofia brave", e);
     return { outcome: { ok: false, error: "La recherche web a échoué. Réessaie dans un instant." }, agentRunId: null };
