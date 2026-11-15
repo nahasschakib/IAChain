@@ -308,7 +308,7 @@ export async function executeKarima(
         ],
         lineage: ["Devis validé par un humain", "Contrôle de remise de Nadia", "Facture établie par Karima", "Validation humaine"],
         facture_id: factureId,
-      
+
       };
       await sql`
         INSERT INTO approvals (title, tag, agent_id, agent_label, payload, org_id)

@@ -88,9 +88,9 @@ export default function SofiaResultPanel({ state }: { state: SofiaRunState }) {
                 </a>
               </div>
               <div style={{ fontSize: "12.5px", lineHeight: 1.5, margin: "4px 0" }}>{s.resume}</div>
-            
+
                 <CategoryChip label={s.categorie} />
-             
+
             </div>
           ))}
         </div>

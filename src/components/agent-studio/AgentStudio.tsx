@@ -183,7 +183,7 @@ export default function AgentStudio({
       >
         {agent.description}
       </p>
-     
+
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
         <TabsList

@@ -241,7 +241,7 @@ export default function AppShellClient({
   orgName?: string | null;
    permissionsCount?: number | null;
    facturesVisibles?: boolean;
-   
+
 }) {
   const pathname = usePathname();
 

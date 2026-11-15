@@ -527,7 +527,7 @@ export default function ApprovalsInbox({
                   </Link>
                 </div>
               )}
-              
+
               {selected.workflowSlug && (
               <div style={{ marginBottom: 14 }}>
                 <Link

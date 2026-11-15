@@ -13,7 +13,7 @@ export type PermissionScope = {
 };
 
 // Une priorité haute ou critique n'est jamais traitée en automatique.
-const PRIORITES_SENSIBLES = ["haute", "critique"]; 
+const PRIORITES_SENSIBLES = ["haute", "critique"];
 
 // Niveau d'autonomie d'une action d'un agent, lu dans agent_permissions.
 // Prudent par défaut : sans ligne (ou en cas d'erreur de lecture),

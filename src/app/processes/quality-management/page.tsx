@@ -612,7 +612,7 @@ export default async function QualityManagementPage({
         </div>
       )}
 
-    
+
             {tab === "rca" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           <Section title="NC-041 · Constat">

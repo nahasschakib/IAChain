@@ -229,7 +229,7 @@ export default async function SettingsPage() {
             </div>
             <PolitiqueTarifaire politique={politique} segments={profile.segments} canEdit={tenant.ctx.isOrgAdmin} />
           </div>
-          
+
         )}
            {tenant.ok && prestations && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
@@ -255,7 +255,7 @@ export default async function SettingsPage() {
             <CataloguePrestations prestations={prestations} canEdit={tenant.ctx.isOrgAdmin} />
           </div>
         )}
-        
+
       </div>
     </AppShell>
   );

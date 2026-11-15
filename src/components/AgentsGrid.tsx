@@ -79,7 +79,7 @@ const ICONS: Record<string, LucideIcon> = {
   shield: Shield,
   "refresh-cw": RefreshCw,
   "book-open": BookOpen,
-  
+
 };
 
 const CATEGORY_ORDER = ["SALES", "MARKETING", "E-COMMERCE", "FINANCE", "SUPPORT", "OPS", "RH", "QUALITÉ"];
@@ -158,7 +158,7 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
           ))}
         </div>
       </div>
-      
+
       <div style={{ display: "flex", gap: "8px", marginBottom: "24px", flexWrap: "wrap" }}>
         {CATEGORIES.map((cat) => (
           <button
@@ -191,7 +191,7 @@ export default function AgentsGrid({ agents }: { agents: Agent[] }) {
           gap: "20px",
         }}
       >
-     
+
         {filtered.map((agent) => {
           const Icon = ICONS[agent.icon] ?? Search;
           const initial = agent.name.charAt(0).toUpperCase();

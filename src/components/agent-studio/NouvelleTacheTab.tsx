@@ -472,7 +472,7 @@ function FieldRenderer({
 }) {
   return (
     <div style={{ marginBottom: "20px" }}>
-      
+
       {field.field_type !== "checkbox" && (
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
           <label style={{ fontSize: "13px", fontWeight: 600 }}>{field.label}</label>
