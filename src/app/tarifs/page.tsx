@@ -105,7 +105,7 @@ export default function TarifsPage() {
           <Link href="/#qualite" style={{ whiteSpace: "nowrap" }}>Qualité</Link>
           <Link href="/agency" style={{ whiteSpace: "nowrap" }}>Agence IA</Link>
         </div>
-        <a href="mailto:contact@iachain.ai" style={BTN_PRIMARY}>Demander une démo</a>
+        <a href="mailto:contact@socytay.ma" style={BTN_PRIMARY}>Demander une démo</a>
       </div>
 
       {/* HERO */}
@@ -238,13 +238,13 @@ export default function TarifsPage() {
               Un premier échange suffit pour cadrer le bon point de départ selon votre processus le plus rentable
               à automatiser.
             </p>
-            <a href="mailto:contact@iachain.ai" style={{ display: "inline-block", background: "#f5f6f8", color: "var(--steel-deep)", fontSize: 14, fontWeight: 700, padding: "13px 24px", borderRadius: 9, marginTop: 28 }}>
+            <a href="mailto:contact@socytay.ma" style={{ display: "inline-block", background: "#f5f6f8", color: "var(--steel-deep)", fontSize: 14, fontWeight: 700, padding: "13px 24px", borderRadius: 9, marginTop: 28 }}>
               Demander un diagnostic
             </a>
           </div>
           <div style={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "#8b93a1" }}>CONTACT</span>
-            <span>contact@iachain.ai</span>
+            <span>contact@socytay.ma</span>
             <span>Casablanca, Maroc</span>
             <span style={{ color: "#8b93a1" }}>Un produit SOCYTAY</span>
           </div>

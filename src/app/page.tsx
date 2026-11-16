@@ -609,13 +609,13 @@ export default async function Home() {
               Un premier échange suffit pour identifier le processus le plus rentable à automatiser dans votre
               organisation.
             </p>
-            <a href="mailto:contact@iachain.ai" style={{ display: "inline-block", background: "#f5f6f8", color: "var(--steel-deep)", fontSize: 14, fontWeight: 700, padding: "13px 24px", borderRadius: 9, marginTop: 28 }}>
+            <a href="mailto:contact@socytay.ma" style={{ display: "inline-block", background: "#f5f6f8", color: "var(--steel-deep)", fontSize: 14, fontWeight: 700, padding: "13px 24px", borderRadius: 9, marginTop: 28 }}>
               Demander un diagnostic
             </a>
           </div>
           <div style={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "#8b93a1" }}>CONTACT</span>
-            <span>contact@iachain.ai</span>
+            <span>contact@socytay.ma</span>
             <span>Casablanca, Maroc</span>
             <span style={{ color: "#8b93a1" }}>Un produit SOCYTAY</span>
           </div>
@@ -625,6 +625,10 @@ export default async function Home() {
       {/* FOOTER */}
       <div style={{ padding: "20px clamp(24px,4vw,64px)", borderTop: "1px solid var(--line)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 12, color: "var(--graphite)" }}>
         <span>© 2026 IAChain. Tous droits réservés.</span>
+         <span style={{ display: "flex", gap: 16 }}>
+          <Link href="/confidentialite" style={{ textDecoration: "underline" }}>Confidentialité</Link>
+          <Link href="/conditions" style={{ textDecoration: "underline" }}>Conditions d&apos;utilisation</Link>
+        </span>
         <span>Conception : Agents spécialisés → Studios individuels → Workflows multi-agents → Business Deliverables.</span>
       </div>
     </div>

@@ -273,7 +273,7 @@ export default function PricingSimulator() {
               <p style={{ fontSize: 12.5, color: "var(--steel-deep)", margin: "0 0 18px" }}>
                 Le palier cabinet dépend du nombre de clients finaux et des intégrations à mettre en place.
               </p>
-              <a href="mailto:contact@iachain.ai" style={{ ...BTN_PRIMARY, width: "100%", textAlign: "center" }}>
+              <a href="mailto:contact@socytay.ma" style={{ ...BTN_PRIMARY, width: "100%", textAlign: "center" }}>
                 Contacter l&apos;agence
               </a>
             </>
@@ -310,7 +310,7 @@ export default function PricingSimulator() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 20 }}>
-                <a href="mailto:contact@iachain.ai" style={{ ...BTN_PRIMARY, textAlign: "center" }}>
+                <a href="mailto:contact@socytay.ma" style={{ ...BTN_PRIMARY, textAlign: "center" }}>
                   Démarrer avec cette estimation
                 </a>
                 <Link href="/dashboard" style={{ ...BTN_SECONDARY, textAlign: "center" }}>

@@ -299,7 +299,7 @@ export default function AgencyPage() {
           </div>
           <div style={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column", gap: 14, fontSize: 14 }}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, letterSpacing: "0.06em", color: "#8b93a1" }}>CONTACT</span>
-            <span>agence@iachain.ai</span>
+            <span>contact@socytay.ma</span>
             <span>Casablanca, Maroc</span>
             <span style={{ color: "#8b93a1" }}>Un produit SOCYTAY</span>
           </div>
