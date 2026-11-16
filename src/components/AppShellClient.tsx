@@ -319,7 +319,18 @@ export default function AppShellClient({
           </span>
         </Link>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            flex: "1 1 auto",
+            minHeight: 0,
+            overflowY: "auto",
+            scrollbarWidth: "thin",
+            scrollbarColor: "rgba(255,255,255,0.25) transparent",
+          }}
+        >
           <span
             style={{
               fontFamily: "var(--font-mono)",
@@ -374,6 +385,7 @@ export default function AppShellClient({
         <div
           style={{
             marginTop: "auto",
+            flexShrink: 0,
             display: "flex",
             alignItems: "center",
             gap: 10,
