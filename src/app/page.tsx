@@ -627,7 +627,7 @@ export default async function Home() {
         <span>© 2026 IAChain. Tous droits réservés.</span>
          <span style={{ display: "flex", gap: 16 }}>
           <Link href="/confidentialite" style={{ textDecoration: "underline" }}>Confidentialité</Link>
-          <Link href="/conditions" style={{ textDecoration: "underline" }}>Conditions d&apos;utilisation</Link>
+          <Link href="/conditions" style={{ textDecoration: "underline" }}>Conditions d&apos;utilisation</Link><Link href="/mentions-legales" style={{ textDecoration: "underline" }}>Mentions légales</Link>
         </span>
         <span>Conception : Agents spécialisés → Studios individuels → Workflows multi-agents → Business Deliverables.</span>
       </div>
