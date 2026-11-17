@@ -5,7 +5,7 @@ import { computeCost } from "@/lib/cost";
 
 // Seuil minimal d'e-mails pour qu'une analyse ait un sens (3 pour les tests sur dev ;
 // à relever avant la production).
-export const MIN_EMAILS = 3;
+export const MIN_EMAILS = 10;
 const MAX_EMAILS = 150;
 
 const SYSTEME = `Tu es Hamza, agent d'analyse des réclamations d'une entreprise marocaine.
