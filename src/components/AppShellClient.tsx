@@ -166,6 +166,17 @@ const PERMISSIONS_ITEM: NavItem = {
     </svg>
   ),
 };
+const CLIENTS_ITEM: NavItem = {
+  href: "/admin/clients",
+  label: "Clients",
+  icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3" stroke="#f5f6f8" strokeWidth="1.5" />
+      <path d="M3.5 19C3.5 15.9 6 14 9 14C12 14 14.5 15.9 14.5 19" stroke="#f5f6f8" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M16 6.5C17.7 6.8 19 8.2 19 10C19 11.8 17.7 13.2 16 13.5M17.5 14.4C19.6 15 20.5 16.7 20.5 19" stroke="#f5f6f8" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+};
 const FACTURES_ITEM: NavItem = {
   href: "/factures",
   label: "Factures",
@@ -374,12 +385,18 @@ export default function AppShellClient({
                     {SYSTEM_ITEMS.map((item) => (
             <NavLink key={item.href} item={item}active={pathname === item.href || pathname.startsWith(item.href + "/")} />
           ))}
-          {permissionsCount !== null && (
-            <NavLink
-              item={permissionsCount > 0 ? { ...PERMISSIONS_ITEM, badge: String(permissionsCount) } : PERMISSIONS_ITEM}
-              active={pathname === PERMISSIONS_ITEM.href || pathname.startsWith(PERMISSIONS_ITEM.href + "/")}
-            />
-          )}
+            {permissionsCount !== null && (
+              <>
+                <NavLink
+                  item={permissionsCount > 0 ? { ...PERMISSIONS_ITEM, badge: String(permissionsCount) } : PERMISSIONS_ITEM}
+                  active={pathname === PERMISSIONS_ITEM.href || pathname.startsWith(PERMISSIONS_ITEM.href + "/")}
+                />
+                <NavLink
+                  item={CLIENTS_ITEM}
+                  active={pathname === CLIENTS_ITEM.href || pathname.startsWith(CLIENTS_ITEM.href + "/")}
+                />
+              </>
+            )}
         </div>
 
         <div
