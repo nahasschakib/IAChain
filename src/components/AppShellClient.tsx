@@ -242,6 +242,7 @@ export default function AppShellClient({
   approvalsCount = 0,
   orgName = null,
   permissionsCount = null,
+  clientsEnAttente = 0,
   facturesVisibles = false,
 }: {
   children: ReactNode;
@@ -250,8 +251,9 @@ export default function AppShellClient({
   topbar?: ReactNode;
   approvalsCount?: number;
   orgName?: string | null;
-   permissionsCount?: number | null;
-   facturesVisibles?: boolean;
+  permissionsCount?: number | null;
+  clientsEnAttente?: number;
+  facturesVisibles?: boolean;
 
 }) {
   const pathname = usePathname();
@@ -382,7 +384,7 @@ export default function AppShellClient({
           >
             SYSTÈME
           </span>
-                    {SYSTEM_ITEMS.map((item) => (
+            {SYSTEM_ITEMS.map((item) => (
             <NavLink key={item.href} item={item}active={pathname === item.href || pathname.startsWith(item.href + "/")} />
           ))}
             {permissionsCount !== null && (
@@ -392,7 +394,7 @@ export default function AppShellClient({
                   active={pathname === PERMISSIONS_ITEM.href || pathname.startsWith(PERMISSIONS_ITEM.href + "/")}
                 />
                 <NavLink
-                  item={CLIENTS_ITEM}
+                  item={clientsEnAttente > 0 ? { ...CLIENTS_ITEM, badge: String(clientsEnAttente) } : CLIENTS_ITEM}
                   active={pathname === CLIENTS_ITEM.href || pathname.startsWith(CLIENTS_ITEM.href + "/")}
                 />
               </>

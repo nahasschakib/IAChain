@@ -16,6 +16,7 @@ export default async function AppShell(props: {
 
   let approvalsCount = 0;
   let orgName: string | null = null;
+  let clientsEnAttente = 0;
   let permissionsCount: number | null = null; // null = lien masqué (réservé à l'Admin SOCYTAY)
   let facturesVisibles = false; // lien « Factures » réservé aux administrateurs de l'organisation
 
@@ -30,6 +31,14 @@ export default async function AppShell(props: {
       `;
            approvalsCount = Number(rows[0]?.n ?? 0);
       if (t.ctx.isPlatformAdmin) {
+        try {
+          const clients = await sql`
+            SELECT COUNT(*)::int AS n FROM tenants WHERE is_platform = false AND status = 'en_attente'
+          `;
+          clientsEnAttente = Number(clients[0]?.n ?? 0);
+        } catch {
+          clientsEnAttente = 0;
+        }
         try {
           const demandes = await sql`
             SELECT COUNT(*)::int AS n FROM org_permission_requests WHERE status = 'en_attente'
@@ -50,6 +59,7 @@ export default async function AppShell(props: {
       approvalsCount={approvalsCount}
       orgName={orgName}
       permissionsCount={permissionsCount}
+      clientsEnAttente={clientsEnAttente}
       facturesVisibles={facturesVisibles}
     />
   );

@@ -66,7 +66,7 @@ function formatMAD(n: number, digits = 2): string {
 }
 
 export default async function DashboardPage() {
-  const { orgId, isOrgAdmin } = await getTenantContext();
+  const { orgId, isOrgAdmin, isPlatformAdmin } = await getTenantContext();
   const user = await currentUser();
   const firstName = user?.firstName?.trim();
   const greeting = firstName
@@ -306,7 +306,7 @@ export default async function DashboardPage() {
         </p>
       </div>
       <div style={{ marginTop: 20 }}>
-        <AFaireCard orgId={orgId} />
+        <AFaireCard orgId={orgId} plateforme={isPlatformAdmin} />
       </div>
       {isOrgAdmin && <MiseEnRouteCard orgId={orgId} />}
 

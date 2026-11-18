@@ -3,17 +3,22 @@ import { sql } from "@/lib/db";
 import { listerDossiersChaine } from "@/lib/salma-chaine";
 
 // Carte du Dashboard : ce qui attend une action de l'utilisateur, avec accès direct au dossier.
-export default async function AFaireCard({ orgId }: { orgId: string }) {
+export default async function AFaireCard({ orgId, plateforme = false }: { orgId: string; plateforme?: boolean }) {
   let dossiers: Awaited<ReturnType<typeof listerDossiersChaine>> = [];
   let nbApprobations = 0;
+  let nbClients = 0;
   try {
     dossiers = await listerDossiersChaine(orgId);
     const r = await sql`SELECT COUNT(*)::int AS n FROM approvals WHERE org_id = ${orgId} AND status = 'en_attente'`;
-    nbApprobations = Number(r[0]?.n ?? 0);
+        nbApprobations = Number(r[0]?.n ?? 0);
+    if (plateforme) {
+      const c = await sql`SELECT COUNT(*)::int AS n FROM tenants WHERE is_platform = false AND status = 'en_attente'`;
+      nbClients = Number(c[0]?.n ?? 0);
+    }
   } catch (e) {
     console.error("AFaireCard", e);
   }
-  const total = dossiers.length + nbApprobations;
+    const total = dossiers.length + nbApprobations + nbClients;
 
   return (
     <div
@@ -47,6 +52,17 @@ export default async function AFaireCard({ orgId }: { orgId: string }) {
               <span style={{ color: "var(--steel)", fontWeight: 600, whiteSpace: "nowrap" }}>Ouvrir le dossier</span>
             </Link>
           ))}
+                    {nbClients > 0 && (
+            <Link
+              href="/admin/clients"
+              style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13, color: "inherit", textDecoration: "none" }}
+            >
+              <span>
+                {nbClients} client{nbClients > 1 ? "s" : ""} à activer
+              </span>
+              <span style={{ color: "var(--steel)", fontWeight: 600, whiteSpace: "nowrap" }}>Ouvrir les clients</span>
+            </Link>
+          )}
           {nbApprobations > 0 && (
             <Link
               href="/approvals"
