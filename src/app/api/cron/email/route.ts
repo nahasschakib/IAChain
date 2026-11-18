@@ -30,7 +30,12 @@ export async function POST(req: Request) {
 
   const debut = Date.now();
   const orgs = (await sql`
-    SELECT DISTINCT org_id FROM email_connexions WHERE fournisseur = 'imap'
+      SELECT DISTINCT c.org_id
+    FROM email_connexions c
+    JOIN tenants t ON t.org_id = c.org_id
+    WHERE c.fournisseur = 'imap'
+      AND t.status = 'actif'
+      AND (t.is_platform OR GREATEST(t.essai_fin, t.paye_jusqu_au) > now())
   `) as { org_id: string }[];
 
   const resultats: Record<string, unknown>[] = [];
