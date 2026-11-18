@@ -4,6 +4,7 @@ import { getTenantContext } from "@/lib/tenant";
 import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 import AFaireCard from "@/components/dashboard/AFaireCard";
+import MiseEnRouteCard from "@/components/dashboard/MiseEnRouteCard";
 import type { CSSProperties } from "react";
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ function formatMAD(n: number, digits = 2): string {
 }
 
 export default async function DashboardPage() {
-  const { orgId } = await getTenantContext();
+  const { orgId, isOrgAdmin } = await getTenantContext();
   const user = await currentUser();
   const firstName = user?.firstName?.trim();
   const greeting = firstName
@@ -307,6 +308,7 @@ export default async function DashboardPage() {
       <div style={{ marginTop: 20 }}>
         <AFaireCard orgId={orgId} />
       </div>
+      {isOrgAdmin && <MiseEnRouteCard orgId={orgId} />}
 
       {/* KPI ROW */}
       <div className="kpi-grid">
