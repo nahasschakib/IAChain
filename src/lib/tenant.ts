@@ -11,7 +11,7 @@ export type TenantContext = {
   tenantName: string;
 };
 
-export type TenantRefusal = "connexion" | "organisation" | "attente" | "suspendu";
+export type TenantRefusal = "connexion" | "organisation" | "attente" | "suspendu" | "echeance";
 
 export async function resolveTenant(): Promise<
   { ok: true; ctx: TenantContext } | { ok: false; reason: TenantRefusal }
@@ -20,11 +20,21 @@ export async function resolveTenant(): Promise<
   if (!userId) return { ok: false, reason: "connexion" };
   if (!orgId) return { ok: false, reason: "organisation" };
 
-  const rows = await sql`SELECT name, status, is_platform FROM tenants WHERE org_id = ${orgId}`;
+  const rows = await sql`SELECT name, status, is_platform, essai_fin, paye_jusqu_au FROM tenants WHERE org_id = ${orgId}`;
   const tenant = rows[0];
   if (!tenant) return { ok: false, reason: "attente" };
   if (tenant.status === "suspendu") return { ok: false, reason: "suspendu" };
-  if (tenant.status !== "actif") return { ok: false, reason: "attente" };
+    if (tenant.status !== "actif") return { ok: false, reason: "attente" };
+
+  // Cycle de vie : la plateforme (SOCYTAY) est exemptée ; tout autre client doit avoir
+  // un essai ou une période payée en cours. Sans aucune date, l'accès est refusé.
+  if (!tenant.is_platform) {
+    const fins = [tenant.essai_fin, tenant.paye_jusqu_au]
+      .filter((d) => d != null)
+      .map((d) => new Date(d as string).getTime());
+    const fin = fins.length > 0 ? Math.max(...fins) : 0;
+    if (fin < Date.now()) return { ok: false, reason: "echeance" };
+  }
 
   const isOrgAdmin = orgRole === "org:admin";
   return {

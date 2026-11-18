@@ -9,6 +9,10 @@ const MESSAGES: Record<string, { title: string; text: string }> = {
     title: "Compte suspendu",
     text: "L'accès de votre organisation est suspendu. Contactez l'équipe IAChain pour le rétablir.",
   },
+    echeance: {
+    title: "Période d'accès terminée",
+    text: "L'essai ou l'abonnement de votre organisation est arrivé à échéance. Vos données sont conservées. Contactez l'équipe IAChain pour renouveler l'accès.",
+  },
   organisation: {
     title: "Aucune organisation active",
     text: "Sélectionnez ou créez l'organisation avec laquelle vous souhaitez travailler.",
