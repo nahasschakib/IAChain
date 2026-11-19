@@ -552,15 +552,15 @@ export default async function Home() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10 }}>
             <span style={{ fontSize: 13, color: "var(--graphite)" }}>
-              Socle dès <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--ink)" }}>1 490 MAD</span> HT / mois
+              Offre unique : <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20, color: "var(--ink)" }}>990 MAD</span> HT / mois · essai gratuit de 14 jours
             </span>
-            <Link href="/tarifs" style={BTN_PRIMARY}>Simuler mon tarif</Link>
+            <Link href="/tarifs" style={BTN_PRIMARY}>Voir l&apos;offre</Link>
           </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 18, marginTop: 28 }}>
           <div style={CARD}>
-            <span style={{ ...EYEBROW, fontSize: 11 }}>FORMULE 1</span>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>POUR COMMENCER</span>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, margin: "8px 0" }}>
               Bibliothèque d&apos;agents
             </div>
@@ -570,7 +570,7 @@ export default async function Home() {
             </p>
           </div>
           <div style={{ ...CARD, border: "1px solid var(--steel)" }}>
-            <span style={{ ...EYEBROW, fontSize: 11 }}>FORMULE 2</span>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>POUR ALLER PLUS LOIN</span>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, margin: "8px 0" }}>
               Processus métier
             </div>
