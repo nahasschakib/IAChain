@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import PricingSimulator from "@/components/PricingSimulator";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +45,14 @@ const BTN_PRIMARY: CSSProperties = {
   borderRadius: 8,
   whiteSpace: "nowrap",
 };
+
+const INCLUS = [
+  "Tous les agents du catalogue et leurs workflows",
+  "5 utilisateurs",
+  "1 000 exécutions par mois",
+  "Journal d'audit",
+  "Données de votre organisation isolées des autres clients",
+];
 
 export default function TarifsPage() {
   return (
@@ -122,75 +129,110 @@ export default function TarifsPage() {
             maxWidth: 720,
           }}
         >
-          Un socle simple pour démarrer, un prix qui suit ce que vous ajoutez.
+          Une offre unique, simple et transparente.
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: "var(--graphite)", margin: "18px 0 0", maxWidth: 620 }}>
-          Un abonnement de base couvre les premiers agents et le premier workflow. Le simulateur ci-dessous
-          calcule en direct ce que coûte votre usage réel — agents, workflows et volume d&apos;exécutions.
+          Un abonnement par organisation, tous les agents inclus. Vous démarrez par un essai gratuit de 14 jours,
+          sans carte bancaire.
         </p>
       </div>
 
-      {/* SOCLE — palier d'entrée */}
+      {/* OFFRE UNIQUE */}
       <div style={{ ...SECTION, paddingBottom: 56 }}>
-        <div style={{ ...CARD, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
-          <div style={{ flex: "1 1 320px" }}>
-            <span style={{ ...EYEBROW, fontSize: 11 }}>PALIER D&apos;ENTRÉE</span>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 22, margin: "8px 0 6px" }}>
-              Socle IAChain
+        <div style={{ ...CARD, border: "1px solid var(--steel)", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 28 }}>
+          <div style={{ flex: "1 1 360px" }}>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>OFFRE DE LANCEMENT</span>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 24, margin: "8px 0 12px" }}>
+              IAChain
             </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0, maxWidth: 480 }}>
-              3 agents actifs, 1 workflow métier complet, jusqu&apos;à 200 exécutions par mois, journal d&apos;audit
-              et intégrations de base incluses. De quoi lancer un premier cas d&apos;usage réel avant d&apos;étendre.
-            </p>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+              {INCLUS.map((t) => (
+                <li key={t} style={{ fontSize: 14, lineHeight: 1.5, color: "var(--graphite)" }}>
+                  ✓ {t}
+                </li>
+              ))}
+            </ul>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 36, color: "var(--steel-deep)" }}>
-              1 490 MAD
+          <div style={{ textAlign: "right", flex: "0 1 280px" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 40, color: "var(--steel-deep)" }}>
+              990 MAD
             </div>
-            <div style={{ fontSize: 12.5, color: "var(--graphite)" }}>HT / mois</div>
+            <div style={{ fontSize: 12.5, color: "var(--graphite)" }}>HT / mois, par organisation (TVA 20 % en sus)</div>
+            <div style={{ fontSize: 12.5, color: "var(--graphite)", marginTop: 4 }}>
+              Annuel : 10 mois payés pour 12
+            </div>
+            <Link href="/sign-up" style={{ ...BTN_PRIMARY, display: "inline-block", marginTop: 18, padding: "12px 22px" }}>
+              Démarrer l&apos;essai de 14 jours
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* SIMULATEUR */}
+      {/* COMMENT ÇA DÉMARRE */}
       <div style={SECTION}>
-        <span style={EYEBROW}>SIMULATEUR</span>
-        <h2 style={H2}>Ajustez selon vos besoins.</h2>
-        <PricingSimulator />
-      </div>
-
-      {/* FORMULES — rappel des deux offres */}
-      <div style={SECTION}>
-        <span style={EYEBROW}>LES DEUX FORMULES</span>
-        <h2 style={H2}>Un agent aujourd&apos;hui, un processus demain.</h2>
+        <span style={EYEBROW}>COMMENT ÇA DÉMARRE</span>
+        <h2 style={H2}>De l&apos;inscription au premier agent en marche.</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 18 }}>
           <div style={CARD}>
-            <span style={{ ...EYEBROW, fontSize: 11 }}>FORMULE 1</span>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>ÉTAPE 1</span>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "8px 0" }}>
-              Bibliothèque d&apos;agents
+              Essai gratuit de 14 jours
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
-              Activez une compétence précise, branchez une intégration, produisez un premier livrable. Facturé au
-              nombre d&apos;agents actifs.
-            </p>
-          </div>
-          <div style={{ ...CARD, border: "1px solid var(--steel)" }}>
-            <span style={{ ...EYEBROW, fontSize: 11 }}>FORMULE 2</span>
-            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "8px 0" }}>
-              Processus métier
-            </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
-              Des workflows complets — branches parallèles, fusions, approbations, action finale — suivis en temps
-              réel. Facturé au nombre de workflows actifs.
+              Vous créez votre organisation. Notre équipe l&apos;active, et les 14 jours démarrent à ce moment-là.
             </p>
           </div>
           <div style={CARD}>
-            <span style={{ ...EYEBROW, fontSize: 11 }}>CABINET / AGENCE</span>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>ÉTAPE 2</span>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "8px 0" }}>
-              Marque blanche
+              Mise en service à distance
             </div>
             <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
-              Plusieurs clients finaux gérés depuis un seul compte, organisation dédiée. Toujours sur devis.
+              Visioconférence d&apos;environ 2 heures, guide écrit, vidéo et checklist, pour obtenir un premier
+              résultat réel dès le départ. Environ 2 500 MAD HT, une seule fois. Intervention sur site possible en
+              option, aux frais réels.
+            </p>
+          </div>
+          <div style={CARD}>
+            <span style={{ ...EYEBROW, fontSize: 11 }}>ÉTAPE 3</span>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "8px 0" }}>
+              Abonnement
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
+              Mensuel ou annuel, réglé par virement ou en espèces. À la fin de la période, l&apos;accès est suspendu
+              et vos données sont conservées.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* BESOIN SPÉCIFIQUE */}
+      <div style={SECTION}>
+        <span style={EYEBROW}>BESOIN SPÉCIFIQUE</span>
+        <h2 style={H2}>Ce qui sort du cadre se traite sur devis.</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 18 }}>
+          <div style={CARD}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "0 0 8px" }}>
+              Diagnostic
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
+              Un premier regard sur vos processus pour identifier ce qui mérite d&apos;être automatisé en priorité.
+            </p>
+          </div>
+          <div style={CARD}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "0 0 8px" }}>
+              Intégration sur mesure
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
+              Un branchement spécifique à vos outils ou un agent adapté à votre métier, facturé au projet.
+            </p>
+          </div>
+          <div style={CARD}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, margin: "0 0 8px" }}>
+              Cabinet / Agence
+            </div>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--graphite)", margin: 0 }}>
+              Plusieurs clients finaux gérés depuis un seul compte, en marque blanche. Toujours sur devis.
             </p>
           </div>
         </div>
@@ -199,24 +241,24 @@ export default function TarifsPage() {
       {/* FAQ courte */}
       <div style={SECTION}>
         <span style={EYEBROW}>QUESTIONS FRÉQUENTES</span>
-        <h2 style={H2}>Ce qu&apos;il faut savoir avant de simuler.</h2>
+        <h2 style={H2}>Ce qu&apos;il faut savoir avant de démarrer.</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 18 }}>
           {[
             {
               q: "Qu'est-ce qu'une « exécution » ?",
-              a: "Chaque fois qu'un agent traite une tâche — un lead qualifié, un ticket classé, un cas de non-conformité analysé — compte comme une exécution.",
+              a: "Chaque fois qu'un agent traite une tâche — un e-mail classé, un dossier analysé, un lead qualifié — cela compte comme une exécution. Les traitements automatiques en font partie.",
             },
             {
-              q: "Puis-je changer de palier en cours de mois ?",
-              a: "Oui, le nombre d'agents et de workflows actifs peut évoluer à tout moment ; la facturation suit l'usage réel du mois suivant.",
+              q: "Et si je dépasse 1 000 exécutions ?",
+              a: "Nous vous prévenons à 80 % de votre quota. Votre service n'est jamais coupé : un pack d'exécutions supplémentaires vous est proposé.",
+            },
+            {
+              q: "Que se passe-t-il à la fin de l'essai ?",
+              a: "L'accès est suspendu tant que l'abonnement n'est pas réglé. Vos données sont conservées et l'accès reprend dès le paiement enregistré.",
             },
             {
               q: "L'Agence IA est-elle incluse ?",
-              a: "Non. Le diagnostic, la conception et l'intégration sur mesure sont facturés au projet, séparément de l'abonnement plateforme.",
-            },
-            {
-              q: "Et si mon besoin ne rentre dans aucun palier ?",
-              a: "Le palier Cabinet couvre le multi-tenant et les gros volumes ; pour tout le reste, un premier échange suffit à cadrer une offre sur mesure.",
+              a: "Non. Le diagnostic, la conception et l'intégration sur mesure sont facturés au projet, séparément de l'abonnement.",
             },
           ].map((item) => (
             <div key={item.q} style={{ ...CARD, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -232,11 +274,10 @@ export default function TarifsPage() {
         <div style={{ maxWidth: 1320, margin: "0 auto", display: "flex", gap: 56, flexWrap: "wrap", justifyContent: "space-between" }}>
           <div style={{ flex: "1 1 380px", minWidth: 300 }}>
             <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "clamp(24px,3vw,34px)", lineHeight: 1.1, margin: 0, letterSpacing: "-0.01em" }}>
-              Pas sûr du palier qui vous convient ?
+              Un besoin qui sort du cadre ?
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: "#c7ccd4", margin: "16px 0 0", maxWidth: 440 }}>
-              Un premier échange suffit pour cadrer le bon point de départ selon votre processus le plus rentable
-              à automatiser.
+              Un premier échange suffit pour cadrer un diagnostic, une intégration spécifique ou une offre sur mesure.
             </p>
             <a href="mailto:contact@socytay.ma" style={{ display: "inline-block", background: "#f5f6f8", color: "var(--steel-deep)", fontSize: 14, fontWeight: 700, padding: "13px 24px", borderRadius: 9, marginTop: 28 }}>
               Demander un diagnostic
@@ -254,7 +295,7 @@ export default function TarifsPage() {
       {/* FOOTER */}
       <div style={{ padding: "20px clamp(24px,4vw,64px)", borderTop: "1px solid var(--line)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 12, color: "var(--graphite)" }}>
         <span>© 2026 IAChain. Tous droits réservés.</span>
-        <span>Tarifs indicatifs, hors taxes, sujets à confirmation lors d&apos;un diagnostic.</span>
+        <span>Tarifs hors taxes, valables pour le Maroc, sujets à évolution.</span>
       </div>
     </div>
   );
