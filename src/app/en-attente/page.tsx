@@ -1,4 +1,5 @@
 import { OrganizationSwitcher, SignOutButton } from "@clerk/nextjs";
+import Link from "next/link";
 
 const MESSAGES: Record<string, { title: string; text: string }> = {
   attente: {
@@ -22,6 +23,7 @@ const MESSAGES: Record<string, { title: string; text: string }> = {
 export default async function EnAttentePage({ searchParams }: { searchParams: Promise<{ raison?: string }> }) {
   const { raison } = await searchParams;
   const m = MESSAGES[raison ?? "attente"] ?? MESSAGES.attente;
+  const peutReessayer = (raison ?? "attente") !== "organisation";
 
   return (
     <main
@@ -47,6 +49,29 @@ export default async function EnAttentePage({ searchParams }: { searchParams: Pr
       >
         <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 24, marginBottom: 10 }}>{m.title}</div>
         <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--graphite)", margin: "0 0 20px" }}>{m.text}</p>
+         {peutReessayer && (
+          <div style={{ margin: "0 0 20px" }}>
+            <Link
+              href="/dashboard"
+              prefetch={false}
+              style={{
+                display: "inline-block",
+                fontSize: 13,
+                fontWeight: 600,
+                padding: "9px 16px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                textDecoration: "none",
+                color: "inherit",
+              }}
+            >
+              Vérifier mon accès
+            </Link>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--graphite)", margin: "14px 0 0" }}>
+              Une question ? Écrivez à <a href="mailto:contact@socytay.ma" style={{ color: "inherit", fontWeight: 600 }}>contact@socytay.ma</a>.
+            </p>
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <OrganizationSwitcher hidePersonal afterSelectOrganizationUrl="/dashboard" />
           <SignOutButton>
