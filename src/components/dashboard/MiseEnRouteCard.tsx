@@ -15,9 +15,10 @@ const CARD: CSSProperties = {
 
 type Etape = { titre: string; consequence: string };
 
-// Carte « Mise en route » : signale à l'administrateur les réglages sans lesquels les agents
-// du devis ne peuvent pas travailler. Disparaît quand tout est saisi.
-export default async function MiseEnRouteCard({ orgId }: { orgId: string }) {
+// Carte « Mise en route » : signale les réglages sans lesquels les agents du devis ne peuvent
+// pas travailler. L'administrateur peut les compléter dans Paramètres ; un membre est invité
+// à s'adresser à un administrateur. Disparaît quand tout est saisi.
+export default async function MiseEnRouteCard({ orgId, canEdit }: { orgId: string; canEdit: boolean }) {
   const [prestations, politique] = await Promise.all([
     listPrestations(orgId, true),
     getPolitiqueActive(orgId),
@@ -52,12 +53,19 @@ export default async function MiseEnRouteCard({ orgId }: { orgId: string }) {
               <div style={{ fontSize: 14, fontWeight: 600 }}>{e.titre}</div>
               <div style={{ fontSize: 13, lineHeight: 1.5, color: "var(--graphite)" }}>{e.consequence}</div>
             </div>
-            <Link href="/settings" style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)", whiteSpace: "nowrap" }}>
-              Compléter dans Paramètres →
-            </Link>
+               {canEdit && (
+              <Link href="/settings" style={{ fontSize: 12, fontWeight: 600, color: "var(--steel)", whiteSpace: "nowrap" }}>
+                Compléter dans Paramètres →
+              </Link>
+            )}
           </div>
         ))}
       </div>
+      {!canEdit && (
+        <p style={{ fontSize: 13, lineHeight: 1.5, color: "var(--graphite)", margin: "14px 0 0" }}>
+          Demandez à un administrateur de votre organisation de compléter ces réglages dans Paramètres.
+        </p>
+      )}
     </div>
   );
 }

@@ -308,7 +308,7 @@ export default async function DashboardPage() {
       <div style={{ marginTop: 20 }}>
         <AFaireCard orgId={orgId} plateforme={isPlatformAdmin} />
       </div>
-      {isOrgAdmin && <MiseEnRouteCard orgId={orgId} />}
+        <MiseEnRouteCard orgId={orgId} canEdit={isOrgAdmin} />
 
       {/* KPI ROW */}
       <div className="kpi-grid">
