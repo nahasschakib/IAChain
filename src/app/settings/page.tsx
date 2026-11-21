@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { currentUser } from "@clerk/nextjs/server";
 import { auth } from "@clerk/nextjs/server";
@@ -124,8 +125,43 @@ export default async function SettingsPage() {
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span style={{ color: "var(--graphite)" }}>Nom</span>
             <span>{organization?.name ?? "Personnel"}</span>
+                  </div>
+                  </div>
+        {tenant.ok && tenant.ctx.isOrgAdmin && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, var(--steel-tint), #cddce7)",
+                  color: "var(--steel)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M3 19c1-3.4 3.4-5 6-5s5 1.6 6 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d="M16 6a3 3 0 010 6M18 14c1.6.6 2.6 2.2 3 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 15 }}>Équipe</span>
+            </div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--graphite)", margin: "0 0 14px" }}>
+              Invitez vos collègues par e-mail et gérez leurs rôles (5 membres maximum, invitations en attente comprises).
+            </p>
+            <Link
+              href="/settings/equipe"
+              style={{ display: "inline-block", fontSize: 13, fontWeight: 600, padding: "9px 16px", borderRadius: 8, border: "1px solid var(--line)", textDecoration: "none", color: "inherit" }}
+            >
+              Gérer l&apos;équipe
+            </Link>
           </div>
-        </div>
+        )}
+        
                 {tenant.ok && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 22, boxShadow: CARD_SHADOW }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
