@@ -68,7 +68,7 @@ export async function proposerLignesSalma(
 
   const catalogue = await listPrestations(orgId, true);
   if (catalogue.length === 0)
-    return echec("Le catalogue de prestations est vide : ajoute des prestations dans Paramètres avant de chiffrer.");
+      return echec("Le catalogue de prestations de l'organisation est vide. Un administrateur doit ajouter des prestations dans Paramètres avant de chiffrer.");
 
   const traceInput = JSON.stringify({ etape: "lignes", client, objectif, budget });
   const liste = catalogue

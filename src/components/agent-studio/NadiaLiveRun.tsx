@@ -137,7 +137,7 @@ export default function NadiaLiveRun({ values, onState }: { values: Values; onSt
         <div style={petit}>
           {liste?.politique
             ? `Motifs de la politique tarifaire v${liste.politique.version}. La condition du motif est vérifiée par la direction à l'approbation.`
-            : "Aucune politique tarifaire active : le contrôle sera manuel. Renseigne-la dans Paramètres."}
+            : "Aucune politique tarifaire active : le contrôle sera manuel. Un administrateur peut la renseigner dans Paramètres."}
         </div>
       </div>
 
