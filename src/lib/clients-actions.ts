@@ -31,7 +31,7 @@ export async function activerEssai(orgId: string): Promise<Resultat> {
 }
 
 // Enregistre un paiement (virement ou espèces) et prolonge « payé jusqu'au » d'un mois ou d'un an,
-// à partir de la fin de la période déjà payée, ou d'aujourd'hui si elle est dépassée.
+// à partir de la plus tardive de trois dates : la fin de la période déjà payée, la fin de l'essai en cours (le client garde ses 14 jours) ou aujourd'hui.
 // Une seule requête : le paiement et la prolongation sont enregistrés ensemble ou pas du tout.
 export async function enregistrerPaiement(
   orgId: string,
@@ -54,7 +54,7 @@ export async function enregistrerPaiement(
 
   const rows = await sql`
     WITH base AS (
-      SELECT org_id, GREATEST(now(), COALESCE(paye_jusqu_au, now())) AS debut
+      SELECT org_id, GREATEST(now(), COALESCE(paye_jusqu_au, now()), COALESCE(essai_fin, now())) AS debut
       FROM tenants
       WHERE org_id = ${orgId} AND is_platform = false AND status IN ('en_attente', 'actif')
     ), ins AS (
