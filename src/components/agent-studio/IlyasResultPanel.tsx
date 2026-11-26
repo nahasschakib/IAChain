@@ -27,7 +27,7 @@ export default function IlyasResultPanel({ state }: { state: IlyasRunState }) {
   if (!outcome) {
     return (
       <Box>
-        Décris la requête de ciblage, coche d&apos;éventuels signaux d&apos;achat, puis lance « Lancer le sourcing
+        Décrivez la requête de ciblage, cochez d&apos;éventuels signaux d&apos;achat, puis lancez « Lancer le sourcing
         avec l&apos;IA ». La liste de comptes s&apos;affichera ici.
       </Box>
     );
@@ -62,7 +62,7 @@ export default function IlyasResultPanel({ state }: { state: IlyasRunState }) {
 
       {retenus.length === 0 ? (
         <p style={{ fontSize: "13px", color: "var(--muted-foreground)", marginBottom: "20px" }}>
-          Aucun compte neuf retenu pour cette requête — essaie d&apos;élargir les critères ou de décocher des signaux.
+          Aucun compte neuf retenu pour cette requête — essayez d&apos;élargir les critères ou de décocher des signaux.
         </p>
       ) : (
         <div>

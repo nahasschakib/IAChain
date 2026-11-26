@@ -10,7 +10,7 @@ import { testerImap } from "@/lib/imap-test";
 export type MessagerieResult = { ok: true } | { ok: false; error: string; erreurs?: ErreursImap };
 
 const REFUS = "Réservé aux administrateurs de l'organisation.";
-const ECHEC = "Enregistrement impossible. Réessaie dans un instant.";
+const ECHEC = "Enregistrement impossible. Réessayez dans un instant.";
 
 export async function sauverImap(input: Record<string, string>): Promise<MessagerieResult> {
   const t = await resolveTenant();
@@ -20,7 +20,7 @@ export async function sauverImap(input: Record<string, string>): Promise<Message
   try {
     const actuel = await getConnexionImap(ctx.orgId);
     const v = validerImap({ ...(input ?? {}) }, !!actuel?.motDePasseChiffre);
-    if (!v.ok) return { ok: false, error: "Corrige les champs signalés.", erreurs: v.erreurs };
+    if (!v.ok) return { ok: false, error: "Corrigez les champs signalés.", erreurs: v.erreurs };
 
     const motDePasse = v.valeurs.motDePasse ?? dechiffrer(actuel!.motDePasseChiffre!);
     const test = await testerImap(v.valeurs.imapHote, v.valeurs.imapPort, v.valeurs.identifiant, motDePasse);

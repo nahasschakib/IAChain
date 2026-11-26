@@ -20,7 +20,7 @@ export default function KarimaResultPanel({ state }: { state: KarimaRunState }) 
     return (
       <div style={{ padding: "28px", border: "1px dashed var(--border)", borderRadius: "12px", color: "var(--muted-foreground)", fontSize: 13, lineHeight: 1.6 }}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Comment établir une facture</div>
-        Choisis un devis validé par un humain, vérifie l&apos;identité légale du client, puis clique sur « Établir la facture ». Les montants sont repris
+        Choisissez un devis validé par un humain, vérifiez l&apos;identité légale du client, puis cliquez sur « Établir la facture ». Les montants sont repris
         du devis et recalculés par le code ; aucune IA n&apos;intervient. La facture est ensuite soumise à une validation humaine, qui lui attribue son numéro.
       </div>
     );

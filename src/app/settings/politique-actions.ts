@@ -104,7 +104,7 @@ export async function savePolitique(input: PolitiqueInput): Promise<PolitiqueRes
   } catch (e) {
     console.error("savePolitique", e);
     if ((e as { code?: string }).code === "23505")
-      return { ok: false, error: "La politique vient d'être modifiée par un autre enregistrement. Recharge la page et réessaie." };
-    return { ok: false, error: "Enregistrement impossible. Réessaie dans un instant." };
+      return { ok: false, error: "La politique vient d'être modifiée par un autre enregistrement. Rechargez la page et réessayez." };
+    return { ok: false, error: "Enregistrement impossible. Réessayez dans un instant." };
   }
 }

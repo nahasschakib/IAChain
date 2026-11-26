@@ -107,8 +107,8 @@ export default function LinaResultPanel({ state }: { state: LinaRunState }) {
   if (!outcome) {
     return (
       <Box>
-        Décris le brief (ou laisse-le vide pour reprendre l&apos;objectif du plan d&apos;Othmane), choisis les formats, le
-        ton et le registre, puis lance « Rédiger les contenus avec l&apos;IA ». Les contenus s&apos;afficheront ici.
+        Décrivez le brief (ou laissez-le vide pour reprendre l&apos;objectif du plan d&apos;Othmane), choisissez les formats, le
+        ton et le registre, puis lancez « Rédiger les contenus avec l&apos;IA ». Les contenus s&apos;afficheront ici.
       </Box>
     );
   }

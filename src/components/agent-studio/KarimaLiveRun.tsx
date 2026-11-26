@@ -61,9 +61,9 @@ export default function KarimaLiveRun({ values, onState }: { values: Values; onS
   const choisi = facturables.find((d) => String(d.validationId) === choix);
 
   const etapes = [
-    { fait: facturables.length > 0 || dejaFactures.length > 0, titre: "Valide un devis", aide: "Un humain doit avoir validé le devis (Approbations)." },
-    { fait: choisi !== undefined && id.ice.trim() !== "" && id.adresse.trim() !== "", titre: "Vérifie l'identité du client", aide: "ICE et adresse sont obligatoires." },
-    { fait, titre: "Établis la facture", aide: "Les montants sont repris du devis ; un humain valide ensuite la facture." },
+    { fait: facturables.length > 0 || dejaFactures.length > 0, titre: "Validez un devis", aide: "Un humain doit avoir validé le devis (Approbations)." },
+    { fait: choisi !== undefined && id.ice.trim() !== "" && id.adresse.trim() !== "", titre: "Vérifiez l'identité du client", aide: "ICE et adresse sont obligatoires." },
+    { fait, titre: "Établissez la facture", aide: "Les montants sont repris du devis ; un humain valide ensuite la facture." },
   ];
   const courante = etapes.findIndex((e) => !e.fait);
 
@@ -88,7 +88,7 @@ export default function KarimaLiveRun({ values, onState }: { values: Values; onS
           referenceCommande: String(values.commande ?? "").trim(),
         });
       } catch {
-        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
+        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessayez dans un instant." };
       }
       if (outcome.ok) {
         setFait(true);

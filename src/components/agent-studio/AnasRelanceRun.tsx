@@ -51,7 +51,7 @@ export default function AnasRelanceRun({ onState }: { onState: (s: AnasRelanceSt
     if (!choisie) return;
     setMessage(null);
     if (!/^\s*\d+\s*$/.test(jours)) {
-      setMessage("Jours sans réponse : saisis un nombre entier.");
+      setMessage("Jours sans réponse : saisissez un nombre entier.");
       return;
     }
     onState({ pending: true, outcome: null });
@@ -60,7 +60,7 @@ export default function AnasRelanceRun({ onState }: { onState: (s: AnasRelanceSt
       try {
         outcome = await runAnasRelance({ salmaRunId: choisie.runId, joursSilence: Number(jours), registre });
       } catch {
-        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
+        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessayez dans un instant." };
       }
       if (!outcome.ok) setMessage(outcome.error);
       else await charger();
@@ -72,7 +72,7 @@ export default function AnasRelanceRun({ onState }: { onState: (s: AnasRelanceSt
     <div style={{ display: "grid", gap: 12, border: "1px solid var(--border)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
       <div style={{ fontSize: 12, fontWeight: 700 }}>RELANCE D&apos;UN DEVIS SANS RÉPONSE</div>
       <div style={petit}>
-        1. Choisis la proposition envoyée. 2. Indique depuis combien de jours le prospect ne répond pas. 3. Anas prépare un brouillon, soumis à
+        1. Choisissez la proposition envoyée. 2. Indiquez depuis combien de jours le prospect ne répond pas. 3. Anas prépare un brouillon, soumis à
         approbation : rien n&apos;est envoyé.
       </div>
 
@@ -81,7 +81,7 @@ export default function AnasRelanceRun({ onState }: { onState: (s: AnasRelanceSt
         {liste === null ? (
           <div style={petit}>Chargement…</div>
         ) : liste.length === 0 ? (
-          <div style={petit}>Aucune proposition chiffrée. Lance d&apos;abord Salma.</div>
+          <div style={petit}>Aucune proposition chiffrée. Lancez d&apos;abord Salma.</div>
         ) : (
           <select style={champ} value={choix} onChange={(e) => setChoix(e.target.value)} disabled={pending}>
             {liste.map((p) => (

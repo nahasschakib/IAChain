@@ -65,14 +65,14 @@ export default function CataloguePrestations({
     setMessage(null);
     const prix = nombre(form.prix, false);
     if (Number.isNaN(prix)) {
-      setMessage({ ok: false, text: "Prix HT : saisis un nombre seul, par exemple 12000 ou 7500,50." });
+      setMessage({ ok: false, text: "Prix HT : saisissez un nombre seul, par exemple 12000 ou 7500,50." });
       return;
     }
     let delai: number | null = null;
     if (form.delai.trim() !== "") {
       delai = nombre(form.delai, true);
       if (Number.isNaN(delai)) {
-        setMessage({ ok: false, text: "Délai : saisis un nombre entier de jours, par exemple 30." });
+        setMessage({ ok: false, text: "Délai : saisissez un nombre entier de jours, par exemple 30." });
         return;
       }
     }
@@ -94,7 +94,7 @@ export default function CataloguePrestations({
         setMessage({ ok: false, text: r.error });
       }
     } catch {
-      setMessage({ ok: false, text: "Enregistrement impossible. Réessaie dans un instant." });
+      setMessage({ ok: false, text: "Enregistrement impossible. Réessayez dans un instant." });
     } finally {
       setPending(false);
     }
@@ -108,7 +108,7 @@ export default function CataloguePrestations({
       if (r.ok) router.refresh();
       else setMessage({ ok: false, text: r.error });
     } catch {
-      setMessage({ ok: false, text: "Modification impossible. Réessaie dans un instant." });
+      setMessage({ ok: false, text: "Modification impossible. Réessayez dans un instant." });
     } finally {
       setPending(false);
     }
@@ -130,7 +130,7 @@ export default function CataloguePrestations({
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ fontSize: 12.5, color: "var(--graphite)", lineHeight: 1.5 }}>
         Les prestations que Salma peut chiffrer, avec leurs prix HT en MAD. Salma ne propose que des lignes de ce catalogue ; un
-        devis déjà produit garde ses lignes, même si tu modifies un prix ensuite.
+        devis déjà produit garde ses lignes, même si vous modifiez un prix ensuite.
       </div>
 
       {prestations.length === 0 ? (

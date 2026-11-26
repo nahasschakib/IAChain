@@ -27,8 +27,8 @@ export default function NadiaResultPanel({ state }: { state: NadiaRunState }) {
     return (
       <div style={{ padding: "28px", border: "1px dashed var(--border)", borderRadius: "12px", color: "var(--muted-foreground)", fontSize: 13, lineHeight: 1.6 }}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Comment contrôler une remise</div>
-        Choisis une proposition chiffrée par Salma, indique si besoin le motif d&apos;exception, puis clique sur « Contrôler la remise ».
-        Le verdict est calculé par le code à partir de ta politique tarifaire ; aucune IA n&apos;intervient.
+        Choisissez une proposition chiffrée par Salma, indiquez si besoin le motif d&apos;exception, puis cliquez sur « Contrôler la remise ».
+        Le verdict est calculé par le code à partir de votre politique tarifaire ; aucune IA n&apos;intervient.
       </div>
     );
   if (!outcome.ok) return <Box error>{outcome.error}</Box>;

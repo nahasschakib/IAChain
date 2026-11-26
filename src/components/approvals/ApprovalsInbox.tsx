@@ -793,7 +793,7 @@ export default function ApprovalsInbox({
             )}
           </>
         ) : (
-          <div style={{ fontSize: 13, color: "var(--graphite)" }}>Sélectionne une demande pour voir son détail.</div>
+          <div style={{ fontSize: 13, color: "var(--graphite)" }}>Sélectionnez une demande pour voir son détail.</div>
         )}
 
                 <div

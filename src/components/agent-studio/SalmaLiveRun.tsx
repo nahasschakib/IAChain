@@ -83,9 +83,9 @@ export default function SalmaLiveRun({
         setDossierRepris(r.client);
         onState({ pending: false, outcome: null });
         if (r.proposition.lignes.length === 0)
-          setMessage("L'IA n'a retenu aucune prestation du catalogue : ajoute-les à la main ci-dessous.");
+          setMessage("L'IA n'a retenu aucune prestation du catalogue : ajoutez-les à la main ci-dessous.");
       } catch {
-        setMessage("Le dossier n'a pas pu être chargé. Réessaie dans un instant.");
+        setMessage("Le dossier n'a pas pu être chargé. Réessayez dans un instant.");
       }
     });
   };
@@ -106,9 +106,9 @@ export default function SalmaLiveRun({
   const objectifOk = (String(values.objectif ?? "").trim() || objectifSaisi.trim()).length >= 10;
   const clientOk = String(values.client ?? "").trim().length >= 2;
   const etapes = [
-    { fait: objectifOk && clientOk, titre: "Décris le dossier", aide: "Client, remise, registre et objectif du prospect." },
-    { fait: etape !== null, titre: "Demande les lignes à l'IA", aide: "Elle ne propose que des prestations de ton catalogue." },
-    { fait: chiffre, titre: "Ajuste, puis chiffre", aide: "Quantités, segment du client, puis « Chiffrer la proposition »." },
+    { fait: objectifOk && clientOk, titre: "Décrivez le dossier", aide: "Client, remise, registre et objectif du prospect." },
+    { fait: etape !== null, titre: "Demandez les lignes à l'IA", aide: "Elle ne propose que des prestations de votre catalogue." },
+    { fait: chiffre, titre: "Ajustez, puis chiffrez", aide: "Quantités, segment du client, puis « Chiffrer la proposition »." },
   ];
   const courante = etapes.findIndex((e) => !e.fait);
 
@@ -142,10 +142,10 @@ export default function SalmaLiveRun({
           setSegment("");
           setAjout("");
           if (r.proposition.lignes.length === 0)
-            setMessage("L'IA n'a retenu aucune prestation du catalogue : ajoute-les à la main ci-dessous.");
+            setMessage("L'IA n'a retenu aucune prestation du catalogue : ajoutez-les à la main ci-dessous.");
         }
       } catch {
-        setMessage("L'agent n'a pas pu répondre. Réessaie dans un instant.");
+        setMessage("L'agent n'a pas pu répondre. Réessayez dans un instant.");
       }
       onState({ pending: false, outcome: null });
     });
@@ -157,13 +157,13 @@ export default function SalmaLiveRun({
     setSucces(null);
     const quantites = lignes.map((l) => (/^\s*\d+\s*$/.test(l.quantite) ? Number(l.quantite) : NaN));
     if (quantites.some((q) => Number.isNaN(q))) {
-      setMessage("Quantités : saisis des nombres entiers.");
+      setMessage("Quantités : saisissez des nombres entiers.");
       return;
     }
     const brut = String(values.remise ?? "").trim();
     const remise = brut === "" ? 0 : /^\d+([.,]\d+)?$/.test(brut) ? Number(brut.replace(",", ".")) : NaN;
     if (Number.isNaN(remise)) {
-      setMessage("Remise : saisis un nombre seul, par exemple 5 ou 7,5.");
+      setMessage("Remise : saisissez un nombre seul, par exemple 5 ou 7,5.");
       return;
     }
     onState({ pending: true, outcome: null });
@@ -178,7 +178,7 @@ export default function SalmaLiveRun({
           lignes: lignes.map((l, i) => ({ prestation_id: l.prestation_id, quantite: quantites[i] })),
         });
       } catch {
-        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
+        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessayez dans un instant." };
       }
       if (!outcome.ok) setMessage(outcome.error);
       else if (dossierRepris) {
@@ -234,8 +234,8 @@ export default function SalmaLiveRun({
             DOSSIERS EN ATTENTE (CHAÎNE PROSPECT TO CASH)
           </div>
           <div style={petit}>
-            Ces prospects ont été qualifiés par la chaîne. Salma a déjà proposé des lignes : clique sur « Reprendre », ajuste les
-            quantités, puis chiffre. La chaîne repart toute seule vers Nadia.
+            Ces prospects ont été qualifiés par la chaîne. Salma a déjà proposé des lignes : cliquez sur « Reprendre », ajustez les
+            quantités, puis chiffrez. La chaîne repart toute seule vers Nadia.
           </div>
           {dossiers.map((d) => (
             <div key={d.executionId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -281,7 +281,7 @@ export default function SalmaLiveRun({
             LIGNES DU DEVIS
           </div>
 
-          {lignes.length === 0 && <div style={petit}>Aucune ligne : ajoute au moins une prestation.</div>}
+          {lignes.length === 0 && <div style={petit}>Aucune ligne : ajoutez au moins une prestation.</div>}
 
           {lignes.map((l) => {
             const p = parId.get(l.prestation_id);

@@ -59,9 +59,9 @@ export default function SalmaResultPanel({ state }: { state: SalmaRunState }) {
   if (pending) return <Box>Salma travaille sur la proposition…</Box>;
   if (!outcome) {
     const etapes: [string, string][] = [
-      ["Décris le dossier", "Saisis le client, l'objectif du prospect et le cadre budgétaire, puis choisis la remise et le registre de rédaction."],
-      ["Demande les lignes à l'IA", "Clique sur « Proposer les lignes avec l'IA » : elle choisit, dans ton catalogue de prestations, celles qui répondent au besoin."],
-      ["Ajuste, puis chiffre", "Corrige les quantités, ajoute ou retire des lignes, indique le segment du client, puis clique sur « Chiffrer la proposition »."],
+      ["Décrivez le dossier", "Saisissez le client, l'objectif du prospect et le cadre budgétaire, puis choisissez la remise et le registre de rédaction."],
+      ["Demandez les lignes à l'IA", "Cliquez sur « Proposer les lignes avec l'IA » : elle choisit, dans votre catalogue de prestations, celles qui répondent au besoin."],
+      ["Ajustez, puis chiffrez", "Corrigez les quantités, ajoutez ou retirez des lignes, indiquez le segment du client, puis cliquez sur « Chiffrer la proposition »."],
     ];
     return (
       <div style={{ padding: "28px", border: "1px dashed var(--border)", borderRadius: "12px", color: "var(--muted-foreground)" }}>

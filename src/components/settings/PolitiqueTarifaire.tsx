@@ -113,7 +113,7 @@ export default function PolitiqueTarifaire({
       ] as const
     ).find(([k]) => Number.isNaN(plafonds[k]));
     if (invalide) {
-      setMessage({ ok: false, text: `${invalide[1]} : saisis un nombre seul, par exemple 5 ou 7,5.` });
+      setMessage({ ok: false, text: `${invalide[1]} : saisissez un nombre seul, par exemple 5 ou 7,5.` });
       return;
     }
     const rattaches = Object.fromEntries(Object.entries(mapping).filter(([, g]) => g !== "")) as Record<string, GrilleSegment>;
@@ -133,7 +133,7 @@ export default function PolitiqueTarifaire({
         setMessage({ ok: false, text: r.error });
       }
     } catch {
-      setMessage({ ok: false, text: "Enregistrement impossible. Réessaie dans un instant." });
+      setMessage({ ok: false, text: "Enregistrement impossible. Réessayez dans un instant." });
     } finally {
       setPending(false);
     }

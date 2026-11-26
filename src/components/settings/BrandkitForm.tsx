@@ -115,7 +115,7 @@ export default function BrandkitForm({
     const local = validerBrandkit(valeurs);
     if (!local.ok) {
       setErreurs(local.erreurs);
-      setMessage({ ok: false, text: "Corrige les champs signalés." });
+      setMessage({ ok: false, text: "Corrigez les champs signalés." });
       return;
     }
     setErreurs({});
@@ -131,7 +131,7 @@ export default function BrandkitForm({
         setMessage({ ok: false, text: r.error });
       }
     } catch {
-      setMessage({ ok: false, text: "Enregistrement impossible. Réessaie dans un instant." });
+      setMessage({ ok: false, text: "Enregistrement impossible. Réessayez dans un instant." });
     } finally {
       setPending(false);
     }

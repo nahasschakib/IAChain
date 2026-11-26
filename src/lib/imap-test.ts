@@ -24,6 +24,6 @@ export async function testerImap(
   } catch (e) {
     // Jamais le mot de passe dans les journaux : on ne garde que le code.
     console.error("testerImap", (e as { code?: string }).code ?? "erreur");
-    return { ok: false, error: "Connexion refusée : vérifie l'identifiant, le mot de passe et le serveur." };
+    return { ok: false, error: "Connexion refusée : vérifiez l'identifiant, le mot de passe et le serveur." };
   }
 }

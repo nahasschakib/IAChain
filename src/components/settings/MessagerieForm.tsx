@@ -78,7 +78,7 @@ export default function MessagerieForm({ connexion, canEdit }: { connexion: Conn
         setMessage({ ok: false, text: r.error });
       }
     } catch {
-      setMessage({ ok: false, text: "Enregistrement impossible. Réessaie dans un instant." });
+      setMessage({ ok: false, text: "Enregistrement impossible. Réessayez dans un instant." });
     } finally {
       setPending(false);
     }

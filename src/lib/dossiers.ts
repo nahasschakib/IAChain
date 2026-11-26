@@ -143,7 +143,7 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
   const appr = etapes.find((e) => e.key === "approval");
   if (salma?.etat === "waiting") {
     actions.push({
-      texte: "Salma a proposé des lignes du catalogue : vérifie les quantités, puis chiffre le devis.",
+      texte: "Salma a proposé des lignes du catalogue : vérifiez les quantités, puis chiffrez le devis.",
       bouton: "Valider les lignes",
       href: `/agents/salma?dossier=${executionId}`,
     });
@@ -162,7 +162,7 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
   }
   if (factureEnAttenteId !== null) {
     actions.push({
-      texte: "Karima a préparé la facture : vérifie-la, puis valide-la pour qu'elle reçoive son numéro.",
+      texte: "Karima a préparé la facture : vérifiez-la, puis validez-la pour qu'elle reçoive son numéro.",
       bouton: "Examiner la facture",
       href: `/approvals?id=${factureEnAttenteId}`,
     });

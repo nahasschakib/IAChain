@@ -48,7 +48,7 @@ export async function savePrestation(input: PrestationInput): Promise<CatalogueR
   } catch (e) {
     if (estDoublon(e)) return { ok: false, error: "Une prestation porte déjà ce libellé." };
     console.error("savePrestation", e);
-    return { ok: false, error: "Enregistrement impossible. Réessaie dans un instant." };
+    return { ok: false, error: "Enregistrement impossible. Réessayez dans un instant." };
   }
 
   revalidatePath("/settings");
@@ -68,7 +68,7 @@ export async function setPrestationActive(id: number, actif: boolean): Promise<C
     if (r.length === 0) return { ok: false, error: "Prestation introuvable." };
   } catch (e) {
     console.error("setPrestationActive", e);
-    return { ok: false, error: "Modification impossible. Réessaie dans un instant." };
+    return { ok: false, error: "Modification impossible. Réessayez dans un instant." };
   }
   revalidatePath("/settings");
   return { ok: true };

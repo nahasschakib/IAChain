@@ -29,7 +29,7 @@ export default function SofiaResultPanel({ state }: { state: SofiaRunState }) {
   if (!outcome) {
     return (
       <Box>
-        Décris la thématique, choisis les sources, la zone et la fréquence, puis lance « Lancer la veille avec
+        Décrivez la thématique, choisissez les sources, la zone et la fréquence, puis lancez « Lancer la veille avec
         l&apos;IA ». La note de veille s&apos;affichera ici.
       </Box>
     );

@@ -47,9 +47,9 @@ export default function NadiaLiveRun({ values, onState }: { values: Values; onSt
   const choisie = propositions.find((p) => String(p.runId) === choix);
 
   const etapes = [
-    { fait: propositions.length > 0, titre: "Prépare une proposition", aide: "Salma doit avoir chiffré un devis." },
-    { fait: choisie !== undefined, titre: "Choisis-la", aide: "La plus récente est présélectionnée." },
-    { fait, titre: "Lance le contrôle", aide: "Nadia compare la remise à la politique tarifaire." },
+    { fait: propositions.length > 0, titre: "Préparez une proposition", aide: "Salma doit avoir chiffré un devis." },
+    { fait: choisie !== undefined, titre: "Choisissez-la", aide: "La plus récente est présélectionnée." },
+    { fait, titre: "Lancez le contrôle", aide: "Nadia compare la remise à la politique tarifaire." },
   ];
   const courante = etapes.findIndex((e) => !e.fait);
 
@@ -67,7 +67,7 @@ export default function NadiaLiveRun({ values, onState }: { values: Values; onSt
           commentaire: String(values.commentaire ?? "").trim(),
         });
       } catch {
-        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
+        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessayez dans un instant." };
       }
       if (outcome.ok) setFait(true);
       else setMessage(outcome.error);
@@ -96,7 +96,7 @@ export default function NadiaLiveRun({ values, onState }: { values: Values; onSt
         {liste === null ? (
           <div style={petit}>Chargement…</div>
         ) : propositions.length === 0 ? (
-          <div style={petit}>Aucune proposition chiffrée. Lance d&apos;abord Salma, puis reviens ici.</div>
+          <div style={petit}>Aucune proposition chiffrée. Lancez d&apos;abord Salma, puis revenez ici.</div>
         ) : (
           <select style={champ} value={choix} onChange={(e) => setChoix(e.target.value)} disabled={pending}>
             {propositions.map((p) => (

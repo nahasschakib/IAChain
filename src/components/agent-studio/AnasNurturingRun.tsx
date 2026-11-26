@@ -40,15 +40,15 @@ export default function AnasNurturingRun({ onState }: { onState: (s: AnasNurturi
   const lancer = () => {
     setMessage(null);
     if (client.trim().length < 2) {
-      setMessage("Indique le nom du prospect.");
+      setMessage("Indiquez le nom du prospect.");
       return;
     }
     if (canaux.length === 0) {
-      setMessage("Choisis au moins un canal.");
+      setMessage("Choisissez au moins un canal.");
       return;
     }
     if (!/^\s*\d+\s*$/.test(nb)) {
-      setMessage("Nombre de touches : saisis un nombre entier.");
+      setMessage("Nombre de touches : saisissez un nombre entier.");
       return;
     }
     onState({ pending: true, outcome: null });
@@ -57,7 +57,7 @@ export default function AnasNurturingRun({ onState }: { onState: (s: AnasNurturi
       try {
         outcome = await runAnasNurturing({ client, theme, maturite, canaux, nbTouches: Number(nb), registre });
       } catch {
-        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessaie dans un instant." };
+        outcome = { ok: false, error: "L'agent n'a pas pu répondre. Réessayez dans un instant." };
       }
       if (!outcome.ok) setMessage(outcome.error);
       onState({ pending: false, outcome });
@@ -68,7 +68,7 @@ export default function AnasNurturingRun({ onState }: { onState: (s: AnasNurturi
     <div style={{ display: "grid", gap: 12, border: "1px solid var(--border)", borderRadius: 10, padding: 14, marginBottom: 16 }}>
       <div style={{ fontSize: 12, fontWeight: 700 }}>SÉQUENCE DE NURTURING D&apos;UN PROSPECT</div>
       <div style={petit}>
-        1. Indique le prospect, sa maturité et les canaux. 2. Anas fixe le calendrier et rédige chaque message. 3. La séquence est soumise à
+        1. Indiquez le prospect, sa maturité et les canaux. 2. Anas fixe le calendrier et rédige chaque message. 3. La séquence est soumise à
         approbation : rien n&apos;est envoyé.
       </div>
 

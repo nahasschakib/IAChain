@@ -21,12 +21,12 @@ const CONSIGNES: Record<string, { quoi: string; bouton: string }> = {
   "Go/no-go": { quoi: "Mehdi a qualifié ce prospect : décide de le transmettre à la vente ou non.", bouton: "Décider" },
   "Validation du devis": { quoi: "Nadia a contrôlé le devis de Salma : décide s'il peut partir.", bouton: "Examiner le devis" },
   "Suivi d'avancement": { quoi: "Soumaya a rédigé un message de suivi pour le client : relis-le avant tout envoi.", bouton: "Relire le message" },
-  "Relance de devis": { quoi: "Anas a rédigé une relance de devis : relis-la avant tout envoi.", bouton: "Relire la relance" },
-  "Validation de la facture": { quoi: "Karima a préparé la facture : vérifie les montants et l'identité du client, puis valide-la pour qu'elle reçoive son numéro.", bouton: "Examiner la facture" },
-  "Réponse support": { quoi: "Imane a rédigé une réponse à un e-mail client : relis-la, corrige-la si besoin, puis décide.", bouton: "Relire la réponse" },
-  "Analyse des causes": { quoi: "Hamza a analysé les e-mails de la période : valide les causes et recommandations avant d'agir.", bouton: "Examiner l'analyse" },
-  "Séquence de nurturing": { quoi: "Anas a rédigé une séquence de messages pour un prospect : relis-la avant tout envoi.", bouton: "Relire la séquence" },
-  "Escalade": { quoi: "Un e-mail demande l'intervention d'un humain : prends-le en charge.", bouton: "Traiter l'escalade" },
+  "Relance de devis": { quoi: "Anas a rédigé une relance de devis : relisez-la avant tout envoi.", bouton: "Relire la relance" },
+  "Validation de la facture": { quoi: "Karima a préparé la facture : vérifiez les montants et l'identité du client, puis validez-la pour qu'elle reçoive son numéro.", bouton: "Examiner la facture" },
+  "Réponse support": { quoi: "Imane a rédigé une réponse à un e-mail client : relisez-la, corrigez-la si besoin, puis décidez.", bouton: "Relire la réponse" },
+  "Analyse des causes": { quoi: "Hamza a analysé les e-mails de la période : validez les causes et recommandations avant d'agir.", bouton: "Examiner l'analyse" },
+  "Séquence de nurturing": { quoi: "Anas a rédigé une séquence de messages pour un prospect : relisez-la avant tout envoi.", bouton: "Relire la séquence" },
+  "Escalade": { quoi: "Un e-mail demande l'intervention d'un humain : prenez-le en charge.", bouton: "Traiter l'escalade" },
 };
 const CONSIGNE_PAR_DEFAUT = { quoi: "Une décision humaine est attendue.", bouton: "Traiter" };
 
@@ -68,7 +68,7 @@ export default async function TasksPage() {
         cle: `salma-${d.executionId}`,
         type: "Lignes du devis",
         titre: `Devis à préparer · ${d.client}`,
-        quoi: "Salma a proposé des lignes du catalogue : vérifie les quantités, puis chiffre le devis.",
+        quoi: "Salma a proposé des lignes du catalogue : vérifiez les quantités, puis chiffrez le devis.",
         bouton: "Valider les lignes",
         href: `/agents/salma?dossier=${d.executionId}`,
         dossierId: d.executionId,
@@ -157,7 +157,7 @@ export default async function TasksPage() {
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ fontSize: 13, color: "var(--graphite)", lineHeight: 1.5 }}>
-          Tout ce qui attend une action de ta part, au même endroit. Chaque ligne dit quoi faire ; le bouton t&apos;emmène directement
+          Tout ce qui attend une action de votre part, au même endroit. Chaque ligne dit quoi faire ; le bouton vous emmène directement
           à la bonne étape, sans passer par les agents ni les workflows.
         </div>
 
@@ -173,7 +173,7 @@ export default async function TasksPage() {
               boxShadow: CARD_SHADOW,
             }}
           >
-            Rien à faire pour le moment. Lance une exécution depuis Workflows, Prospect to Cash : ce qui demandera ton action apparaîtra ici.
+            Rien à faire pour le moment. Lancez une exécution depuis Workflows, Prospect to Cash : ce qui demandera votre action apparaîtra ici.
           </div>
         )}
 

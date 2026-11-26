@@ -54,7 +54,7 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
               ? "Dossier terminé : rien à faire pour le moment."
               : d.statut === "echoue"
                 ? "Dossier arrêté : voir l'étape concernée ci-dessous."
-                : "Les agents travaillent : rien à faire de ton côté pour le moment."}
+                : "Les agents travaillent : rien à faire de votre côté pour le moment."}
           </div>
         )}
 

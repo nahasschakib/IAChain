@@ -37,7 +37,7 @@ export default async function AFaireCard({ orgId, plateforme = false }: { orgId:
         </Link>
       </div>
       {total === 0 ? (
-        <div style={{ fontSize: 13, color: "var(--graphite)" }}>Rien n&apos;attend ton action pour le moment.</div>
+        <div style={{ fontSize: 13, color: "var(--graphite)" }}>Rien n&apos;attend votre action pour le moment.</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {dossiers.slice(0, 3).map((d) => (

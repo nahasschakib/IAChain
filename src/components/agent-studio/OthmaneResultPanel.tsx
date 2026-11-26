@@ -63,8 +63,8 @@ export default function OthmaneResultPanel({ state }: { state: OthmaneRunState }
   if (!outcome) {
     return (
       <Box>
-        Décris l&apos;objectif (ou laisse-le vide pour reprendre l&apos;opportunité de la veille de Sofia), choisis le
-        budget et les canaux, puis lance « Construire le plan avec l&apos;IA ». Le plan s&apos;affichera ici.
+        Décrivez l&apos;objectif (ou laissez-le vide pour reprendre l&apos;opportunité de la veille de Sofia), choisissez le
+        budget et les canaux, puis lancez « Construire le plan avec l&apos;IA ». Le plan s&apos;affichera ici.
       </Box>
     );
   }

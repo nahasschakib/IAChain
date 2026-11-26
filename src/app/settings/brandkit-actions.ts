@@ -26,17 +26,17 @@ export async function sauverBrandkit(input: Record<string, string>): Promise<Bra
     if (String(brut.rib ?? "").trim() === "" && actuel?.rib) brut.rib = actuel.rib;
   } catch (e) {
     console.error("sauverBrandkit lecture", e);
-    return { ok: false, error: "Enregistrement impossible. Réessaie dans un instant." };
+    return { ok: false, error: "Enregistrement impossible. Réessayez dans un instant." };
   }
 
   const v = validerBrandkit(brut);
-  if (!v.ok) return { ok: false, error: "Corrige les champs signalés.", erreurs: v.erreurs };
+  if (!v.ok) return { ok: false, error: "Corrigez les champs signalés.", erreurs: v.erreurs };
 
   try {
     await enregistrerBrandkit(ctx.orgId, ctx.userId, v.valeurs);
   } catch (e) {
     console.error("sauverBrandkit", e);
-    return { ok: false, error: "Enregistrement impossible. Réessaie dans un instant." };
+    return { ok: false, error: "Enregistrement impossible. Réessayez dans un instant." };
   }
   revalidatePath("/settings");
   return { ok: true };
