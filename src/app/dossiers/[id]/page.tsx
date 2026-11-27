@@ -51,7 +51,9 @@ export default async function DossierPage({ params }: { params: Promise<{ id: st
         ) : (
           <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: "14px 22px", fontSize: 13, color: "var(--graphite)", boxShadow: CARD_SHADOW }}>
             {d.statut === "termine"
-              ? "Dossier terminé : rien à faire pour le moment."
+              ? d.etapes.some((e) => e.etat === "pending")
+                ? "Parcours clos : les étapes en grisé n'ont pas été lancées pour ce dossier."
+                : "Dossier terminé : rien à faire pour le moment."
               : d.statut === "echoue"
                 ? "Dossier arrêté : voir l'étape concernée ci-dessous."
                 : "Les agents travaillent : rien à faire de votre côté pour le moment."}
