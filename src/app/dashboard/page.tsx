@@ -158,8 +158,8 @@ export default async function DashboardPage() {
 
   const kpiRows = await sql`
     SELECT
-      (SELECT COUNT(*) FROM org_agents oa JOIN agents a ON a.id = oa.agent_id
-         WHERE oa.org_id = ${orgId} AND a.status = 'actif') AS active_agents,
+      (SELECT COUNT(DISTINCT agent_id) FROM agent_runs
+         WHERE org_id = ${orgId} AND created_at >= now() - interval '7 days') AS active_agents,
       (SELECT COUNT(*) FROM agents) AS total_agents,
       (SELECT COUNT(*) FROM workflow_executions
          WHERE org_id = ${orgId} AND status = 'en_cours') AS active_workflows,
@@ -222,7 +222,7 @@ export default async function DashboardPage() {
 
   const KPIS: { label: string; value: string; note: string; tone: Tone }[] = [
     {
-      label: "Agents actifs",
+      label: "Agents actifs (7 j)",
       value: String(k.active_agents),
       note: `sur ${k.total_agents} disponibles`,
       tone: undefined,
