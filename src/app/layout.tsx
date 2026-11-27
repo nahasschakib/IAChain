@@ -29,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <ClerkProvider
        localization={{
          ...frFR,
+         formFieldInputPlaceholder__signUpPassword: "Créez un mot de passe",
          roles: {
           "org:admin": "Administrateur",
           "org:member": "Membre",
