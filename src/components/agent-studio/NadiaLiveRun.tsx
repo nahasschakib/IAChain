@@ -36,7 +36,7 @@ export default function NadiaLiveRun({ values, onState }: { values: Values; onSt
         setListe(l);
         if (l.propositions[0]) setChoix(String(l.propositions[0].runId));
       })
-      .catch(() => vivant && setMessage("Impossible de charger les propositions. Recharge la page."));
+      .catch(() => vivant && setMessage("Impossible de charger les propositions. Rechargez la page."));
     return () => {
       vivant = false;
     };

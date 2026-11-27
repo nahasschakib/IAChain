@@ -94,7 +94,7 @@ export default function MessagerieForm({ connexion, canEdit }: { connexion: Conn
       )}
       {champ("identifiant", "Adresse e-mail (identifiant)")}
       {champ("motDePasse", "Mot de passe de la boîte", "password",
-        connexion ? "Laisse vide pour conserver le mot de passe enregistré." : undefined)}
+        connexion ? "Laissez vide pour conserver le mot de passe enregistré." : undefined)}
       {champ("imapHote", "Serveur IMAP (réception)")}
       {champ("imapPort", "Port IMAP (SSL/TLS)")}
       {champ("smtpHote", "Serveur SMTP (envoi)")}

@@ -159,7 +159,7 @@ export default function BrandkitForm({
                   inputMode={c === "ice" || c === "rib" || c === "capital_social" ? "numeric" : undefined}
                   onChange={(e) => setValeurs({ ...valeurs, [c]: e.target.value })}
                 />
-                {c === "rib" && ribMasque && !erreurs[c] && <div style={AIDE}>Laisse vide pour conserver le RIB enregistré.</div>}
+                {c === "rib" && ribMasque && !erreurs[c] && <div style={AIDE}>Laissez vide pour conserver le RIB enregistré.</div>}
                 {erreurs[c] && <div style={ERREUR}>{erreurs[c]}</div>}
               </label>
             ))}

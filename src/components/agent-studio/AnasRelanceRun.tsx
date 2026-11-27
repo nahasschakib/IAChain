@@ -39,7 +39,7 @@ export default function AnasRelanceRun({ onState }: { onState: (s: AnasRelanceSt
         setListe(l);
         setChoix((c) => (c && l.some((p) => String(p.runId) === c) ? c : l[0] ? String(l[0].runId) : ""));
       })
-      .catch(() => setMessage("Impossible de charger les propositions. Recharge la page."));
+      .catch(() => setMessage("Impossible de charger les propositions. Rechargez la page."));
 
   useEffect(() => {
     charger();

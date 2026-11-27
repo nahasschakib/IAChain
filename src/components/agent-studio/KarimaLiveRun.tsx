@@ -50,7 +50,7 @@ export default function KarimaLiveRun({ values, onState }: { values: Values; onS
           setId(identite(premier));
         }
       })
-      .catch(() => vivant && setMessage("Impossible de charger les devis validés. Recharge la page."));
+      .catch(() => vivant && setMessage("Impossible de charger les devis validés. Rechargez la page."));
     return () => {
       vivant = false;
     };
