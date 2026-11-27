@@ -115,7 +115,7 @@ export default async function DeliverablesPage({
     icon: ICONS[row.kind as keyof typeof ICONS] ?? DocIcon,
     name: row.title as string,
     agent: row.agent_label as string,
-    workflow: row.workflow_name as string,
+    workflow: (row.workflow_name as string | null) ?? "Exécution manuelle",
     created: formatDeliverableDate(new Date(row.created_at as string)),
     version: row.version as string,
   }));
