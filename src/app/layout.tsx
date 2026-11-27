@@ -26,7 +26,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <ClerkProvider localization={frFR}>
+      <ClerkProvider
+       localization={{
+         ...frFR,
+         roles: {
+          "org:admin": "Administrateur",
+          "org:member": "Membre",
+        },
+      }}
+    >
       <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} h-full antialiased`}
