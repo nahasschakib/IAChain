@@ -67,7 +67,7 @@ export default function KarimaResultPanel({ state }: { state: KarimaRunState }) 
             {r.compte_client === "non_enregistre" && "L'identité n'a pas pu être enregistrée sur la fiche client ; elle figure sur la facture."}
           </p>
           <p style={{ margin: 0, fontWeight: 600 }}>
-            Le numéro (AAAA-NNNN) est attribué à la validation : décide la facture dans <a href="/approvals">Approbations</a>.
+            Le numéro (AAAA-NNNN) est attribué à la validation : décidez la facture dans <a href="/approvals">Approbations</a>.
           </p>
         </div>
       </div>

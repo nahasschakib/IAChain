@@ -203,7 +203,7 @@ export default function LinaResultPanel({ state }: { state: LinaRunState }) {
         <strong>TRAÇABILITÉ</strong> —{" "}
         {r.plan_utilise ? "Rédigé à partir du dernier plan d'Othmane" : "Aucun plan d'Othmane disponible"}
         {r.veille_utilisee ? " et de la dernière veille de Sofia." : "."} Les affirmations à confirmer sont listées
-        ci-dessus : relis-les avant toute publication. Rien n&apos;est publié : les contenus passent par la validation
+        ci-dessus : relisez-les avant toute publication. Rien n&apos;est publié : les contenus passent par la validation
         avant diffusion.
         {outcome.costMad !== undefined && <> Coût de cette exécution : {outcome.costMad.toFixed(3).replace(".", ",")} MAD.</>}
       </div>

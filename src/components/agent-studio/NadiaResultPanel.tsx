@@ -84,7 +84,7 @@ export default function NadiaResultPanel({ state }: { state: NadiaRunState }) {
           <p style={{ margin: 0, padding: 14, fontSize: 13, lineHeight: 1.6 }}>
             {r.validation_devis === "soumise" && (
               <>
-                Devis soumis à validation humaine : décide-le dans <a href="/approvals">Approbations</a>. Une fois validé, le suivi
+                Devis soumis à validation humaine : décidez-le dans <a href="/approvals">Approbations</a>. Une fois validé, le suivi
                 d&apos;avancement peut informer le client.
               </>
             )}

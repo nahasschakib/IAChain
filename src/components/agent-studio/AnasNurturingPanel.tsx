@@ -48,7 +48,7 @@ export default function AnasNurturingPanel({ state }: { state: AnasNurturingStat
           <li>
             {r.approbation_creee ? (
               <>
-                Séquence soumise à approbation : décide-la dans <a href="/approvals">Approbations</a>. Aucun envoi automatique.
+                Séquence soumise à approbation : décidez-la dans <a href="/approvals">Approbations</a>. Aucun envoi automatique.
               </>
             ) : (
               "L'approbation n'a pas pu être créée : le brouillon est conservé, relance la préparation."

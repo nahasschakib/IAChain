@@ -46,7 +46,7 @@ export default function AnasRelancePanel({ state }: { state: AnasRelanceState })
           <li>
             {r.approbation_creee ? (
               <>
-                Brouillon soumis à approbation : décide-le dans <a href="/approvals">Approbations</a>. Aucun envoi automatique.
+                Brouillon soumis à approbation : décidez-le dans <a href="/approvals">Approbations</a>. Aucun envoi automatique.
               </>
             ) : (
               "L'approbation n'a pas pu être créée : le brouillon est conservé, relance la préparation."

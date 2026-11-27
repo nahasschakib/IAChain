@@ -32,7 +32,7 @@ export async function savePrestation(input: PrestationInput): Promise<CatalogueR
     if (input.id === undefined || input.id === null) {
       const n = await sql`SELECT count(*)::int AS n FROM catalogue_prestations WHERE org_id = ${ctx.orgId}`;
       if ((n[0].n as number) >= LIMITES.maxPrestations)
-        return { ok: false, error: `${LIMITES.maxPrestations} prestations maximum : désactive-en avant d'en ajouter.` };
+        return { ok: false, error: `${LIMITES.maxPrestations} prestations maximum : désactivez-en avant d'en ajouter.` };
       await sql`
         INSERT INTO catalogue_prestations (org_id, libelle, description, unite, prix_ht, delai_jours, created_by)
         VALUES (${ctx.orgId}, ${v.libelle}, ${v.description}, ${v.unite}, ${v.prix_ht}, ${v.delai_jours}, ${ctx.userId})`;

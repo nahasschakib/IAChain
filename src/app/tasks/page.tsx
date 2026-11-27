@@ -18,9 +18,9 @@ function formatDate(date: Date): string {
 
 // Pour chaque type d'approbation : ce que l'utilisateur doit faire, dit simplement, et le libellé du bouton.
 const CONSIGNES: Record<string, { quoi: string; bouton: string }> = {
-  "Go/no-go": { quoi: "Mehdi a qualifié ce prospect : décide de le transmettre à la vente ou non.", bouton: "Décider" },
-  "Validation du devis": { quoi: "Nadia a contrôlé le devis de Salma : décide s'il peut partir.", bouton: "Examiner le devis" },
-  "Suivi d'avancement": { quoi: "Soumaya a rédigé un message de suivi pour le client : relis-le avant tout envoi.", bouton: "Relire le message" },
+  "Go/no-go": { quoi: "Mehdi a qualifié ce prospect : décidez de le transmettre à la vente ou non.", bouton: "Décider" },
+  "Validation du devis": { quoi: "Nadia a contrôlé le devis de Salma : décidez s'il peut partir.", bouton: "Examiner le devis" },
+  "Suivi d'avancement": { quoi: "Soumaya a rédigé un message de suivi pour le client : relisez-le avant tout envoi.", bouton: "Relire le message" },
   "Relance de devis": { quoi: "Anas a rédigé une relance de devis : relisez-la avant tout envoi.", bouton: "Relire la relance" },
   "Validation de la facture": { quoi: "Karima a préparé la facture : vérifiez les montants et l'identité du client, puis validez-la pour qu'elle reçoive son numéro.", bouton: "Examiner la facture" },
   "Réponse support": { quoi: "Imane a rédigé une réponse à un e-mail client : relisez-la, corrigez-la si besoin, puis décidez.", bouton: "Relire la réponse" },

@@ -73,7 +73,7 @@ export default function SofiaResultPanel({ state }: { state: SofiaRunState }) {
 
       {!ready && (
         <p style={{ fontSize: "13px", color: "var(--muted-foreground)", marginBottom: "20px" }}>
-          Les signaux trouvés ne suffisent pas pour formuler une opportunité : précise la thématique ou élargis la période.
+          Les signaux trouvés ne suffisent pas pour formuler une opportunité : précisez la thématique ou élargissez la période.
         </p>
       )}
 

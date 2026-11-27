@@ -134,7 +134,7 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
   `;
   if (gng[0]) {
     actions.push({
-      texte: "Mehdi a qualifié ce prospect : décide de le transmettre à la vente ou non.",
+      texte: "Mehdi a qualifié ce prospect : décidez de le transmettre à la vente ou non.",
       bouton: "Décider du go/no-go",
       href: `/approvals?id=${Number(gng[0].id)}`,
     });
@@ -155,7 +155,7 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
       ORDER BY a.id DESC LIMIT 1
     `;
     actions.push({
-      texte: "Nadia a contrôlé le devis : décide s'il peut partir.",
+      texte: "Nadia a contrôlé le devis : décidez s'il peut partir.",
       bouton: "Examiner le devis",
       href: a[0] ? `/approvals?id=${Number(a[0].id)}` : "/approvals",
     });
@@ -171,7 +171,7 @@ export async function chargerDossier(orgId: string, executionId: number): Promis
   const etapeFac = etapes.find((e) => e.key === "facture");
   if (appr?.etat === "done" && etapeFac?.etat === "pending") {
     actions.push({
-      texte: "Le devis est validé : établis la facture (ICE et adresse du client requis).",
+      texte: "Le devis est validé : établissez la facture (ICE et adresse du client requis).",
       bouton: "Établir la facture",
       href: "/agents/karima",
     });

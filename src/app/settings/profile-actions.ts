@@ -53,7 +53,7 @@ export async function addOption(kind: string, label: string): Promise<ProfileRes
     await sql`UPDATE org_options SET active = true WHERE id = ${same.id as number} AND org_id = ${ctx.orgId}`;
   } else {
     if (rows.length >= MAX_PER_KIND)
-      return { ok: false, error: `${MAX_PER_KIND} valeurs maximum par liste : désactive-en une avant d'en ajouter.` };
+      return { ok: false, error: `${MAX_PER_KIND} valeurs maximum par liste : désactivez-en une avant d'en ajouter.` };
     const next = await sql`
       SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM org_options WHERE org_id = ${ctx.orgId} AND kind = ${kind}
     `;
